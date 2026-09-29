@@ -1,0 +1,7 @@
+node_modules
+dist
+.env.local
+.DS_Store
+source_assets/Akabare_Panipuri_Master_Print_v0_6.pdf
+source_assets/svg
+*.log
