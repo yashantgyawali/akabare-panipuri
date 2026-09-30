@@ -6,3 +6,5 @@ source_assets/Akabare_Panipuri_Master_Print_v0_6.pdf
 source_assets/svg
 *.log
 *.local
+supabase/.build/game/
+supabase/functions/game/_lib/

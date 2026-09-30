@@ -17,7 +17,8 @@
     "art:render-backs": "node scripts/render-backs.mjs",
     "art:backs": "node scripts/export-backs.mjs",
     "dev:supabase": "vite --mode supabase --port 5174",
-    "build:supabase": "tsc -p tsconfig.json && vite build --mode supabase"
+    "build:supabase": "tsc -p tsconfig.json && vite build --mode supabase",
+    "build:function": "npm run sync:function && rolldown -c supabase/.build/rolldown.config.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
