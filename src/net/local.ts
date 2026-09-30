@@ -165,11 +165,11 @@ export class LocalGameClient implements GameClient {
   }
 
   act(session: Session, action: Action): Promise<Snapshot> {
-    return this.mutate(session, (rec, me, now) => core.act(rec, me, action, now));
+    return this.mutate(session, (rec, me, now) => core.act(rec, me, action, now, randomSeed()));
   }
 
   setBot(session: Session, playerId: PlayerId, isBot: boolean): Promise<Snapshot> {
-    return this.mutate(session, (rec, me, now) => core.setBot(rec, me, playerId, isBot, now));
+    return this.mutate(session, (rec, me, now) => core.setBot(rec, me, playerId, isBot, now, randomSeed()));
   }
 
   rematch(session: Session): Promise<Snapshot> {
@@ -303,7 +303,8 @@ export class LocalGameClient implements GameClient {
 
   /** Runs `fn` exclusively for this game across tabs (navigator.locks), or at least within this tab. */
   private lock<T>(code: string, fn: () => T): Promise<T> {
-    if (this.locks) return this.locks.request(`akabare:${code}`, async () => fn());
+    // A synchronous throw inside the callback rejects the request (and releases the lock).
+    if (this.locks) return this.locks.request(`akabare:${code}`, () => fn());
     const run = this.queue.then(fn);
     this.queue = run.catch(() => undefined);
     return run;

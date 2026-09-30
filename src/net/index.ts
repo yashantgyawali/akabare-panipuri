@@ -8,7 +8,16 @@ import { SupabaseGameClient } from './supabase.ts';
 import type { GameClient } from './types.ts';
 
 export * from './types.ts';
-export { clearSession, listSessions, loadSession, saveSession, type LoadedSession } from './session.ts';
+export {
+  clearSession,
+  createSessionStore,
+  listSessions,
+  loadSession,
+  saveSession,
+  sessionStore,
+  type LoadedSession,
+  type SessionStore,
+} from './session.ts';
 
 let client: GameClient | null = null;
 

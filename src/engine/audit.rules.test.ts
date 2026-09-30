@@ -10,6 +10,9 @@ import { describe, expect, test } from 'vitest';
 import {
   applyAction,
   availablePowers,
+  botStep,
+  chooseBotAction,
+  computeWinners,
   createGame,
   EngineError,
   legalActions,
@@ -17,6 +20,8 @@ import {
   pendingActors,
   POWER_KINDS,
   projectView,
+  runBots,
+  setBot,
   type Action,
   type ColorId,
   type GameConfig,
@@ -26,6 +31,7 @@ import {
   type LegalActions,
   type Phase,
   type PlayerId,
+  type PlayerState,
   type PowerKind,
   type PuriKind,
 } from './index.ts';
@@ -236,9 +242,13 @@ describe('audit: setup (PDF "Setup", decision 1)', () => {
   test('a new round hands back the full set and clears stacks, powers and flags', () => {
     const g = game();
     setupAll(g, { sita: { stack: [A, P] } });
+    // Cards end up spread over other stacks and the plate: all of them must come home.
     serve(g, [[P, 'ramesh'], [A, 'sita'], [P, 'anil']]);
     auction(g, 'sita', 1);
-    g.flip('sita', 'sita');
+    g.flip('sita', 'sita'); // ramesh's Akabare, planted on top of sita's stack
+    expect(g.e.pendingAkabare!.card.owner).toBe('ramesh');
+    g.ok('sita', { type: 'ACCEPT_BUST' });
+    expect(g.s.phase).toBe('roundEnd');
     g.ok('ramesh', { type: 'FORCE_CONTINUE' });
     expect(g.s.round).toBe(2);
     expect(g.s.phase).toBe('setup');
@@ -1666,7 +1676,7 @@ describe('audit: differential test against an independent reference model', () =
         if (last.trapRewardTo) hit('trap reward');
         if (last.akabareOwnerId === last.eaterId) hit('own akabare bust');
       }
-      if (r.phase === 'gameOver') hit('game over');
+      if ((r.phase as Phase) === 'gameOver') hit('game over');
     }
   });
 
@@ -1686,5 +1696,388 @@ describe('audit: differential test against an independent reference model', () =
       expect(coverage[k] ?? 0, k).toBeGreaterThan(0);
     }
     expect(coverage['game over']).toBeGreaterThan(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Part 3: the PDF's worked examples (p4-5), played literally
+// ---------------------------------------------------------------------------
+
+describe('audit: PDF examples (p4-5)', () => {
+  test('"Vinegar saves you": numb first, then the Akabare Ramesh planted on his own stack is cancelled', () => {
+    const g = game(3);
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    serve(g, [[P, 'sita'], [A, 'ramesh']]);
+    auction(g, 'sita', 4); // anil opens, sita raises to 4, the others pass
+    for (let i = 0; i < 3; i++) g.flip('sita', 'sita');
+    expect(g.e.eaten).toBe(3);
+    g.power('sita', 'sita');
+    expect(g.last('flipPower')).toMatchObject({ kind: 'vinegar', effect: 'numb' });
+    const events = g.flip('sita', 'ramesh');
+    expect(events.map((e) => e.type)).toEqual(['flipPuri']);
+    expect(g.last('flipPuri')).toMatchObject({ owner: 'ramesh', kind: A, cancelled: true, eaten: 3 });
+    expect(g.e.pendingAkabare).toBeNull();
+    g.flip('sita', 'ramesh');
+    expect(g.result).toMatchObject({ outcome: 'success', target: 4, akabareOwnerId: null, trapRewardTo: null });
+    expect(g.result.scoreDeltas).toEqual({ sita: 4, ramesh: 0, anil: 0 });
+  });
+
+  test('"Vinegar wastes a puri": the Panipuri after Vinegar does not count', () => {
+    const g = game(3, { first: 'anil' });
+    setupAll(g, { anil: { power: 'vinegar' } });
+    auction(g, 'anil', 2);
+    g.power('anil', 'anil');
+    g.flip('anil', 'anil');
+    expect(g.last('flipPuri')).toMatchObject({ kind: P, cancelled: true, eaten: 0 });
+    expect(g.e).toMatchObject({ eaten: 0, skipNext: false });
+    g.flip('anil', 'anil');
+    expect(g.e.eaten).toBe(1);
+    g.flip('anil', 'sita');
+    expect(g.result).toMatchObject({ outcome: 'success', eaten: 2, target: 2 });
+  });
+
+  test('"The blind Dahi": Priya bites, gambles on Anil\'s power, it is Chaat, she is out (no +2)', () => {
+    const g = game(4);
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'dahi' }, anil: { power: 'chaat' }, priya: { power: 'khali' } });
+    serve(g, [[A, 'priya']]);
+    auction(g, 'priya', 3); // ramesh opens, anil passes, priya raises, sita and ramesh pass
+    g.flip('priya', 'priya');
+    expect(g.e.pendingAkabare!.card.owner).toBe('sita');
+    g.power('priya', 'anil');
+    expect(g.last('flipPower')).toMatchObject({ owner: 'anil', kind: 'chaat', effect: 'failedSave', eaten: 0 });
+    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', eaten: 0, target: 3, trapRewardTo: 'sita' });
+    expect(g.result.scoreDeltas).toEqual({ sita: 2, ramesh: 0, anil: 0, priya: -3 });
+  });
+
+  test('"Chaat speeds you up": bid 4, eat 1, Sita\'s Chaat makes 3, one more to go', () => {
+    const g = game(3);
+    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    auction(g, 'ramesh', 4);
+    g.flip('ramesh', 'ramesh');
+    g.power('ramesh', 'sita');
+    expect(g.last('flipPower')).toMatchObject({ owner: 'sita', kind: 'chaat', effect: 'plusTwo', eaten: 3, target: 4 });
+    expect(g.s.phase).toBe('eating');
+    g.flip('ramesh', 'ramesh');
+    expect(g.result).toMatchObject({ outcome: 'success', eaten: 4, target: 4 });
+    expect(g.score('ramesh')).toBe(4);
+  });
+
+  test('"Khali Puri backfires": bid 5 becomes 6, and the bust costs 6', () => {
+    const g = game(4);
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'khali' }, anil: { power: 'dahi' }, priya: { power: 'chaat' } });
+    serve(g, [[A, 'priya']]);
+    auction(g, 'priya', 5);
+    g.power('priya', 'ramesh');
+    expect(g.last('flipPower')).toMatchObject({ kind: 'khali', effect: 'targetUp', target: 6 });
+    expect(g.e).toMatchObject({ bid: 5, target: 6 });
+    g.flip('priya', 'priya'); // sita's Akabare
+    g.ok('priya', { type: 'ACCEPT_BUST' });
+    expect(g.result).toMatchObject({ outcome: 'bust', bid: 5, target: 6, trapRewardTo: 'sita' });
+    expect(g.result.scoreDeltas).toEqual({ sita: 2, ramesh: 0, anil: 0, priya: -6 });
+  });
+
+  test('"Chaat on an empty table": 5 eaten of 7, table empty, the last flip is Chaat: success', () => {
+    const g = game(5, { first: 'anil', config: { startingStack: 1 } });
+    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'dahi' } });
+    auction(g, 'anil', 7);
+    g.flip('anil', 'anil');
+    g.power('anil', 'ramesh'); // Dahi with nothing to save
+    expect(g.last('flipPower').effect).toBe('wasted');
+    for (const t of ['sita', 'ramesh', 'priya', 'maya'] as Id[]) g.flip('anil', t);
+    expect(g.e.eaten).toBe(5);
+    expect(g.s.players.every((p) => p.stack.length === 0)).toBe(true);
+    expect(g.s.phase).toBe('eating');
+    expect(g.legal('anil')).toMatchObject({ flipPuri: [], acceptBust: true });
+    g.power('anil', 'sita');
+    expect(g.result).toMatchObject({ outcome: 'success', eaten: 7, target: 7 });
+    expect(g.score('anil')).toBe(7);
+  });
+
+  test('"The planted chili": Sita\'s Akabare on Anil\'s stack busts Ramesh through a Khali, Sita +2', () => {
+    const g = game(3);
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'vinegar' }, anil: { power: 'khali' } });
+    serve(g, [[A, 'anil']]);
+    auction(g, 'ramesh', 3);
+    g.flip('ramesh', 'ramesh');
+    g.flip('ramesh', 'ramesh');
+    g.flip('ramesh', 'anil');
+    expect(g.last('bite')).toMatchObject({ eaterId: 'ramesh', fromStackOf: 'anil', owner: 'sita' });
+    g.power('ramesh', 'anil');
+    expect(g.last('flipPower')).toMatchObject({ kind: 'khali', effect: 'failedSave', target: 3 });
+    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 3, akabareOwnerId: 'sita', trapRewardTo: 'sita' });
+    expect(g.result.scoreDeltas).toEqual({ sita: 2, ramesh: -3, anil: 0 });
+    expect(g.p('ramesh').busts).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Part 4: remaining corners
+// ---------------------------------------------------------------------------
+
+describe('audit: more bidding and pending-bite corners', () => {
+  test('6 players: raises and passes interleave; passed seats are skipped every time around', () => {
+    const g = game(6);
+    setupAll(g);
+    const script: [Id, Action, Id | null][] = [
+      ['sita', { type: 'START_BID', amount: 1 }, 'ramesh'],
+      ['ramesh', { type: 'PASS' }, 'anil'],
+      ['anil', { type: 'RAISE', amount: 2 }, 'priya'],
+      ['priya', { type: 'PASS' }, 'maya'],
+      ['maya', { type: 'PASS' }, 'hari'],
+      ['hari', { type: 'RAISE', amount: 3 }, 'sita'],
+      ['sita', { type: 'RAISE', amount: 4 }, 'anil'],
+      ['anil', { type: 'PASS' }, 'hari'],
+      ['hari', { type: 'RAISE', amount: 5 }, 'sita'],
+      ['sita', { type: 'PASS' }, null],
+    ];
+    for (const [who, a, next] of script) {
+      g.ok(who, a);
+      if (next) {
+        expect(g.turn()).toBe(next);
+        expect(pendingActors(g.s)).toEqual([next]);
+        for (const out of g.s.bidding!.passed) expect(acceptedTypes(g, out as Id)).toEqual([]);
+      }
+    }
+    expect(g.e).toMatchObject({ eaterId: 'hari', bid: 5, target: 5 });
+    expect(g.s.bidding!.passed).toEqual(['ramesh', 'priya', 'maya', 'anil', 'sita']);
+    expect(g.all('eater')).toHaveLength(1);
+  });
+
+  test('pending: a revealed power is refused and changes nothing; a Khali from before the bite stays; own Dahi saves', () => {
+    const g = plantedOnRamesh({ sita: 'dahi', ramesh: 'khali', anil: 'vinegar' }, 5);
+    g.power('sita', 'ramesh'); // Khali before the bite: target 6
+    g.flip('sita', 'ramesh'); // anil's Akabare: pending
+    const before = JSON.stringify(g.s);
+    g.no('sita', { type: 'FLIP_POWER', targetPlayerId: 'ramesh' });
+    g.no('sita', { type: 'FLIP_PURI', targetPlayerId: 'anil' });
+    g.no('anil', { type: 'FLIP_POWER', targetPlayerId: 'sita' });
+    g.no('anil', { type: 'ACCEPT_BUST' });
+    expect(JSON.stringify(g.s)).toBe(before);
+    expect(g.legal('sita').flipPower).toEqual(['sita', 'anil']);
+    g.power('sita', 'sita');
+    expect(g.e).toMatchObject({ pendingAkabare: null, powersFlipped: 2, target: 6, eaten: 2 });
+    expect(g.legal('sita').flipPower).toEqual([]);
+    for (const t of ['ramesh', 'ramesh', 'anil', 'anil'] as Id[]) g.flip('sita', t);
+    expect(g.result).toMatchObject({ outcome: 'success', target: 6, eaten: 6 });
+  });
+
+  test("pending with only the eater's own power left: it is still a choice, and own non-Dahi fails the save", () => {
+    const g = game(3, { config: { powerFlipsMax: 3 } });
+    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'khali' }, anil: { power: 'dahi' } });
+    serve(g, [[P, 'ramesh'], [A, 'sita']]);
+    auction(g, 'sita', 6);
+    g.power('sita', 'ramesh'); // Khali: 7
+    g.power('sita', 'anil'); // Dahi, nothing to save
+    g.flip('sita', 'sita'); // ramesh's Akabare
+    expect(g.e.pendingAkabare!.card.owner).toBe('ramesh');
+    expect(g.legal('sita')).toMatchObject({ flipPuri: [], flipPower: ['sita'], acceptBust: true });
+    g.power('sita', 'sita');
+    expect(g.last('flipPower')).toMatchObject({ kind: 'chaat', effect: 'failedSave', eaten: 0, target: 7 });
+    expect(g.result.scoreDeltas).toEqual({ sita: -7, ramesh: 2, anil: 0 });
+  });
+
+  test('nobody outside the game gets any action accepted, in any phase', () => {
+    const g = game();
+    const probe = () => {
+      for (const a of battery(['sita', 'ramesh', 'anil'])) expect(applyAction(g.s, 'ghost', a).ok).toBe(false);
+      expect(legalActions(g.s, 'ghost')).toEqual(legalActions(g.s, 'nobody'));
+      expect(projectView(g.s, 'ghost').legal.startBid).toBeNull();
+    };
+    probe();
+    setupAll(g);
+    probe();
+    auction(g, 'sita', 2);
+    probe();
+    g.flip('sita', 'sita');
+    g.flip('sita', 'sita');
+    expect(g.s.phase).toBe('roundEnd');
+    probe();
+  });
+});
+
+describe('audit: winners and game length (decision 12)', () => {
+  const W = (rows: [string, number, number][]) =>
+    computeWinners(rows.map(([id, score, busts]) => ({ id, score, busts }) as PlayerState));
+
+  test('highest score, then fewer busts among the leaders only, then a shared win', () => {
+    expect(W([['a', 5, 2], ['b', 5, 1], ['c', 4, 0]])).toEqual(['b']);
+    expect(W([['a', 5, 1], ['b', 5, 1], ['c', 5, 2]])).toEqual(['a', 'b']);
+    expect(W([['a', -3, 1], ['b', -1, 2], ['c', -2, 0]])).toEqual(['b']);
+    expect(W([['a', 0, 0], ['b', 0, 0], ['c', 0, 0]])).toEqual(['a', 'b', 'c']);
+    expect(W([['a', 31, 3], ['b', 30, 0], ['c', 2, 0]])).toEqual(['a']);
+  });
+
+  test('maxRounds null: play goes past round 5 until someone reaches targetScore', () => {
+    const g = game(3, { config: { targetScore: 3, maxRounds: null } });
+    for (let r = 1; r <= 6; r++) quickRound(g);
+    expect(g.s).toMatchObject({ phase: 'setup', round: 7 });
+    expect(g.s.players.map((p) => p.score)).toEqual([2, 2, 2]);
+    quickRound(g);
+    expect(g.s).toMatchObject({ phase: 'gameOver', round: 7, winners: ['sita'] });
+  });
+
+  test('the last human READY also runs the game-over check', () => {
+    const g = game(3, { config: { targetScore: 1 } });
+    setupAll(g);
+    auction(g, 'sita', 1);
+    g.flip('sita', 'sita');
+    g.ok('ramesh', { type: 'READY' });
+    g.ok('anil', { type: 'READY' });
+    expect(g.s.phase).toBe('roundEnd');
+    g.ok('sita', { type: 'READY' });
+    expect(g.s).toMatchObject({ phase: 'gameOver', winners: ['sita'] });
+    expect(g.last('gameOver')).toMatchObject({ winners: ['sita'], scores: { sita: 1, ramesh: 0, anil: 0 } });
+  });
+
+  test('setBot at roundEnd: a new bot is ready at once, a returning human must READY again', () => {
+    const g = game();
+    setupAll(g);
+    auction(g, 'sita', 1);
+    g.flip('sita', 'sita');
+    expect(pendingActors(g.s)).toEqual(['sita', 'ramesh', 'anil']);
+    g.s = setBot(g.s, 'anil', true);
+    expect(g.p('anil').ready).toBe(true);
+    expect(pendingActors(g.s)).toEqual(['sita', 'ramesh']);
+    g.ok('sita', { type: 'READY' });
+    g.s = setBot(g.s, 'anil', false);
+    expect(g.p('anil').ready).toBe(false);
+    expect(pendingActors(g.s)).toEqual(['ramesh', 'anil']);
+    g.ok('ramesh', { type: 'READY' });
+    expect(g.s.phase).toBe('roundEnd');
+    g.ok('anil', { type: 'READY' });
+    expect(g.s).toMatchObject({ phase: 'setup', round: 2 });
+  });
+
+  test('when the last unready human becomes a bot, the bots move the round on and set up', () => {
+    const g = game();
+    setupAll(g);
+    auction(g, 'sita', 1);
+    g.flip('sita', 'sita');
+    g.ok('sita', { type: 'READY' });
+    g.ok('ramesh', { type: 'READY' });
+    g.s = setBot(g.s, 'anil', true);
+    expect(g.s.phase).toBe('roundEnd');
+    expect(pendingActors(g.s)).toEqual(['anil']);
+    const out = runBots(g.s).state;
+    expect(out).toMatchObject({ phase: 'setup', round: 2 });
+    expect(out.players.find((p) => p.id === 'anil')!.setupDone).toBe(true);
+    expect(pendingActors(out)).toEqual(['sita', 'ramesh']);
+  });
+});
+
+describe('audit: round-1 first player and the private reminder (decisions 3, 13)', () => {
+  test('round 1 first player comes from the seed: deterministic per seed, every seat reachable', () => {
+    const seeds = ROSTER.slice(0, 4).map((p) => ({ ...p, isBot: false }));
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 200; seed++) {
+      const a = createGame(seeds, {}, seed);
+      expect(createGame(seeds, {}, seed)).toEqual(a);
+      seen.add(a.firstPlayerId);
+      expect(a.log[0]).toMatchObject({ type: 'roundStart', firstPlayerId: a.firstPlayerId, round: 1, seq: 1 });
+    }
+    expect([...seen].sort()).toEqual(['anil', 'priya', 'ramesh', 'sita']);
+  });
+
+  test('owners keep seeing what they placed and where; everyone else sees only the back color', () => {
+    const g = game();
+    setupAll(g, { sita: { stack: [A, P] } });
+    serve(g, [[P, 'ramesh'], [P, 'sita'], [P, 'sita']]);
+    const cards = (viewer: Id | null, of: Id) =>
+      projectView(g.s, viewer).players.find((p) => p.id === of)!.stack.map((c) => `${c.owner}:${c.kind}`);
+    expect(cards('sita', 'sita')).toEqual(['sita:akabare', 'sita:panipuri', 'ramesh:null', 'anil:null']);
+    expect(cards('ramesh', 'sita')).toEqual(['sita:null', 'sita:null', 'ramesh:panipuri', 'anil:null']);
+    expect(cards(null, 'sita')).toEqual(['sita:null', 'sita:null', 'ramesh:null', 'anil:null']);
+    expect(cards('sita', 'ramesh')).toEqual(['ramesh:null', 'ramesh:null', 'sita:panipuri']);
+    expect(projectView(g.s, 'sita').me!.setup).toEqual({ stack: [A, P], power: 'vinegar' });
+    auction(g, 'ramesh', 6);
+    for (const t of ['ramesh', 'ramesh', 'ramesh', 'sita', 'sita', 'sita'] as Id[]) g.flip('ramesh', t);
+    expect(g.result.outcome).toBe('success');
+    expect(cards('sita', 'sita')).toEqual(['sita:akabare']);
+    expect(cards('ramesh', 'sita')).toEqual(['sita:null']);
+    expect(projectView(g.s, 'sita').me!.setup).toEqual({ stack: [A, P], power: 'vinegar' });
+  });
+
+  test('the reminder keeps bottom → top order after someone else eats the whole setup', () => {
+    const g = game();
+    setupAll(g, { sita: { stack: [A, P] } });
+    auction(g, 'ramesh', 4);
+    g.flip('ramesh', 'ramesh');
+    g.flip('ramesh', 'ramesh');
+    g.flip('ramesh', 'sita'); // sita's top: Panipuri
+    g.flip('ramesh', 'sita'); // sita's bottom: her Akabare
+    expect(g.e.pendingAkabare!.card.owner).toBe('sita');
+    expect(g.p('sita').stack).toEqual([]);
+    expect(projectView(g.s, 'sita').me!.setup).toEqual({ stack: [A, P], power: 'vinegar' });
+    g.ok('ramesh', { type: 'ACCEPT_BUST' });
+    expect(projectView(g.s, 'sita').me!.setup).toEqual({ stack: [A, P], power: 'vinegar' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Part 5: hidden information never reaches a view or a bot (decisions 13-15)
+// ---------------------------------------------------------------------------
+
+function shuffled<T>(xs: readonly T[], rand: Rand): T[] {
+  const out = [...xs];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** A copy of `s` differing only in what `viewer` can't know: others' face-down/hand kinds, hidden powers, power history. */
+function hiddenTwin(s: GameState, viewer: PlayerId | null, rand: Rand): GameState {
+  const t = structuredClone(s);
+  for (const q of t.players) {
+    if (q.id === viewer) continue;
+    const cards = [...t.players.flatMap((x) => x.stack.filter((c) => c.owner === q.id)), ...q.hand];
+    const kinds = shuffled(cards.map((c) => c.kind), rand);
+    cards.forEach((c, i) => (c.kind = kinds[i]));
+    if (q.power && !q.power.revealed) q.power.kind = pickOf(POWER_KINDS, rand);
+    q.usedPowers = shuffled(POWER_KINDS, rand).slice(0, Math.floor(rand() * 4));
+    q.powerPicks = q.powerPicks.map(() => pickOf(POWER_KINDS, rand));
+  }
+  return t;
+}
+
+describe('audit: views and bots see only public info (decisions 13-15)', () => {
+  const CONFIGS: Partial<GameConfig>[] = [{}, { revealOnRoundEnd: true }, { startingStack: 1, powerFlipsMax: 1 }, { startingStack: 3, powerFlipsMax: 3 }];
+
+  test.each(Array.from({ length: 12 }, (_, i) => i))('all-bot game %i', (i) => {
+    const n = 3 + (i % 4);
+    const seeds = ROSTER.slice(0, n).map((p) => ({ ...p, isBot: true }));
+    let s = createGame(seeds, { ...CONFIGS[i % CONFIGS.length], maxRounds: 3, targetScore: null }, 1000 + i);
+    let seed = i + 1;
+    const rand: Rand = () => {
+      const [v, next] = mulberry32(seed);
+      seed = next;
+      return v;
+    };
+    let compared = 0;
+    for (let step = 0; step < 800 && s.phase !== 'gameOver'; step++) {
+      const revealed = s.phase === 'roundEnd' && s.config.revealOnRoundEnd;
+      const viewers: (PlayerId | null)[] = [null, pickOf(s.players, rand).id, ...pendingActors(s)];
+      for (const viewer of revealed ? [] : viewers) {
+        const twin = hiddenTwin(s, viewer, rand);
+        const a = JSON.stringify(projectView(s, viewer));
+        const b = JSON.stringify(projectView(twin, viewer));
+        if (a !== b) expect({ step, viewer, view: projectView(twin, viewer) }).toEqual({ step, viewer, view: projectView(s, viewer) });
+        if (viewer) expect(chooseBotAction(twin, viewer)).toEqual(chooseBotAction(s, viewer));
+        compared++;
+      }
+      const view = projectView(s, null);
+      expect(view.tableMax).toBe(s.players.reduce((k, p) => k + p.stack.length, 0) + 2 * s.config.powerFlipsMax);
+      expect(view.lastSeq).toBe(s.log[s.log.length - 1].seq);
+      const next = botStep(s);
+      expect(next, `bots stuck in ${s.phase}`).not.toBeNull();
+      expect(next!.usedFallback).toBe(false);
+      s = next!.state;
+    }
+    expect(s.phase).toBe('gameOver');
+    expect(compared).toBeGreaterThan(50);
+    // The log is gap-free and tagged with non-decreasing rounds.
+    expect(s.log.map((e) => e.seq)).toEqual(s.log.map((_, k) => k + 1));
+    expect(s.log.every((e, k) => k === 0 || e.round >= s.log[k - 1].round)).toBe(true);
   });
 });

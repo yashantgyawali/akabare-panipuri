@@ -193,7 +193,7 @@ describe('lobby lifecycle', () => {
     let rec = lobby();
     expectError(() => removePlayer(rec, 'p2', 'b1', T1), 'forbidden');
     expectError(() => removePlayer(rec, 'h', 'h', T1), 'bad_request');
-    expectError(() => removePlayer(rec, 'h', 'nobody', T1), 'not_found');
+    expectError(() => removePlayer(rec, 'h', 'nobody', T1), 'bad_request');
     rec = removePlayer(rec, 'h', 'p2', T1);
     expect(rec.players.map((p) => [p.id, p.seat])).toEqual([
       ['h', 0],
@@ -314,7 +314,7 @@ describe('setBot', () => {
     let rec = startGame(lobby(), 'h', 9, T1);
     expectError(() => setBot(rec, 'p2', 'h', true, T1), 'forbidden');
     expectError(() => setBot(rec, 'h', 'b1', false, T1), 'forbidden');
-    expectError(() => setBot(rec, 'h', 'nobody', true, T1), 'not_found');
+    expectError(() => setBot(rec, 'h', 'nobody', true, T1), 'bad_request');
     rec = setBot(rec, 'h', 'p2', true, T1);
     expect(rec.players.find((p) => p.id === 'p2')!.isBot).toBe(true);
     expect(rec.state!.players.find((p) => p.id === 'p2')!.isBot).toBe(true);
@@ -330,6 +330,18 @@ describe('setBot', () => {
     rec = setBot(rec, 'h', 'p2', true, T1);
     rec = setBot(rec, 'h', 'h', true, T1);
     expect(rec.status).toBe('finished');
+  });
+
+  it('bots finish even a long game (more than one runBots batch) when everyone is away', () => {
+    let rec = updateLobby(lobby(), 'h', { config: { maxRounds: 60, targetScore: null } }, T0);
+    rec = startGame(rec, 'h', 13, T1);
+    rec = setBot(rec, 'h', 'p2', true, T1);
+    const before = rec.version;
+    rec = setBot(rec, 'h', 'h', true, T1);
+    expect(rec.version).toBe(before + 1);
+    expect(rec.status).toBe('finished');
+    expect(rec.state!.round).toBe(60);
+    expect(rec.state!.log.length).toBeGreaterThan(1000);
   });
 
   it('works in the lobby', () => {
