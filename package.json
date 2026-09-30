@@ -15,7 +15,9 @@
     "art:wordmarks": "node scripts/build-wordmarks.mjs",
     "art:palette": "node scripts/render-palette.mjs",
     "art:render-backs": "node scripts/render-backs.mjs",
-    "art:backs": "node scripts/export-backs.mjs"
+    "art:backs": "node scripts/export-backs.mjs",
+    "dev:supabase": "vite --mode supabase --port 5174",
+    "build:supabase": "tsc -p tsconfig.json && vite build --mode supabase"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

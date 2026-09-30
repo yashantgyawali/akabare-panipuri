@@ -9,8 +9,13 @@
  *               sprigs and an embroidered cream patch: a golden puri with a
  *               round akabare chili peeking out.
  *   power back  the weave takes over: a dense owner-colour stepped lattice on
- *               parchment, around a dark round masala dabba (spice box) whose
- *               four bowls hint at the four powers.
+ *               parchment, around a round owner-colour masala dabba (spice box)
+ *               whose four brass bowls hint at the four powers. Dark owners get
+ *               a bright rim round a deep tin, light owners (yellow, orange) the
+ *               reverse, so the hue survives at 44px (red vs orange especially).
+ *
+ * Filters: paper grain, a slow gouache wash, a cloth slub texture and a smooth
+ * displacement wobble for threads/lettering (2 octaves: more smears the pixels).
  *
  * Pure string builders: no DOM, no fonts (wordmarks are outlined paths), no
  * external refs. All jitter is seeded, so the output is stable.
@@ -142,6 +147,10 @@ interface Threads {
   a1: string; a2: string;
   /** corner flower: petal, heart, leaf */
   petal: string; heart: string; leaf: string;
+  /** Devanagari wordmark fill on the owner colour */
+  word: string;
+  /** light owner colours (ink reads better on them than cream) */
+  lightOwner: boolean;
 }
 
 const ACCENTS: Record<ColorId, [string, string, string, string, string]> = {
@@ -157,7 +166,8 @@ const ACCENTS: Record<ColorId, [string, string, string, string, string]> = {
 function threads(color: ColorId): Threads {
   const p = PLAYER_PALETTE[color];
   const [a1, a2, petal, heart, leaf] = ACCENTS[color];
-  return { base: p.base, deep: p.deep, darker: p.darker, light: p.light, ink: p.ink, a1, a2, petal, heart, leaf };
+  const word = color === 'yellow' ? CREAM_BRIGHT : color === 'orange' ? PURI_GOLD.light : GOLD;
+  return { base: p.base, deep: p.deep, darker: p.darker, light: p.light, ink: p.ink, a1, a2, petal, heart, leaf, word, lightOwner: p.onBase === INK };
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +201,7 @@ function filters(p: string, washDark: string, washLight: string, weaveDark: stri
     `<filter id="${p}-wash" ${FULL}>`
       + `<feTurbulence type="fractalNoise" baseFrequency="0.0055 0.008" numOctaves="3" seed="23" result="n"/>`
       + `<feColorMatrix in="n" type="matrix" values="${tint(washDark, 2.6, -1.2)}" result="d"/>`
-      + `<feColorMatrix in="n" type="matrix" values="${tint(washLight, -2.4, 0.95, 1)}" result="l"/>`
+      + `<feColorMatrix in="n" type="matrix" values="${tint(washLight, -2.2, 0.8, 1)}" result="l"/>`
       + `<feMerge><feMergeNode in="d"/><feMergeNode in="l"/></feMerge></filter>`,
     // cloth: short weft slubs and faint warp
     `<filter id="${p}-cloth" ${FULL}>`
@@ -200,13 +210,10 @@ function filters(p: string, washDark: string, washLight: string, weaveDark: stri
       + `<feTurbulence type="fractalNoise" baseFrequency="0.75 0.06" numOctaves="1" seed="9" result="v"/>`
       + `<feColorMatrix in="v" type="matrix" values="${tint(weaveDark, 2, -1.05)}" result="vv"/>`
       + `<feMerge><feMergeNode in="hh"/><feMergeNode in="vv"/></feMerge></filter>`,
-    // hand wobble for threads and stitches, plus uneven (hand-dyed) thread density
+    // hand wobble for threads, stitches and lettering
     `<filter id="${p}-wob" ${region(-20, -20, W + 40, H + 40)}>`
-      + `<feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="3" result="t"/>`
-      + `<feDisplacementMap in="SourceGraphic" in2="t" scale="7" xChannelSelector="R" yChannelSelector="G" result="d"/>`
-      + `<feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="17" result="m"/>`
-      + `<feColorMatrix in="m" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.5 0 0.16" result="ma"/>`
-      + `<feComposite in="d" in2="ma" operator="in"/></filter>`,
+      + `<feTurbulence type="fractalNoise" baseFrequency="0.024" numOctaves="2" seed="3" result="t"/>`
+      + `<feDisplacementMap in="SourceGraphic" in2="t" scale="7" xChannelSelector="R" yChannelSelector="G"/></filter>`,
     `<filter id="${p}-soft" ${FULL}><feGaussianBlur stdDeviation="6"/></filter>`,
   ].join('');
 }
@@ -344,15 +351,27 @@ function puri(p: string): string {
   }
   const body = smooth(pts, true);
   const hy = py - ry + 20;
-  const chy = hy - 16;
-  const cr = 29;
+  const chy = hy - 19;
+  const cr = 35;
   let g = `<defs><clipPath id="${p}-pc"><path d="${body}"/></clipPath>`
     + `<radialGradient id="${p}-pg" cx="0.38" cy="0.3" r="0.78"><stop offset="0" stop-color="#F7D07A"/><stop offset="0.5" stop-color="${PURI_GOLD.mid}"/><stop offset="1" stop-color="${PURI_GOLD.deep}"/></radialGradient>`
     + `<radialGradient id="${p}-cg" cx="0.36" cy="0.32" r="0.72"><stop offset="0" stop-color="#F26A3C"/><stop offset="0.5" stop-color="${CHILI}"/><stop offset="1" stop-color="#7E170A"/></radialGradient>`
     + `<pattern id="${p}-sat" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)"><rect width="6" height="2.2" fill="#FBE2A2"/></pattern>`
+    + `<pattern id="${p}-csat" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(38)"><rect width="5" height="1.7" fill="#FFB590"/></pattern>`
     + `<clipPath id="${p}-cc"><path d="M280 360H470V${hy}A62 20 0 0 1 280 ${hy}Z"/></clipPath></defs>`;
   // cast shadow on the linen
   g += `<ellipse cx="${px + 8}" cy="${f(py + ry * 0.93 + 3)}" rx="88" ry="11" fill="${INK_SOFT}" opacity=".4" filter="url(#${p}-soft)"/>`;
+  // coriander sprigs tucked under the shell, fanning out left and right
+  for (const sx of [-1, 1]) {
+    const x = px + sx * 66, y = py + 50;
+    const lf = (deg: number, len: number, wd: number, fill: string): string => {
+      const ang = sx > 0 ? deg : 180 - deg;
+      const a = (ang * Math.PI) / 180;
+      return `<path d="${leafPath(x, y, ang, len, wd * sx)}" fill="${fill}"/>`
+        + `<path d="M${f(x)} ${f(y)}L${f(x + Math.cos(a) * len * 0.8)} ${f(y + Math.sin(a) * len * 0.8)}" stroke="#DCE6B8" stroke-width="1.3" stroke-linecap="round" opacity=".55"/>`;
+    };
+    g += lf(34, 36, 17, '#6E9A3E') + lf(2, 44, 20, LEAF) + lf(-32, 32, 15, '#6E9A3E');
+  }
   // shell: gradient, satin threads, crisp blisters (french knots), shade
   g += `<path d="${body}" fill="url(#${p}-pg)"/>`;
   let inner = `<rect x="${px - rx - 5}" y="${py - ry - 5}" width="${rx * 2 + 10}" height="${ry * 2 + 10}" fill="url(#${p}-sat)" opacity=".26"/>`;
@@ -385,32 +404,35 @@ function puri(p: string): string {
   }
   g += `<path d="${poly(hole)}" fill="#2A170E" stroke="#FAE0A0" stroke-width="2.6" stroke-linejoin="round"/>`;
   g += `<ellipse cx="${px - 34}" cy="${hy + 5}" rx="14" ry="5" fill="${LEAF}" opacity=".9"/><ellipse cx="${px + 36}" cy="${hy + 4}" rx="12" ry="4.4" fill="#C9892E"/><circle cx="${px + 22}" cy="${hy + 9}" r="3.4" fill="#E5B45A"/>`;
-  // round akabare chili nestled in the opening: glossy cherry body, small cap, long hooked stem
+  // round akabare chili nestled in the opening: glossy cherry body satin-stitched, small cap, long hooked stem
+  const k = cr / 29;
   const lob: Pt[] = [];
   for (let i = 0; i < 20; i++) {
     const a = (i / 20) * Math.PI * 2;
     const rr = cr + jit(R, 0.5);
     lob.push([px + Math.cos(a) * rr * 1.04, chy + Math.sin(a) * rr]);
   }
-  const ch = `<path d="${smooth(lob, true)}" fill="url(#${p}-cg)" stroke="#6E1409" stroke-width="2"/>`
-    + `<path d="M${px - 20} ${chy - 4}C${px - 19} ${chy - 16} ${px - 11} ${chy - 23} ${px - 1} ${chy - 25}" fill="none" stroke="#FFD6BA" stroke-width="5" stroke-linecap="round" opacity=".9"/>`
-    + `<circle cx="${px - 21}" cy="${chy + 5}" r="2.6" fill="#FFD6BA" opacity=".85"/>`
-    + `<path d="M${px + 8} ${chy + 22}C${px + 18} ${chy + 18} ${px + 24} ${chy + 10} ${px + 26} ${chy}" fill="none" stroke="#F0653A" stroke-width="2.4" stroke-linecap="round" opacity=".6"/>`;
+  const lobD = smooth(lob, true);
+  const q = (dx: number, dy: number): string => `${f(px + dx * k)} ${f(chy + dy * k)}`;
+  const ch = `<path d="${lobD}" fill="url(#${p}-cg)" stroke="#6E1409" stroke-width="2.2"/>`
+    + `<path d="${lobD}" fill="url(#${p}-csat)" opacity=".22"/>`
+    + `<path d="M${q(-20, -4)}C${q(-19, -16)} ${q(-11, -23)} ${q(-1, -25)}" fill="none" stroke="#FFD6BA" stroke-width="${f(5 * k)}" stroke-linecap="round" opacity=".9"/>`
+    + `<circle cx="${f(px - 21 * k)}" cy="${f(chy + 5 * k)}" r="${f(2.6 * k)}" fill="#FFD6BA" opacity=".85"/>`
+    + `<path d="M${q(8, 22)}C${q(18, 18)} ${q(24, 10)} ${q(26, 0)}" fill="none" stroke="#F0653A" stroke-width="2.6" stroke-linecap="round" opacity=".6"/>`;
   g += `<g clip-path="url(#${p}-cc)">${ch}</g>`;
+  // the shell's front lip passes in front of the chili
+  g += `<path d="${poly(hole.slice(0, 13), false)}" fill="none" stroke="#FAE0A0" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>`;
   const top = chy - cr;
-  g += `<path d="M${px - 12} ${top + 3}C${px - 8} ${top - 5} ${px + 8} ${top - 5} ${px + 12} ${top + 3}C${px + 6} ${top} ${px + 3} ${top + 4} ${px} ${top + 1}C${px - 3} ${top + 4} ${px - 6} ${top} ${px - 12} ${top + 3}Z" fill="${LEAF}" stroke="#2F4F1E" stroke-width="1.4" stroke-linejoin="round"/>`;
-  g += `<path d="M${px} ${top - 2}C${px - 2} ${top - 20} ${px + 6} ${top - 36} ${px + 22} ${top - 38}C${px + 30} ${top - 38} ${px + 33} ${top - 32} ${px + 30} ${top - 27}" fill="none" stroke="#2F4F1E" stroke-width="6.4" stroke-linecap="round"/>`;
-  g += `<path d="M${px} ${top - 3}C${px - 2} ${top - 20} ${px + 6} ${top - 35} ${px + 22} ${top - 37}C${px + 29} ${top - 37} ${px + 32} ${top - 32} ${px + 30} ${top - 28}" fill="none" stroke="#7FA24A" stroke-width="3" stroke-linecap="round"/>`;
-  // danger rays
+  g += `<path d="M${px - 14} ${top + 3}C${px - 9} ${top - 6} ${px + 9} ${top - 6} ${px + 14} ${top + 3}C${px + 7} ${top} ${px + 3} ${top + 5} ${px} ${top + 1}C${px - 3} ${top + 5} ${px - 7} ${top} ${px - 14} ${top + 3}Z" fill="${LEAF}" stroke="#2F4F1E" stroke-width="1.5" stroke-linejoin="round"/>`;
+  g += `<path d="M${px} ${top - 2}C${px - 2} ${top - 20} ${px + 6} ${top - 36} ${px + 22} ${top - 38}C${px + 30} ${top - 38} ${px + 33} ${top - 32} ${px + 30} ${top - 27}" fill="none" stroke="#2F4F1E" stroke-width="7" stroke-linecap="round"/>`;
+  g += `<path d="M${px} ${top - 3}C${px - 2} ${top - 20} ${px + 6} ${top - 35} ${px + 22} ${top - 37}C${px + 29} ${top - 37} ${px + 32} ${top - 32} ${px + 30} ${top - 28}" fill="none" stroke="#7FA24A" stroke-width="3.2" stroke-linecap="round"/>`;
+  // danger rays, stitched in chili thread
   for (let i = 0; i < 8; i++) {
     if (i === 4 || i === 5) continue; // leave room for the stem
     const a = ((-176 + i * 24.5) * Math.PI) / 180;
-    const r0 = cr + 16, r1 = cr + 28 + (i % 2) * 7;
-    g += `<path d="M${f(px + Math.cos(a) * r0)} ${f(chy + Math.sin(a) * r0)}L${f(px + Math.cos(a) * r1)} ${f(chy + Math.sin(a) * r1)}" stroke="${CHILI}" stroke-width="3.6" stroke-linecap="round"/>`;
+    const r0 = cr + 14, r1 = cr + 25 + (i % 2) * 7;
+    g += `<path d="M${f(px + Math.cos(a) * r0)} ${f(chy + Math.sin(a) * r0)}L${f(px + Math.cos(a) * r1)} ${f(chy + Math.sin(a) * r1)}" stroke="${CHILI}" stroke-width="3.8" stroke-linecap="round"/>`;
   }
-  // coriander leaves at the foot
-  g += `<path d="${leafPath(px - 76, py + 68, 158, 36, 10)}" fill="${LEAF}"/><path d="${leafPath(px - 72, py + 76, 196, 26, 8)}" fill="#6E9A3E"/>`;
-  g += `<path d="${leafPath(px + 76, py + 68, 22, 36, -10)}" fill="${LEAF}"/><path d="${leafPath(px + 72, py + 76, -16, 26, -8)}" fill="#6E9A3E"/>`;
   return g;
 }
 
@@ -435,11 +457,11 @@ export function puriBackSvg(color: ColorId): string {
 
   let body = `<rect width="${W}" height="${H}" fill="${t.base}"/>`;
   // tone-on-tone jacquard lattice in the field, under the wash so it reads as dyed cloth
-  body += `<rect x="40" y="${FIELD.y0}" width="670" height="${FIELD.y1 - FIELD.y0}" fill="url(#${p}-tone)" opacity=".28" filter="url(#${p}-wob)"/>`;
-  body += `<rect width="${W}" height="${H}" filter="url(#${p}-wash)" opacity=".55"/>`;
+  body += `<rect x="40" y="${FIELD.y0}" width="670" height="${FIELD.y1 - FIELD.y0}" fill="url(#${p}-tone)" opacity=".4" filter="url(#${p}-wob)"/>`;
+  body += `<rect width="${W}" height="${H}" filter="url(#${p}-wash)" opacity=".42"/>`;
   body += `<g clip-path="url(#${p}-in)"><rect width="${W}" height="${H}" filter="url(#${p}-cloth)" opacity=".5"/></g>`;
 
-  const fx = 44, fy = FIELD.y0 + 2, sc = 0.92;
+  const fx = 50, fy = FIELD.y0 + 12, sc = 0.92;
   body += `<g filter="url(#${p}-wob)">`
     + `<use href="#${p}-band"/><use href="#${p}-band" transform="rotate(180 ${CX} ${CY})"/>`
     + `<use href="#${p}-fl" transform="translate(${fx} ${fy}) scale(${sc})"/>`
@@ -447,7 +469,7 @@ export function puriBackSvg(color: ColorId): string {
     + `<use href="#${p}-fl" transform="translate(${fx} ${H - fy}) scale(${sc} -${sc})"/>`
     + `<use href="#${p}-fl" transform="translate(${W - fx} ${H - fy}) scale(-${sc} -${sc})"/>`
     + wordmarkSvg('AKABARE PANIPURI', { x: CX, y: 176, valign: 'cap-middle', height: 33, tracking: 2, fill: CREAM_BRIGHT, stroke: t.darker, strokeWidth: 5 })
-    + wordmarkSvg('अकबरे पानीपुरी', { x: CX, y: H - 176, valign: 'middle', height: 31, fill: t.a1, stroke: t.darker, strokeWidth: 5 })
+    + wordmarkSvg('अकबरे पानीपुरी', { x: CX, y: H - 176, valign: 'middle', height: 31, fill: t.word, stroke: t.darker, strokeWidth: 5 })
     + `</g>`;
   body += patch(p, t);
   body += frame();
@@ -500,16 +522,25 @@ function dabba(p: string, t: Threads): string {
   g += `<path d="${wobCircle(CX, CY, 225, 0.8, 30, R)}" fill="none" stroke="${t.base}" stroke-width="3.2" stroke-dasharray="10 6" stroke-linecap="round"/>`;
   g += `<circle cx="${CX}" cy="${CY + 8}" r="206" fill="${t.darker}" opacity=".55" filter="url(#${p}-soft)"/>`;
   // satin-stitched owner rim
-  g += `<path d="${wobCircle(CX, CY, 207, 0.9, 30, R)}" fill="${t.deep}"/>`;
-  g += `<circle cx="${CX}" cy="${CY}" r="200" fill="none" stroke="${t.base}" stroke-width="12" stroke-dasharray="1.5 2.1"/>`;
+  // (dark owners: bright owner-colour rim round a deep tin; light owners: the reverse)
+  const [rim, rimStitch, tooth] = t.lightOwner ? [t.deep, t.base, t.darker] : [t.base, t.deep, t.base];
+  g += `<path d="${wobCircle(CX, CY, 207, 0.9, 30, R)}" fill="${rim}"/>`;
+  g += `<circle cx="${CX}" cy="${CY}" r="200" fill="none" stroke="${rimStitch}" stroke-width="12" stroke-dasharray="1.4 2.2" opacity=".6"/>`;
   g += `<path d="${wobCircle(CX, CY, 190, 0.8, 30, R)}" fill="none" stroke="${CREAM}" stroke-width="2.8" stroke-dasharray="9 5.5" stroke-linecap="round"/>`;
   // tin body with a soft sheen
-  g += `<defs><radialGradient id="${p}-tin" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="${t.deep}"/><stop offset="1" stop-color="${t.ink}"/></radialGradient>`
+  g += `<defs><radialGradient id="${p}-tin" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="${t.lightOwner ? t.base : t.deep}"/><stop offset="1" stop-color="${t.lightOwner ? t.deep : t.darker}"/></radialGradient>`
     + `<radialGradient id="${p}-brass" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#F8DC92"/><stop offset=".5" stop-color="${PURI_GOLD.mid}"/><stop offset="1" stop-color="#8A4212"/></radialGradient>`
     + `<radialGradient id="${p}-bowl" cx="0.6" cy="0.65" r="0.7"><stop offset="0" stop-color="${PURI_GOLD.light}"/><stop offset="1" stop-color="#8A4212"/></radialGradient>`
     + `<path id="${p}-dt" d="${stepTri(CX, CY - 182, 3, 3.6, 1)}"/></defs>`;
   g += `<path d="${wobCircle(CX, CY, 183, 0.8, 30, R)}" fill="url(#${p}-tin)"/>`;
-  for (let i = 0; i < 36; i++) g += `<use href="#${p}-dt" fill="${i % 2 ? t.base : t.a1}" transform="rotate(${f(i * 10 + jit(R, 0.4))} ${CX} ${CY})"/>`;
+  // soft sheen on the tin's upper-left shoulder
+  const arc = (r: number, a0: number, a1: number): string => {
+    const p0 = [CX + Math.cos((a0 * Math.PI) / 180) * r, CY + Math.sin((a0 * Math.PI) / 180) * r];
+    const p1 = [CX + Math.cos((a1 * Math.PI) / 180) * r, CY + Math.sin((a1 * Math.PI) / 180) * r];
+    return `M${f(p0[0])} ${f(p0[1])}A${r} ${r} 0 0 1 ${f(p1[0])} ${f(p1[1])}`;
+  };
+  g += `<path d="${arc(158, 192, 256)}" fill="none" stroke="${t.light}" stroke-width="16" stroke-linecap="round" opacity=".28" filter="url(#${p}-soft)"/>`;
+  for (let i = 0; i < 36; i++) g += `<use href="#${p}-dt" fill="${i % 2 ? tooth : t.a1}" transform="rotate(${f(i * 10 + jit(R, 0.4))} ${CX} ${CY})"/>`;
   // four bowls (the four powers: vinegar, dahi, chaat, khali puri)
   const D = 88, BR = 60;
   const bowls: [number, number, string][] = [[-1, -1, 'vinegar'], [1, -1, 'dahi'], [1, 1, 'chaat'], [-1, 1, 'khali']];
@@ -519,6 +550,12 @@ function dabba(p: string, t: Threads): string {
     g += `<path d="${wobCircle(x, y, BR, 0.7, 16, R)}" fill="url(#${p}-brass)" stroke="${INK}" stroke-width="2"/>`;
     g += `<path d="${wobCircle(x, y, BR - 9, 0.6, 16, R)}" fill="url(#${p}-bowl)" stroke="#6B3410" stroke-width="1.6"/>`;
     g += spice(kind, x, y, BR - 13, R);
+  }
+  // woven lozenges at the four cardinal points, between the bowls
+  for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+    const x = CX + dx * 150 + jit(R, 0.5), y = CY + dy * 150 + jit(R, 0.5);
+    g += `<path d="${stepDiamond(x, y, 2, 4)}" fill="${t.a1}"/><path d="${stepDiamond(x, y, 0, 4)}" fill="${CREAM}"/>`;
+    g += `<path d="${stepDiamond(x - dy * 20, y + dx * 20, 0, 3.4)}" fill="${t.base}"/><path d="${stepDiamond(x + dy * 20, y - dx * 20, 0, 3.4)}" fill="${t.base}"/>`;
   }
   // centre: four-petal knot pointing between the bowls
   for (let i = 0; i < 4; i++) {
@@ -574,7 +611,7 @@ function hexPath(cy: number, w: number, h: number, o: number): string {
   return poly([[x0 + e, y0], [x1 - e, y0], [x1, cy], [x1 - e, y1], [x0 + e, y1], [x0, cy]]);
 }
 
-function cartouche(p: string, t: Threads, cy: number, label: 'POWER' | 'शक्ति'): string {
+function cartouche(t: Threads, cy: number, label: 'POWER' | 'शक्ति'): string {
   const R = rng(cy);
   const w = 388, h = 80;
   let g = `<path d="${hexPath(cy, w, h, 13)}" fill="${PAPER}" stroke-linejoin="round"/>`;
@@ -615,9 +652,10 @@ export function powerBackSvg(color: ColorId): string {
   body += `<g clip-path="url(#${p}-panel)">`
     + `<rect width="${W}" height="${H}" fill="${PAPER}"/>`
     + `<rect width="${W}" height="${H}" filter="url(#${p}-pwash)" opacity=".7"/>`
-    + `<g filter="url(#${p}-wob)">${lattice(p, t)}`
+    + `<g filter="url(#${p}-wob)">${lattice(p, t)}</g>`
+    + `<g filter="url(#${p}-wob)">`
     + corner(1, 1) + corner(-1, 1) + corner(1, -1) + corner(-1, -1)
-    + cartouche(p, t, 126, 'POWER') + cartouche(p, t, H - 126, 'शक्ति')
+    + cartouche(t, 126, 'POWER') + cartouche(t, H - 126, 'शक्ति')
     + `</g></g>`;
   body += `<rect x="${PANEL.x}" y="${PANEL.y}" width="${PANEL.w}" height="${PANEL.h}" rx="${PANEL.r}" fill="none" stroke="${t.darker}" stroke-width="3"/>`;
   body += dabba(p, t);

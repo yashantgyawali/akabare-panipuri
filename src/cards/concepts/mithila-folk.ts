@@ -56,6 +56,60 @@ const n1 = (v: number): string => String(Math.round(v * 10) / 10);
 const pt = ([x, y]: Pt): string => `${n1(x)} ${n1(y)}`;
 const add = (a: Pt, b: Pt, k = 1): Pt => [a[0] + b[0] * k, a[1] + b[1] * k];
 
+/**
+ * Rewrite every path's data as relative commands on a 0.1 grid (same shape,
+ * ~30 % fewer bytes). Deltas are taken between already-rounded absolute
+ * points, so rounding never drifts. Paths with arcs are left untouched.
+ */
+function minifyPaths(svg: string): string {
+  const ARGS: Record<string, number> = { M: 2, L: 2, C: 6, Q: 4, H: 1, V: 1, Z: 0 };
+  const fmt = (t: number): string => {
+    const s = (Math.abs(t) / 10).toString();
+    return (t < 0 ? '-' : '') + (s.startsWith('0.') ? s.slice(1) : s);
+  };
+  const join = (nums: number[]): string =>
+    nums.map(fmt).reduce((acc, s) => acc + (acc === '' || s.startsWith('-') ? '' : ' ') + s, '');
+  return svg.replace(/ d="([^"]*)"/g, (whole, d: string) => {
+    if (/[AaSsTt]/.test(d)) return whole;
+    const toks = d.match(/[MLCQHVZmlcqhvz]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/g);
+    if (!toks) return whole;
+    let out = '';
+    let cx = 0, cy = 0, sx = 0, sy = 0; // current / subpath start, in tenths
+    let i = 0;
+    let cmd = '';
+    let last = '';
+    while (i < toks.length) {
+      if (/[A-Za-z]/.test(toks[i])) cmd = toks[i++];
+      const up = cmd.toUpperCase();
+      const rel = cmd !== up;
+      const n = ARGS[up];
+      if (n === undefined) return whole;
+      if (up === 'Z') { out += 'z'; last = 'z'; cx = sx; cy = sy; continue; }
+      const v = toks.slice(i, i + n).map(Number);
+      if (v.length < n || v.some(Number.isNaN)) return whole;
+      i += n;
+      if (up === 'H' || up === 'V') {
+        const t = Math.round((rel ? (up === 'H' ? cx : cy) / 10 + v[0] : v[0]) * 10);
+        if (up === 'H') { out += 'h' + fmt(t - cx); cx = t; } else { out += 'v' + fmt(t - cy); cy = t; }
+        last = up.toLowerCase();
+        continue;
+      }
+      const abs: number[] = [];
+      for (let k = 0; k < n; k += 2) {
+        abs.push(Math.round((rel ? cx / 10 + v[k] : v[k]) * 10), Math.round((rel ? cy / 10 + v[k + 1] : v[k + 1]) * 10));
+      }
+      const deltas = abs.map((t, k) => t - (k % 2 ? cy : cx));
+      const c = up.toLowerCase();
+      const body = join(deltas);
+      out += c === last && c !== 'm' ? (body.startsWith('-') ? '' : ' ') + body : c + body;
+      last = c;
+      cx = abs[n - 2]; cy = abs[n - 1];
+      if (up === 'M') { sx = cx; sy = cy; cmd = rel ? 'l' : 'L'; }
+    }
+    return ` d="${out}"`;
+  });
+}
+
 /** Deterministic PRNG (mulberry32). */
 function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -228,19 +282,29 @@ interface Tones {
   accent: string;
   /** Devanagari wordmark fill on the puri back (gold unless gold melts into the ground). */
   deva: string;
+  /** Puri-back medallion ground: a deeper, warmer pool of the owner colour. */
+  medal: string;
+  /** Fish fins/tail on the medallion (chili, or gold where chili melts into the ground). */
+  fin: string;
+  /** The dark disc behind the sun's rays. */
+  sun: string;
 }
 
 function tones(color: ColorId): Tones {
   const p = PLAYER_PALETTE[color];
   // Power-back paper: cream with a breath of the owner's tint, so even the light card says whose it is.
-  const paper = mixOklab(mixOklab(CREAM, PAPER, 0.35), p.light, 0.16);
+  const paper = mixOklab(mixOklab(CREAM, PAPER, 0.3), p.light, 0.3);
   const line = contrastRatio(p.deep, paper) >= 4 ? p.deep : p.darker;
   // Leaves must read against every ground: on the green player's field they turn olive-gold.
   const leaf = color === 'green' ? adjustOklch(GOLD, { dl: -0.06, cMul: 0.85, dh: 22 }) : LEAF;
   const goldReads = contrastRatio(GOLD, p.base) >= 1.6;
   const accent = color === 'yellow' ? CHILI : GOLD;
   const deva = goldReads ? GOLD : color === 'yellow' ? CHILI : CREAM_BRIGHT;
-  return { ground: p.base, deep: p.deep, dark: p.darker, light: p.light, line, ink: p.ink, leaf, paper, accent, deva };
+  // Yellow's own "deep" is an olive ochre that swallows the gold fish heads: glaze it with burnt sienna.
+  const medal = color === 'yellow' ? mixOklab(p.darker, '#7A3414', 0.35) : mixOklab(p.deep, INK, 0.12);
+  const fin = contrastRatio(CHILI, medal) >= 1.6 ? CHILI : GOLD;
+  const sun = color === 'yellow' ? mixOklab(medal, INK, 0.45) : p.darker;
+  return { ground: p.base, deep: p.deep, dark: p.darker, light: p.light, line, ink: p.ink, leaf, paper, accent, deva, medal, fin, sun };
 }
 
 // ---------------------------------------------------------------------------
@@ -249,30 +313,48 @@ function tones(color: ColorId): Tones {
 
 const rgb = (hex: string): string[] => [1, 3, 5].map((i) => String(Math.round((parseInt(hex.slice(i, i + 2), 16) / 255) * 1000) / 1000));
 
+const k3 = (v: number): string => String(Math.round(v * 1000) / 1000);
+
 /**
- * Gouache texture overlay (ignores its source graphic): soft pigment pooling
- * (light + dark, low frequency) and fine paper tooth (high frequency).
+ * Fine paper tooth (1–2 px speckle, light and dark). It ignores its source
+ * graphic. The only texture that is not point-symmetric — far too fine to mark
+ * a card by.
  */
-function textureFilter(id: string, seed: number, light: string, dark: string, mottle: number, tooth: number): string {
+function toothFilter(id: string, seed: number, light: string, dark: string, tooth: number): string {
   const [lr, lg, lb] = rgb(light);
   const [dr, dg, db] = rgb(dark);
-  const k = (v: number): string => String(Math.round(v * 1000) / 1000);
-  // alpha = slope·noise + offset; fractal noise sits around 0.5 ± 0.15
-  const m = (ch: string) => `${ch === 'r' ? k(mottle * 1.6) : 0} ${ch === 'g' ? k(mottle * 1.6) : 0} 0 0 ${k(-mottle * 0.74)}`;
   return `<filter id="${id}" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}" color-interpolation-filters="sRGB">` +
-    `<feTurbulence type="fractalNoise" baseFrequency="0.02 0.03" numOctaves="4" seed="${seed}" result="m"/>` +
-    `<feColorMatrix in="m" type="matrix" values="0 0 0 0 ${lr} 0 0 0 0 ${lg} 0 0 0 0 ${lb} ${m('r')}" result="hi"/>` +
-    `<feColorMatrix in="m" type="matrix" values="0 0 0 0 ${dr} 0 0 0 0 ${dg} 0 0 0 0 ${db} ${m('g')}" result="lo"/>` +
-    `<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="${seed + 11}" result="g"/>` +
-    `<feColorMatrix in="g" type="matrix" values="0 0 0 0 ${dr} 0 0 0 0 ${dg} 0 0 0 0 ${db} 0 0 ${k(-tooth * 3)} 0 ${k(tooth * 1.3)}" result="sd"/>` +
-    `<feColorMatrix in="g" type="matrix" values="0 0 0 0 ${lr} 0 0 0 0 ${lg} 0 0 0 0 ${lb} ${k(tooth * 3)} 0 0 0 ${k(-tooth * 1.7)}" result="sl"/>` +
-    `<feMerge><feMergeNode in="hi"/><feMergeNode in="lo"/><feMergeNode in="sd"/><feMergeNode in="sl"/></feMerge>` +
+    `<feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="${seed}" result="g"/>` +
+    `<feColorMatrix in="g" type="matrix" values="0 0 0 0 ${dr} 0 0 0 0 ${dg} 0 0 0 0 ${db} 0 0 ${k3(-tooth * 3)} 0 ${k3(tooth * 1.3)}" result="sd"/>` +
+    `<feColorMatrix in="g" type="matrix" values="0 0 0 0 ${lr} 0 0 0 0 ${lg} 0 0 0 0 ${lb} ${k3(tooth * 3)} 0 0 0 ${k3(-tooth * 1.7)}" result="sl"/>` +
+    `<feMerge><feMergeNode in="sd"/><feMergeNode in="sl"/></feMerge>` +
     `</filter>`;
 }
 
+/**
+ * Gouache pigment pooling: seeded soft glazes (light and dark round blots of
+ * three sizes) laid in the top half, repeated turned 180°, then blurred into a
+ * cloudy wash. Blur is isotropic, so the wash is exactly point-symmetric — and
+ * identical in every renderer, unlike feTurbulence.
+ */
+function wash(id: string, seed: number, light: string, dark: string, strength: number, darkStrength = strength, blur = 13): string {
+  const rand = rng(seed);
+  const sizes = [{ w: 170, n: 6, o: 1 }, { w: 96, n: 11, o: 0.85 }, { w: 48, n: 16, o: 0.7 }];
+  let blots = '';
+  for (const [col, str] of [[light, strength], [dark, darkStrength]] as const) {
+    for (const z of sizes) {
+      let d = '';
+      for (let i = 0; i < z.n; i++) d += `M${n1(rand() * W)} ${n1(rand() * (CY + 60) - 30)}h.1`;
+      blots += `<path d="${d}" stroke="${col}" stroke-width="${z.w}" stroke-linecap="round" opacity="${k3(str * z.o)}"/>`;
+    }
+  }
+  return `<filter id="${id}-b" filterUnits="userSpaceOnUse" x="-120" y="-120" width="${W + 240}" height="${H + 240}"><feGaussianBlur stdDeviation="${blur}"/></filter>` +
+    `<g filter="url(#${id}-b)">${sym(`${id}-h`, blots)}</g>`;
+}
+
 /** Slight ink wobble for all line work (hand-drawn edges). */
-function inkFilter(id: string, seed: number, scale = 3): string {
-  return `<filter id="${id}" filterUnits="userSpaceOnUse" x="-8" y="-8" width="${W + 16}" height="${H + 16}">` +
+function inkFilter(id: string, seed: number, scale = 2.2): string {
+  return `<filter id="${id}" filterUnits="userSpaceOnUse" x="-8" y="-8" width="${W + 16}" height="${H + 16}" color-interpolation-filters="sRGB">` +
     `<feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="${seed}" result="w"/>` +
     `<feDisplacementMap in="SourceGraphic" in2="w" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/>` +
     `</filter>`;
@@ -299,6 +381,21 @@ function hatchBand(inset0: number, inset1: number, r: number, spacing: number, s
     const k = skew + (rand() - 0.5) * 1.8;
     const c = add(p, t, j);
     d += `M${pt(add(add(c, n, -half), t, -k))}L${pt(add(add(c, n, half), t, k))}`;
+  }
+  return d;
+}
+
+/**
+ * Skewed hatch strokes across a ring r0…r1 around the card centre, for HALF the
+ * ring (angles 0…π) — the caller completes it with a 180° <use>.
+ */
+function hatchRing(r0: number, r1: number, n: number, skew: number, seed: number): string {
+  const rand = rng(seed);
+  let d = '';
+  for (let i = 0; i < n / 2; i++) {
+    const a = ((i + 0.5) / n) * TAU + (rand() - 0.5) * 0.006;
+    const k = skew + (rand() - 0.5) * 0.004;
+    d += `M${pt(polar(r0 + 0.8, a - k))}L${pt(polar(r1 - 0.8, a + k))}`;
   }
   return d;
 }
@@ -347,7 +444,7 @@ const ringMap = (R: number, a0: number) => ([u, v]: Pt): Pt => polar(R + v, a0 +
  * a dotted spine, golden head with a big eye, chili fins, forked tail, and
  * three bubbles in front of its mouth.
  */
-function fish(id: string, R: number, a0: number, len: number, hw: number, ink: string, seed: number): string {
+function fish(id: string, R: number, a0: number, len: number, hw: number, ink: string, seed: number, finFill = CHILI): string {
   const map = ringMap(R, a0);
   const ped = len * 0.19; // peduncle (tail joint)
   const bodyHalf = (u: number): number => {
@@ -385,8 +482,16 @@ function fish(id: string, R: number, a0: number, len: number, hw: number, ink: s
       hatch += polyline([a, [(a[0] + b[0]) / 2 + (rand() - 0.5), 0] as Pt, b].map(map));
     }
   }
+  const collarW = hw * 0.62;
   const spine: Pt[] = [];
-  for (let i = 0; i <= 8; i++) spine.push(map([ped + 8 + ((ug - ped - 16) * i) / 8, 0]));
+  for (let i = 0; i <= 8; i++) spine.push(map([ped + 8 + ((ug - collarW - ped - 18) * i) / 8, 0]));
+  // striped collar behind the gill (the Mithila fish's band of bharni colour)
+  // a curve parallel to the back of the head, shifted by du along the body
+  const gillCurve = (du: number, ext: number): Pt[] =>
+    ([[ug + du, hg * ext], [ug - hw * 0.3 + du, hg * 0.55], [ug - hw * 0.4 + du, 0], [ug - hw * 0.3 + du, -hg * 0.55], [ug + du, -hg * ext]] as Pt[]).map(map);
+  const collarPath = smooth(gillCurve(3, 1.5), false) + 'L' + smooth(gillCurve(-collarW, 1.5).reverse(), false).slice(1) + 'Z';
+  let collarLines = '';
+  for (let k = 1; k <= 3; k++) collarLines += smooth(gillCurve((-collarW * k) / 4, 1.4), false);
 
   // fins (outer side larger) and tail
   const fin = (u0: number, u1: number, side: 1 | -1, reach: number): string => {
@@ -397,7 +502,7 @@ function fish(id: string, R: number, a0: number, len: number, hw: number, ink: s
     return smooth(finPts.map(map), false) + 'Z';
   };
   const L = len - ped;
-  const fins = fin(ped + L * 0.3, ped + L * 0.52, 1, hw * 0.42) + fin(ped + L * 0.34, ped + L * 0.5, -1, hw * 0.34);
+  const fins = fin(ped + L * 0.3, ped + L * 0.52, 1, hw * 0.3) + fin(ped + L * 0.34, ped + L * 0.5, -1, hw * 0.3);
   const tailLocal: Pt[] = [[ped + 5, hw * 0.22], [ped * 0.55, hw * 0.52], [0, hw * 0.92], [ped * 0.3, hw * 0.3], [ped * 0.42, 0], [ped * 0.3, -hw * 0.3], [0, -hw * 0.92], [ped * 0.55, -hw * 0.52], [ped + 5, -hw * 0.22]];
   const tail = smooth(tailLocal.map(map), true, 0.8);
   let tailLines = '';
@@ -409,15 +514,20 @@ function fish(id: string, R: number, a0: number, len: number, hw: number, ink: s
   const bubbles = [8, 22, 38].map((du, i) => circ(map([len + du, hw * (0.1 - i * 0.12)]), 4.4 - i * 1.1, `fill="${CREAM_BRIGHT}" stroke="${ink}" stroke-width="1.6"`)).join('');
 
   return `<clipPath id="${id}-clip"><path d="${body}"/></clipPath>` +
-    `<path d="${tail}" fill="${CHILI}" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>` +
+    `<path d="${tail}" fill="${finFill}" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>` +
     `<path d="${tailLines}" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>` +
-    `<path d="${fins}" fill="${CHILI}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>` +
+    `<path d="${fins}" fill="${finFill}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>` +
     `<path d="${body}" fill="${CREAM_BRIGHT}" stroke="${ink}" stroke-width="3.2" stroke-linejoin="round"/>` +
     `<path d="${hatch}" clip-path="url(#${id}-clip)" fill="none" stroke="${ink}" stroke-width="1.2" opacity=".75"/>` +
+    `<g clip-path="url(#${id}-clip)"><path d="${collarPath}" fill="${CHILI}" stroke="${ink}" stroke-width="2"/>` +
+    `<path d="${collarLines}" fill="none" stroke="${GOLD}" stroke-width="2.6"/></g>` +
     `<path d="${smooth(spine, false)}" fill="none" stroke="${CHILI}" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="0.1 9"/>` +
     `<path d="${head}" fill="${GOLD}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>` +
     `<path d="${gill2}" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>` +
-    circ(eyeC, eyeR, `fill="${CREAM_BRIGHT}" stroke="${ink}" stroke-width="2.4"`) +
+    `<path d="${polyline([map([len - 1, -hw * 0.02]), map([len - hw * 0.5, -hw * 0.14])])}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linecap="round"/>` +
+    `<path d="${[0, 1, 2].map((k) => `M${pt(map([ug + (len - ug) * (0.12 + k * 0.13), -hw * (0.34 - k * 0.06)]))}h0.1`).join('')}" stroke="${ink}" stroke-width="3.4" stroke-linecap="round"/>` +
+    circ(eyeC, eyeR * 1.38, `fill="${CHILI}" stroke="${ink}" stroke-width="1.8"`) +
+    circ(eyeC, eyeR, `fill="${CREAM_BRIGHT}" stroke="${ink}" stroke-width="2"`) +
     circ(eyeC, eyeR * 0.46, `fill="${ink}"`) +
     bubbles;
 }
@@ -484,10 +594,10 @@ export function puriBackSvg(color: ColorId): string {
   // --- corner flourish: chili flame flower pointing into the corner, a curling
   //     vine with leaves along each edge (mirrored about the corner diagonal)
   const arm =
-    `<path d="M40 40C62 30 96 16 138 20C160 22 170 36 160 46C152 53 142 46 148 40" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>` +
-    `<g transform="translate(76 27) rotate(-8)">${leaf(30, 8, CREAM, ink, 2)}</g>` +
-    `<g transform="translate(104 21) rotate(112)">${leaf(28, 8, T.leaf, ink, 2)}</g>` +
-    `<g transform="translate(134 21) rotate(24)">${leaf(22, 7, CREAM, ink, 2)}</g>`;
+    `<path d="M40 40C62 30 96 16 138 20C160 22 170 36 160 46C152 53 142 46 148 40" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/>` +
+    `<g transform="translate(76 27) rotate(-8)">${leaf(34, 9.5, CREAM, ink, 2.1)}</g>` +
+    `<g transform="translate(104 21) rotate(112)">${leaf(32, 9.5, T.leaf, ink, 2.1)}</g>` +
+    `<g transform="translate(134 21) rotate(24)">${leaf(25, 8, CREAM, ink, 2)}</g>`;
   const flame =
     `<g transform="translate(34 34) rotate(-45)">` +
     `<path d="M0 12C-15 2 -13 -18 0 -38C13 -18 15 2 0 12Z" fill="${CHILI}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>` +
@@ -498,7 +608,7 @@ export function puriBackSvg(color: ColorId): string {
   const corners = quad(`${id}-c`, `<g transform="translate(88 88)">${arm}<g transform="matrix(0 1 1 0 0 0)">${arm}</g>${flame}</g>${filler}`);
 
   // --- medallion (from the outside in)
-  const fringeR = 236;
+  const fringeR = 238, rimR = 223;
   let fringe = '', fringeIn = '';
   const nF = 40;
   for (let i = 0; i < nF; i++) {
@@ -511,9 +621,9 @@ export function puriBackSvg(color: ColorId): string {
     let red = '', gold = '', veins = '';
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU;
-      const d = flameRay(102, 150, a, (TAU / n) * 0.92, 0.13);
+      const d = flameRay(96, 143, a, (TAU / n) * 0.92, 0.13);
       if (i % 2) red += d; else gold += d;
-      veins += `M${pt(polar(108, a + 0.01))}Q${pt(polar(126, a + 0.03))} ${pt(polar(138, a + 0.09))}`;
+      veins += `M${pt(polar(102, a + 0.01))}Q${pt(polar(119, a + 0.03))} ${pt(polar(131, a + 0.09))}`;
     }
     return `<path d="${gold}" fill="${GOLD}" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>` +
       `<path d="${red}" fill="${CHILI}" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>` +
@@ -525,9 +635,9 @@ export function puriBackSvg(color: ColorId): string {
     let blisters = '';
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI + rand() * 0.15;
-      const r = 64 + (i % 3) * 9 + rand() * 4;
+      const r = 60 + (i % 3) * 8.5 + rand() * 4;
       const [x, y] = polar(r, a);
-      const s = 3 + rand() * 2.5;
+      const s = 3 + rand() * 2.3;
       blisters += `M${n1(x - s)} ${n1(y)}q${n1(s)} ${n1(-s * 1.1)} ${n1(s * 2)} 0`;
       blisters += `M${n1(2 * CX - x + s)} ${n1(2 * CY - y)}q${n1(-s)} ${n1(s * 1.1)} ${n1(-s * 2)} 0`;
     }
@@ -537,25 +647,36 @@ export function puriBackSvg(color: ColorId): string {
     const jag: number[] = [];
     for (let i = 0; i < nT / 2; i++) jag.push(jr());
     const hole: Pt[] = [];
-    for (let i = 0; i < nT; i++) hole.push(polar(i % 2 ? 53 + jag[i % (nT / 2)] * 4 : 46 + jag[i % (nT / 2)] * 3, (i / nT) * TAU));
-    return `<path d="${wobblyCircle(100, 1.2, 12, 36)}" fill="${PURI_GOLD.mid}" stroke="${ink}" stroke-width="3.4"/>` +
-      `<path d="${wobblyCircle(89, 1.2, 13, 36)}" fill="${PURI_GOLD.light}"/>` +
+    for (let i = 0; i < nT; i++) hole.push(polar(i % 2 ? 50 + jag[i % (nT / 2)] * 4 : 43.5 + jag[i % (nT / 2)] * 3, (i / nT) * TAU));
+    // the akabare, seen from above: a glossy red cherry, two (point-symmetric) highlights,
+    // a six-lobed calyx and an S-curled stem (an S is its own 180° rotation)
+    const hl = (a: number): string => {
+      const c = polar(20, a);
+      return `<path transform="translate(${pt(c)}) rotate(${n1((a * 180) / Math.PI + 90)})" d="M-8 1C-5 -4 5 -4 8 1C4 -1 -4 -1 -8 1Z"/>`;
+    };
+    const sv: Pt = [7.5, -9.5], sw: Pt = [11, 7];
+    const stem = `M${pt([CX + sv[0], CY + sv[1]])}C${pt([CX + sw[0], CY + sw[1]])} ${pt([CX - sw[0], CY - sw[1]])} ${pt([CX - sv[0], CY - sv[1]])}`;
+    return `<path d="${wobblyCircle(94, 1.1, 12, 36)}" fill="${PURI_GOLD.mid}" stroke="${ink}" stroke-width="3.4"/>` +
+      `<path d="${wobblyCircle(84, 1.1, 13, 36)}" fill="${PURI_GOLD.light}"/>` +
       `<path d="${blisters}" fill="none" stroke="${PURI_GOLD.deep}" stroke-width="2.2" stroke-linecap="round"/>` +
       `<path d="${polyline(hole)}Z" fill="${ink}" stroke="${PURI_GOLD.deep}" stroke-width="2.4" stroke-linejoin="round"/>` +
-      // akabare chili seen from above: red cherry with a six-lobed calyx
-      `<circle cx="${CX}" cy="${CY}" r="35" fill="${CHILI}" stroke="${ink}" stroke-width="3"/>` +
-      `<path d="${wobblyCircle(27, 0.6, 21, 24)}" fill="none" stroke="${adjustOklch(CHILI, { dl: 0.12, cMul: 0.9 })}" stroke-width="3.4"/>` +
-      `<path d="${sixStar(15, 6.5)}" fill="${LEAF}" stroke="${ink}" stroke-width="2"/>` +
-      `<circle cx="${CX}" cy="${CY}" r="3.8" fill="${ink}"/>`;
+      `<circle cx="${CX}" cy="${CY}" r="34" fill="${CHILI}" stroke="${ink}" stroke-width="3"/>` +
+      `<circle cx="${CX}" cy="${CY}" r="29.5" fill="none" stroke="${adjustOklch(CHILI, { dl: -0.1, cMul: 0.9 })}" stroke-width="5" opacity=".75"/>` +
+      `<g fill="${CREAM_BRIGHT}" opacity=".9">${hl((-3 * Math.PI) / 4)}${hl(Math.PI / 4)}</g>` +
+      `<path d="${sixStar(19, 7.5)}" fill="${LEAF}" stroke="${ink}" stroke-width="2"/>` +
+      `<path d="${stem}" fill="none" stroke="${ink}" stroke-width="7.5" stroke-linecap="round"/>` +
+      `<path d="${stem}" fill="none" stroke="${adjustOklch(LEAF, { dl: 0.08 })}" stroke-width="3.8" stroke-linecap="round"/>`;
   })();
 
   const medallion =
     `<path d="${fringe}" fill="${CREAM}" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>` +
     `<path d="${fringeIn}" fill="none" stroke="${CHILI}" stroke-width="2.6" stroke-linecap="round"/>` +
-    `<path d="${wobblyCircle(fringeR, 1.2, 33, 48)}" fill="${T.deep}" stroke="${ink}" stroke-width="3.4"/>` +
-    dotRing(fringeR - 11, 176, CREAM, 2.4) +
-    sym(`${id}-fish`, fish(`${id}-f`, 190, -Math.PI / 2 - 0.3, 392, 30, ink, 77)) +
-    `<path d="${wobblyCircle(154, 1, 37, 40)}" fill="${T.dark}" stroke="${ink}" stroke-width="2.6"/>` +
+    // hatched double-line rim, like the border
+    `<path d="${wobblyCircle(fringeR, 1.1, 33, 48)}" fill="${CREAM}" stroke="${ink}" stroke-width="3.2"/>` +
+    sym(`${id}-rh`, `<path d="${hatchRing(rimR, fringeR, 168, 0.028, 91)}" fill="none" stroke="${ink}" stroke-width="1.5" stroke-linecap="round"/>`) +
+    `<path d="${wobblyCircle(rimR, 1, 35, 48)}" fill="${T.medal}" stroke="${ink}" stroke-width="2.8"/>` +
+    sym(`${id}-fish`, fish(`${id}-f`, 182, -Math.PI / 2 - 0.34, 372, 33, ink, 77, T.fin)) +
+    `<path d="${wobblyCircle(147, 1, 37, 40)}" fill="${T.sun}" stroke="${ink}" stroke-width="2.6"/>` +
     rays +
     puri;
 
@@ -563,17 +684,19 @@ export function puriBackSvg(color: ColorId): string {
   const titleY = 176;
   const words =
     wordmarkSvg('AKABARE PANIPURI', { x: CX, y: titleY, height: 26, tracking: 2.5, fill: CREAM_BRIGHT, stroke: ink, strokeWidth: 4.5 }) +
-    wordmarkSvg('अकबरे पानीपुरी', { x: CX, y: titleY + 42, height: 17, tracking: 12, fill: T.deva, stroke: ink, strokeWidth: 4 });
-  const dots = [-1, 1].map((s) => `<circle cx="${CX + s * 112}" cy="${titleY + 31}" r="3.6" fill="${CHILI}" stroke="${ink}" stroke-width="1.5"/><circle cx="${CX + s * 126}" cy="${titleY + 31}" r="2.4" fill="${CREAM}"/>`).join('');
+    wordmarkSvg('अकबरे पानीपुरी', { x: CX, y: titleY + 45, height: 19.5, tracking: 11, fill: T.deva, stroke: ink, strokeWidth: 4.2 });
+  const dots = [-1, 1].map((s) => `<circle cx="${CX + s * 123}" cy="${titleY + 35}" r="3.6" fill="${CHILI}" stroke="${ink}" stroke-width="1.5"/><circle cx="${CX + s * 137}" cy="${titleY + 35}" r="2.4" fill="${CREAM}"/>`).join('');
   const wordmark = sym(`${id}-w`, words + dots);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">` +
-    `<defs>${textureFilter(`${id}-tex`, 5, CREAM, T.dark, 0.24, 0.36)}${inkFilter(`${id}-ink`, 9)}</defs>` +
+  return minifyPaths(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">` +
+    `<defs>${toothFilter(`${id}-tooth`, 23, CREAM_BRIGHT, INK, 0.27)}${inkFilter(`${id}-ink`, 9)}</defs>` +
     `<rect width="${W}" height="${H}" fill="${T.ground}"/>` +
-    `<rect width="${W}" height="${H}" fill="#000" filter="url(#${id}-tex)"/>` +
+    wash(`${id}-w1`, 5, CREAM, T.dark, 0.13) +
     `<g filter="url(#${id}-ink)">${border}${corners}${medallion}${wordmark}</g>` +
+    wash(`${id}-w2`, 6, CREAM_BRIGHT, INK, 0.06) +
+    `<rect width="${W}" height="${H}" fill="#000" filter="url(#${id}-tooth)"/>` +
     creamFrame() +
-    `</svg>`;
+    `</svg>`);
 }
 
 // ---------------------------------------------------------------------------
@@ -594,17 +717,27 @@ function powerSymbols(id: string, L: string, ink: string): string {
     `<rect x="-7" y="-26" width="14" height="10" rx="2.5" fill="${PURI_GOLD.deep}" ${s}/>` +
     `<path d="M-5 -12L5 -12" stroke="${L}" stroke-width="2"/>` +
     `<circle cx="-5" cy="14" r="1.6" fill="${ink}"/><circle cx="4" cy="16" r="1.4" fill="${ink}"/><circle cx="9" cy="11" r="1.2" fill="${ink}"/>`;
-  const dahi = `<path d="M5 -6L17 -27" stroke="${ink}" stroke-width="3.2" stroke-linecap="round"/>` +
-    `<ellipse cx="18" cy="-28" rx="4.2" ry="6.4" transform="rotate(30 18 -28)" fill="${CREAM_BRIGHT}" ${s}/>` +
-    `<path d="M-21 0C-19 -16 19 -16 21 0Z" fill="#FFFDF4" ${s}/>` +
-    `<path d="M-8 -6C-3 -11 4 -10 7 -5" fill="none" stroke="${L}" stroke-width="1.6" stroke-linecap="round"/>` +
-    `<path d="M-25 0L25 0C23 14 13 20 0 20C-13 20 -23 14 -25 0Z" fill="${L}" ${s}/>` +
+  const dahi = `<path d="M-25 0L25 0C23 14 13 20 0 20C-13 20 -23 14 -25 0Z" fill="${L}" ${s}/>` +
     `<path d="M-8 20L-10 25L10 25L8 20" fill="${L}" ${s}/>` +
-    `<path d="M-15 7L-9 9M-3 11L3 11M9 9L15 7" stroke="${CREAM}" stroke-width="2" stroke-linecap="round"/>`;
-  const khali = `<circle cx="0" cy="4" r="21" fill="${PURI_GOLD.light}" ${s}/>` +
-    `<path d="M-16 -6L-13 -12L-9 -10L-6 -15L-1 -12L3 -16L7 -12L11 -14L14 -9L17 -6L14 -1L9 1L3 0L-3 2L-9 0L-14 -1Z" fill="${PURI_GOLD.mid}" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/>` +
-    `<path d="M-11 -5L-8 -9L-3 -8L1 -11L5 -8L10 -9L12 -5L8 -2L-1 -1L-8 -2Z" fill="${ink}"/>` +
-    `<path d="M-12 12q2 -2 4 0M6 16q2 -2 4 0M12 6q2 -2 4 0M-4 20q2 -2 4 0M-1 9q2 -2 4 0" fill="none" stroke="${PURI_GOLD.deep}" stroke-width="1.6" stroke-linecap="round"/>`;
+    `<path d="M-16 7L-10 9M-3 11L3 11M10 9L16 7" stroke="${CREAM}" stroke-width="2" stroke-linecap="round"/>` +
+    `<ellipse cx="0" cy="0" rx="25" ry="3.8" fill="${CREAM_BRIGHT}" ${s}/>` +
+    `<path d="M3 -6L15 -31" stroke="${ink}" stroke-width="5.4" stroke-linecap="round"/>` +
+    `<path d="M3 -6L15 -31" stroke="${PURI_GOLD.light}" stroke-width="2.2" stroke-linecap="round"/>` +
+    // a dollop with a soft swirl peak
+    `<path d="M-21 0C-22 -7 -15 -10 -8 -10C-8 -16 -1 -21 1 -14C8 -14 21 -10 21 0C8 3 -8 3 -21 0Z" fill="#FFFDF4" ${s}/>` +
+    `<path d="M-13 -4C-7 -7 5 -8 12 -4M-4 -10C-1 -12 2 -12 3 -11" fill="none" stroke="${L}" stroke-width="1.6" stroke-linecap="round"/>`;
+  let rim = '';
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * TAU;
+    const r = i % 2 ? 1 : 1.28;
+    rim += `${i ? 'L' : 'M'}${n1(Math.cos(a) * 12.5 * r)} ${n1(-8 + Math.sin(a) * 6 * r)}`;
+  }
+  const khali = `<circle cx="0" cy="3" r="21" fill="${PURI_GOLD.light}" ${s}/>` +
+    `<path d="M-19 9C-14 22 14 22 19 9C14 17 -14 17 -19 9Z" fill="${PURI_GOLD.mid}"/>` +
+    `<path d="${rim}Z" fill="${PURI_GOLD.mid}" stroke="${ink}" stroke-width="1.8" stroke-linejoin="round"/>` +
+    `<ellipse cx="0" cy="-7.4" rx="10.5" ry="4.6" fill="${ink}"/>` +
+    `<path d="M-13 6q2 -2 4 0M6 11q2 -2 4 0M12 1q2 -2 4 0M-5 14q2 -2 4 0M-15 -2q2 -2 4 0" fill="none" stroke="${PURI_GOLD.deep}" stroke-width="1.6" stroke-linecap="round"/>` +
+    `<circle cx="0" cy="3" r="21" fill="none" ${s}/>`;
   const chaat = `<circle cx="-10" cy="-5" r="8.5" fill="${PURI_GOLD.light}" ${s}/><circle cx="10" cy="-5" r="8.5" fill="${PURI_GOLD.light}" ${s}/><circle cx="0" cy="-13" r="8.5" fill="${PURI_GOLD.mid}" ${s}/>` +
     `<circle cx="-4" cy="-6" r="2.4" fill="${CHILI}"/><circle cx="6" cy="-14" r="2.2" fill="${CHILI}"/><circle cx="13" cy="-8" r="2" fill="${LEAF}"/><circle cx="-12" cy="-11" r="2" fill="${LEAF}"/>` +
     `<path d="M-27 0L27 0C25 12 15 17 0 17C-15 17 -25 12 -27 0Z" fill="${CREAM_BRIGHT}" ${s}/>` +
@@ -619,18 +752,21 @@ export function powerBackSvg(color: ColorId): string {
   const ink = T.ink;
 
   // --- solid owner-colour band with a cream sawtooth pointing outward from the field
-  const bandI = 88, fieldR = 16;
+  const bandI = 98, fieldR = 16;
   const field = `<rect x="${bandI}" y="${bandI}" width="${W - 2 * bandI}" height="${H - 2 * bandI}" rx="${fieldR}" fill="${T.paper}"/>`;
   let teeth = '', dots = '';
+  const nearCorner = ([x, y]: Pt): boolean => Math.min(x, W - x) < bandI + 30 && Math.min(y, H - y) < bandI + 30;
   for (const { p, t, n } of stations(roundedFrame(bandI - 1, fieldR), 23)) {
-    teeth += `M${pt(add(p, t, -8.5))}L${pt(add(p, n, -22))}L${pt(add(p, t, 8.5))}Z`;
-    const q = add(add(p, t, 11.5), n, -26);
+    if (nearCorner(p)) continue;
+    teeth += `M${pt(add(p, t, -9))}L${pt(add(p, n, -27))}L${pt(add(p, t, 9))}Z`;
+    const q = add(add(p, t, 11.5), n, -30);
     dots += `M${pt(q)}h0.1`;
   }
   const sawtooth = sym(`${id}-st`,
     `<path d="${teeth}" fill="${CREAM}" stroke="${ink}" stroke-width="1.6" stroke-linejoin="round"/>` +
     `<path d="${dots}" stroke="${CREAM}" stroke-width="4.6" stroke-linecap="round"/>`);
   const fieldEdge = `<path d="${frameLine(bandI, fieldR, 0.7, 51)}" fill="none" stroke="${ink}" stroke-width="3"/>` +
+    `<path d="${frameLine(bandI - 44, fieldR + 8, 0.6, 57)}" fill="none" stroke="${CREAM}" stroke-width="2"/>` +
     `<path d="${frameLine(bandI + 9, fieldR - 8, 0.7, 53)}" fill="none" stroke="${L}" stroke-width="1.6"/>`;
 
   // --- faint diamond lattice (kachni line work) on the cream field
@@ -663,13 +799,21 @@ export function powerBackSvg(color: ColorId): string {
       const base = pt(polar(r0 - 6, a));
       petals += `<path transform="translate(${base}) rotate(${deg})" d="${petalPath(160, 47, 0.3)}"/>`;
       panels += `<path transform="translate(${base}) rotate(${deg}) translate(0 -16) scale(.76)" d="${petalPath(160, 47, 0.3)}"/>`;
-      symbols += `<use href="#${id}-s${i % 4}" transform="translate(${pt(polar(r0 + 70, a))}) rotate(${deg}) scale(1.28)"/>`;
+      symbols += `<use href="#${id}-s${i % 4}" transform="translate(${pt(polar(r0 + 63, a))}) rotate(${deg}) scale(1.22)"/>`;
       const a2 = a + TAU / 16;
       back += `<path transform="translate(${pt(polar(r0 - 4, a2))}) rotate(${n1((a2 * 180) / Math.PI + 90)})" d="${petalPath(126, 27, 0.35)}"/>`;
     }
-    return `<path d="${wobblyCircle(244, 1.2, 71, 48)}" fill="none" stroke="${L}" stroke-width="2.6"/>` +
-      dotRing(254, 176, L, 2.4) +
+    const ringI = 240, ringO = 253;
+    let rings = '';
+    for (let r = 84; r <= 196; r += 7.5) rings += `M${n1(CX + r)} ${CY}a${r} ${r} 0 1 0 ${-2 * r} 0a${r} ${r} 0 1 0 ${2 * r} 0`;
+    return `<path d="${wobblyCircle(ringO, 1.1, 71, 48)}" fill="none" stroke="${L}" stroke-width="2.6"/>` +
+      `<path d="${wobblyCircle(ringI, 1.1, 72, 48)}" fill="none" stroke="${L}" stroke-width="2.6"/>` +
+      sym(`${id}-rh`, `<path d="${hatchRing(ringI, ringO, 180, -0.03, 93)}" fill="none" stroke="${L}" stroke-width="1.3" stroke-linecap="round"/>`) +
+      dotRing(ringO + 9, 112, T.accent, 4) +
+      `<clipPath id="${id}-bp">${back}</clipPath>` +
       `<g fill="${T.accent}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round">${back}</g>` +
+      `<path clip-path="url(#${id}-bp)" d="${rings}" fill="none" stroke="${ink}" stroke-width="1.1" opacity=".55"/>` +
+      `<g fill="none" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round">${back}</g>` +
       `<g fill="${T.ground}" stroke="${ink}" stroke-width="3" stroke-linejoin="round">${petals}</g>` +
       `<g fill="${T.paper}" stroke="${ink}" stroke-width="1.4">${panels}</g>` +
       symbols +
@@ -679,19 +823,24 @@ export function powerBackSvg(color: ColorId): string {
       `<circle cx="${CX}" cy="${CY}" r="7" fill="${CHILI}" stroke="${ink}" stroke-width="2"/>`;
   })();
 
-  // --- corners: a quarter lotus fanning out of each field corner
-  const cornerFan = (() => {
-    let pet = '', inner = '';
-    const o: Pt = [bandI + 12, bandI + 12];
-    for (const deg of [112, 135, 158]) {
-      const a = ((deg - 90) * Math.PI) / 180;
-      const len = deg === 135 ? 70 : 54;
-      pet += petalAt(o, a, len, 15, 0.3);
-      inner += petalAt(add(o, [Math.cos(a), Math.sin(a)], 12), a, len * 0.62, 8, 0.3);
+  // --- corners: a Mithila rosette pinned over each field corner, with a hatched leaf reaching inward
+  const cornerRosette = (() => {
+    const o: Pt = [bandI + 3, bandI + 3];
+    let pet = '';
+    for (let i = 0; i < 8; i++) pet += petalAt(o, (i / 8) * TAU + Math.PI / 8, 19, 6.2, 0.35);
+    const la = Math.PI / 4; // pointing into the field, toward the card centre
+    const lb = add(o, [Math.cos(la), Math.sin(la)], 26);
+    const leafD = petalAt(lb, la, 50, 13, 0.35);
+    let veins = `M${pt(lb)}L${pt(add(lb, [Math.cos(la), Math.sin(la)], 36))}`;
+    for (let k = 1; k <= 4; k++) {
+      const c = add(lb, [Math.cos(la), Math.sin(la)], 6 + k * 7);
+      for (const sd of [-1, 1]) veins += `M${pt(c)}L${pt(add(add(c, [Math.cos(la), Math.sin(la)], 6), [-Math.sin(la) * sd, Math.cos(la) * sd], 8))}`;
     }
-    return `<path d="${pet}" fill="${T.ground}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>` +
-      `<path d="${inner}" fill="${T.accent}" stroke="${ink}" stroke-width="1.4"/>` +
-      `<circle cx="${o[0]}" cy="${o[1]}" r="13" fill="${T.accent}" stroke="${ink}" stroke-width="2.2"/><circle cx="${o[0]}" cy="${o[1]}" r="4.5" fill="${T.ground}"/>`;
+    return `<path d="${leafD}" fill="${T.paper}" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="${veins}" fill="none" stroke="${L}" stroke-width="1.5" stroke-linecap="round"/>` +
+      `<circle cx="${o[0]}" cy="${o[1]}" r="27" fill="${T.ground}" stroke="${ink}" stroke-width="2.6"/>` +
+      `<path d="${pet}" fill="${CREAM_BRIGHT}" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/>` +
+      `<circle cx="${o[0]}" cy="${o[1]}" r="6.5" fill="${T.accent}" stroke="${ink}" stroke-width="1.8"/>`;
   })();
   // small owner-colour four-petal flowers in the diagonal gaps (echo the lotus centre)
   const fc: Pt = [150, 298];
@@ -707,7 +856,7 @@ export function powerBackSvg(color: ColorId): string {
     `<path d="${fi}" stroke="${T.paper}" stroke-width="2" stroke-linecap="round"/>` +
     `<path d="${fd}" stroke="${T.accent}" stroke-width="5" stroke-linecap="round"/>` +
     `<circle cx="${fc[0]}" cy="${fc[1]}" r="6" fill="${T.accent}" stroke="${ink}" stroke-width="1.6"/>`;
-  const corners = quad(`${id}-c`, cornerFan + gapFlower);
+  const corners = quad(`${id}-c`, cornerRosette + gapFlower);
 
   // --- label (top, and the same rotated at the bottom)
   const titleY = 182;
@@ -717,19 +866,24 @@ export function powerBackSvg(color: ColorId): string {
   const flank = [-1, 1].map((s) => `<path d="M${CX + s * 42} ${titleY + 33}l${s * 8} -5l${s * 8} 5l${-s * 8} 5Z" fill="${GOLD}" stroke="${ink}" stroke-width="1.4"/><circle cx="${CX + s * 70}" cy="${titleY + 33}" r="3" fill="${L}"/>`).join('');
   const label = sym(`${id}-w`, words + flank);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">` +
-    `<defs>${textureFilter(`${id}-tex`, 15, CREAM_BRIGHT, INK_SOFT, 0.16, 0.2)}${inkFilter(`${id}-ink`, 19)}${powerSymbols(id, L, ink)}</defs>` +
+  return minifyPaths(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">` +
+    `<defs>${toothFilter(`${id}-tooth`, 29, CREAM_BRIGHT, INK, 0.22)}${inkFilter(`${id}-ink`, 19)}${powerSymbols(id, L, ink)}</defs>` +
     `<rect width="${W}" height="${H}" fill="${T.ground}"/>` +
     field +
-    `<rect width="${W}" height="${H}" fill="#000" filter="url(#${id}-tex)"/>` +
+    wash(`${id}-w1`, 15, CREAM_BRIGHT, INK_SOFT, 0.11, 0.045) +
     `<g filter="url(#${id}-ink)">${latticeSvg}${sawtooth}${fieldEdge}${corners}${lotus}${label}</g>` +
+    wash(`${id}-w2`, 16, CREAM_BRIGHT, T.dark, 0.05, 0.03) +
+    `<rect width="${W}" height="${H}" fill="#000" filter="url(#${id}-tooth)"/>` +
     creamFrame() +
-    `</svg>`;
+    `</svg>`);
 }
 
 /** Simple four-petal flower at the card centre. */
 function fourPetal(r: number, fill: string, ink: string): string {
-  let d = '';
-  for (let i = 0; i < 4; i++) d += `<path transform="translate(${CX} ${CY}) rotate(${45 + i * 90})" d="${petalPath(r, r * 0.42, 0.4)}"/>`;
-  return `<g fill="${fill}" stroke="${ink}" stroke-width="2" stroke-linejoin="round">${d}</g>`;
+  // drawn as two opposite pairs, so the petals' overlap order survives a half turn
+  const pair = (deg: number): string => {
+    const a = (deg * Math.PI) / 180;
+    return `<path d="${petalAt([CX, CY], a, r, r * 0.42, 0.4)}${petalAt([CX, CY], a + Math.PI, r, r * 0.42, 0.4)}"/>`;
+  };
+  return `<g fill="${fill}" stroke="${ink}" stroke-width="2" stroke-linejoin="round">${pair(-45)}${pair(45)}</g>`;
 }
