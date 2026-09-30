@@ -1,0 +1,705 @@
+/**
+ * State transitions. `applyAction` is pure: it clones the input and returns a
+ * new state plus the public events it produced, or a human-readable error.
+ */
+import {
+  COLORS,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  POWER_KINDS,
+  PURI_KINDS,
+  type Action,
+  type ApplyResult,
+  type BustReason,
+  type GameConfig,
+  type GameEvent,
+  type GameEventBody,
+  type GameState,
+  type LegalActions,
+  type PlayerId,
+  type PlayerSeed,
+  type PlayerState,
+  type PowerEffect,
+  type PuriCard,
+  type PuriKind,
+  type RoundOutcome,
+  type RoundResult,
+} from './types.ts';
+import {
+  availablePowers,
+  canFlipPower,
+  countKinds,
+  findPlayer,
+  fullSet,
+  isPowerResetRound,
+  isTableEmpty,
+  nextSeatId,
+  playerName,
+  POWER_LABELS,
+  PURI_LABELS,
+  randomInt,
+  resolveConfig,
+  takeCard,
+  validateConfig,
+} from './rules.ts';
+
+export class EngineError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EngineError';
+  }
+}
+
+/** Mutable working copy of a state plus the events emitted while transforming it. */
+interface Ctx {
+  s: GameState;
+  events: GameEvent[];
+}
+
+function emit(ctx: Ctx, body: GameEventBody): void {
+  const event = { ...body, seq: ctx.s.nextSeq++, round: ctx.s.round } as GameEvent;
+  ctx.s.log.push(event);
+  ctx.events.push(event);
+}
+
+/**
+ * Deep copy for a pure transition. The log is append-only and its events are
+ * never mutated, so the array is copied but the event objects are shared.
+ */
+function cloneState(state: GameState): GameState {
+  const { log, ...rest } = state;
+  return { ...structuredClone(rest), log: log.slice() };
+}
+
+// ---------------------------------------------------------------------------
+// Game creation & round lifecycle
+// ---------------------------------------------------------------------------
+
+export function createGame(players: PlayerSeed[], config: Partial<GameConfig> = {}, seed = 0): GameState {
+  if (!Array.isArray(players) || players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
+    const got = Array.isArray(players) ? players.length : 0;
+    throw new EngineError(`A game needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players (got ${got}).`);
+  }
+  const ids = new Set<string>();
+  const colors = new Set<string>();
+  for (const p of players) {
+    if (!p || typeof p.id !== 'string' || p.id === '') throw new EngineError('Every player needs an id.');
+    if (ids.has(p.id)) throw new EngineError(`Duplicate player id "${p.id}".`);
+    if (!(COLORS as readonly string[]).includes(p.color)) throw new EngineError(`Unknown color "${p.color}".`);
+    if (colors.has(p.color)) throw new EngineError(`Two players can't both be ${p.color}.`);
+    if (typeof p.name !== 'string' || p.name.trim() === '') throw new EngineError('Every player needs a name.');
+    ids.add(p.id);
+    colors.add(p.color);
+  }
+  const cfg = resolveConfig(config);
+  const errors = validateConfig(cfg);
+  if (errors.length > 0) throw new EngineError(`Invalid config: ${errors.join(' ')}`);
+
+  const [firstIndex, rng] = randomInt(seed >>> 0, players.length);
+  const state: GameState = {
+    config: cfg,
+    players: players.map((p, seat) => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      isBot: !!p.isBot,
+      seat,
+      score: 0,
+      busts: 0,
+      hand: [],
+      stack: [],
+      power: null,
+      usedPowers: [],
+      powerPicks: [],
+      setupDone: false,
+      ready: false,
+    })),
+    round: 1,
+    phase: 'setup',
+    firstPlayerId: players[firstIndex].id,
+    serving: null,
+    bidding: null,
+    eating: null,
+    results: [],
+    winners: null,
+    log: [],
+    nextSeq: 1,
+    rng,
+  };
+  beginRound({ s: state, events: [] });
+  return state;
+}
+
+/** Deals full sets, clears the table and per-round flags, applies the power reset, emits roundStart. */
+function beginRound(ctx: Ctx): void {
+  const s = ctx.s;
+  const reset = isPowerResetRound(s.round, s.config.powerResetRound);
+  for (const p of s.players) {
+    p.hand = fullSet(p.id, s.config);
+    p.stack = [];
+    p.power = null;
+    p.setupDone = false;
+    p.ready = false;
+    if (reset) p.usedPowers = [];
+  }
+  s.phase = 'setup';
+  s.serving = null;
+  s.bidding = null;
+  s.eating = null;
+  emit(ctx, { type: 'roundStart', firstPlayerId: s.firstPlayerId, availablePowersReset: reset });
+}
+
+/** Game-over check first; otherwise the next round with the first player rotated clockwise. */
+function continueRound(ctx: Ctx): void {
+  const s = ctx.s;
+  const { targetScore, maxRounds } = s.config;
+  const reached = targetScore !== null && s.players.some((p) => p.score >= targetScore);
+  const lastRound = maxRounds !== null && s.round >= maxRounds;
+  if (reached || lastRound) {
+    s.phase = 'gameOver';
+    s.winners = computeWinners(s.players);
+    emit(ctx, {
+      type: 'gameOver',
+      winners: [...s.winners],
+      scores: Object.fromEntries(s.players.map((p) => [p.id, p.score])),
+    });
+    return;
+  }
+  s.round += 1;
+  s.firstPlayerId = nextSeatId(s, s.firstPlayerId);
+  beginRound(ctx);
+}
+
+/** Highest score; ties go to fewer busts; still tied = shared win (seat order). */
+export function computeWinners(players: readonly PlayerState[]): PlayerId[] {
+  const top = Math.max(...players.map((p) => p.score));
+  const leaders = players.filter((p) => p.score === top);
+  const fewest = Math.min(...leaders.map((p) => p.busts));
+  return leaders.filter((p) => p.busts === fewest).map((p) => p.id);
+}
+
+// ---------------------------------------------------------------------------
+// Action dispatch
+// ---------------------------------------------------------------------------
+
+type Handler = (ctx: Ctx, player: PlayerState, action: never) => string | null;
+
+const HANDLERS: Record<Action['type'], Handler> = {
+  SUBMIT_SETUP: submitSetup,
+  PLACE_PURI: placePuri,
+  START_BID: startBid,
+  RAISE: raise,
+  PASS: pass,
+  FLIP_PURI: flipPuri,
+  FLIP_POWER: flipPower,
+  ACCEPT_BUST: acceptBust,
+  READY: ready,
+  FORCE_CONTINUE: forceContinue,
+};
+
+export function applyAction(state: GameState, playerId: PlayerId, action: Action): ApplyResult {
+  const shapeError = checkActionShape(action);
+  if (shapeError) return { ok: false, error: shapeError };
+  if (!findPlayer(state, playerId)) return { ok: false, error: "You're not a player in this game." };
+  if (state.phase === 'gameOver') return { ok: false, error: 'The game is over.' };
+  const ctx: Ctx = { s: cloneState(state), events: [] };
+  const player = findPlayer(ctx.s, playerId)!;
+  const error = HANDLERS[action.type](ctx, player, action as never);
+  return error ? { ok: false, error } : { ok: true, state: ctx.s, events: ctx.events };
+}
+
+const isPuriKind = (v: unknown): v is PuriKind => (PURI_KINDS as readonly unknown[]).includes(v);
+const isId = (v: unknown): boolean => typeof v === 'string' && v !== '';
+const isInt = (v: unknown): boolean => typeof v === 'number' && Number.isInteger(v);
+
+/** Actions arrive as untrusted JSON: check the shape before touching state. */
+function checkActionShape(action: unknown): string | null {
+  if (!action || typeof action !== 'object') return 'Missing action.';
+  const a = action as Record<string, unknown>;
+  switch (a.type) {
+    case 'SUBMIT_SETUP':
+      if (!Array.isArray(a.stack) || !a.stack.every(isPuriKind)) return 'Setup stack must be a list of puri kinds.';
+      if (!(POWER_KINDS as readonly unknown[]).includes(a.power)) return 'Pick a power card.';
+      return null;
+    case 'PLACE_PURI':
+      if (!isPuriKind(a.kind)) return 'Pick a Panipuri or Akabare card to place.';
+      return isId(a.targetPlayerId) ? null : 'Pick a stack to place on.';
+    case 'START_BID':
+    case 'RAISE':
+      return isInt(a.amount) ? null : 'A bid must be a whole number.';
+    case 'FLIP_PURI':
+    case 'FLIP_POWER':
+      return isId(a.targetPlayerId) ? null : 'Pick a stack.';
+    case 'PASS':
+    case 'ACCEPT_BUST':
+    case 'READY':
+    case 'FORCE_CONTINUE':
+      return null;
+    default:
+      return `Unknown action "${String(a.type)}".`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Setup
+// ---------------------------------------------------------------------------
+
+function submitSetup(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'SUBMIT_SETUP' }>): string | null {
+  const s = ctx.s;
+  const c = s.config;
+  if (s.phase !== 'setup') return 'Setup is over for this round.';
+  if (a.stack.length !== c.startingStack) return `Choose exactly ${c.startingStack} puri cards for your stack.`;
+  const counts = countKinds(a.stack.map((kind) => ({ kind })));
+  if (counts.akabare > 1) return 'You only have 1 Akabare.';
+  if (counts.panipuri > c.panipuriPerPlayer) return `You only have ${c.panipuriPerPlayer} Panipuri.`;
+  if (!availablePowers(s, p.id).includes(a.power)) {
+    return `${POWER_LABELS[a.power]} isn't available to you this round.`;
+  }
+  // Resubmitting starts again from the full set (nothing else can be on the table yet).
+  const hand = fullSet(p.id, c);
+  p.stack = a.stack.map((kind) => takeCard(hand, kind)!);
+  p.hand = hand;
+  p.power = { kind: a.power, revealed: false };
+  if (!p.setupDone) {
+    p.setupDone = true;
+    emit(ctx, { type: 'setupDone', playerId: p.id });
+  }
+  if (s.players.every((q) => q.setupDone)) startServing(ctx);
+  return null;
+}
+
+/** Locks in the picked powers (they count as used whether or not they get flipped). */
+function startServing(ctx: Ctx): void {
+  const s = ctx.s;
+  for (const p of s.players) {
+    const kind = p.power!.kind;
+    if (!p.usedPowers.includes(kind)) p.usedPowers.push(kind);
+    p.powerPicks.push(kind);
+  }
+  s.phase = 'serving';
+  s.serving = { turnId: s.firstPlayerId };
+  emit(ctx, { type: 'servingStart', turnId: s.firstPlayerId });
+}
+
+// ---------------------------------------------------------------------------
+// Serving & bidding
+// ---------------------------------------------------------------------------
+
+function turnError(s: GameState, p: PlayerState, turnId: PlayerId): string | null {
+  return turnId === p.id ? null : `It's ${playerName(s, turnId)}'s turn.`;
+}
+
+function placePuri(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'PLACE_PURI' }>): string | null {
+  const s = ctx.s;
+  if (s.phase !== 'serving') return s.phase === 'bidding' ? 'The bid has started: no more placing.' : "It's not serving time.";
+  const err = turnError(s, p, s.serving!.turnId);
+  if (err) return err;
+  const target = findPlayer(s, a.targetPlayerId);
+  if (!target) return 'There is no such stack.';
+  const card = takeCard(p.hand, a.kind);
+  if (!card) return `You have no ${PURI_LABELS[a.kind]} in hand.`;
+  target.stack.push(card);
+  emit(ctx, { type: 'place', playerId: p.id, onStackOf: target.id });
+  s.serving!.turnId = nextSeatId(s, p.id);
+  return null;
+}
+
+function startBid(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'START_BID' }>): string | null {
+  const s = ctx.s;
+  if (s.phase !== 'serving') return s.phase === 'bidding' ? 'The bid has already started.' : "It's not serving time.";
+  const err = turnError(s, p, s.serving!.turnId);
+  if (err) return err;
+  if (a.amount < s.config.minBid) return `The opening bid must be at least ${s.config.minBid}.`;
+  s.phase = 'bidding';
+  s.serving = null;
+  s.bidding = {
+    starterId: p.id,
+    highBid: a.amount,
+    highBidderId: p.id,
+    turnId: nextSeatId(s, p.id),
+    passed: [],
+    history: [{ playerId: p.id, action: 'start', amount: a.amount }],
+  };
+  emit(ctx, { type: 'bidStart', playerId: p.id, amount: a.amount });
+  return null;
+}
+
+function raise(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'RAISE' }>): string | null {
+  const s = ctx.s;
+  if (s.phase !== 'bidding') return 'There is no bid to raise.';
+  const b = s.bidding!;
+  const err = turnError(s, p, b.turnId);
+  if (err) return err;
+  if (a.amount <= b.highBid) return `Raise above the current bid of ${b.highBid}.`;
+  b.highBid = a.amount;
+  b.highBidderId = p.id;
+  b.history.push({ playerId: p.id, action: 'raise', amount: a.amount });
+  emit(ctx, { type: 'raise', playerId: p.id, amount: a.amount });
+  b.turnId = nextSeatId(s, p.id, b.passed);
+  return null;
+}
+
+function pass(ctx: Ctx, p: PlayerState): string | null {
+  const s = ctx.s;
+  if (s.phase !== 'bidding') return 'There is no bid to pass on.';
+  const b = s.bidding!;
+  const err = turnError(s, p, b.turnId);
+  if (err) return err;
+  b.passed.push(p.id);
+  b.history.push({ playerId: p.id, action: 'pass' });
+  emit(ctx, { type: 'pass', playerId: p.id });
+  const active = s.players.filter((q) => !b.passed.includes(q.id));
+  // The turn never reaches the high bidder while they lead, so the last one standing holds the high bid.
+  if (active.length === 1) startEating(ctx, active[0].id);
+  else b.turnId = nextSeatId(s, p.id, b.passed);
+  return null;
+}
+
+function startEating(ctx: Ctx, eaterId: PlayerId): void {
+  const s = ctx.s;
+  const b = s.bidding!;
+  b.turnId = eaterId;
+  s.phase = 'eating';
+  s.eating = {
+    eaterId,
+    bid: b.highBid,
+    target: b.highBid,
+    eaten: 0,
+    powersFlipped: 0,
+    skipNext: false,
+    pendingAkabare: null,
+    plate: [],
+    powers: [],
+  };
+  emit(ctx, { type: 'eater', playerId: eaterId, bid: b.highBid });
+  checkEnd(ctx);
+}
+
+// ---------------------------------------------------------------------------
+// Eating
+// ---------------------------------------------------------------------------
+
+function eaterError(s: GameState, p: PlayerState): string | null {
+  if (s.phase !== 'eating') return "Nobody is eating right now.";
+  const eaterId = s.eating!.eaterId;
+  return eaterId === p.id ? null : `Only the eater (${playerName(s, eaterId)}) can do that.`;
+}
+
+/** Stacks the eater may FLIP_PURI from: their own until empty, then any non-empty other stack. */
+export function flipPuriTargets(state: GameState): PlayerId[] {
+  const e = state.eating;
+  if (state.phase !== 'eating' || !e || e.pendingAkabare) return [];
+  const eater = findPlayer(state, e.eaterId)!;
+  if (eater.stack.length > 0) return [eater.id];
+  return state.players.filter((p) => p.id !== eater.id && p.stack.length > 0).map((p) => p.id);
+}
+
+function flipPowerTargets(state: GameState): PlayerId[] {
+  if (state.phase !== 'eating' || !canFlipPower(state)) return [];
+  return state.players.filter((p) => p.power !== null && !p.power.revealed).map((p) => p.id);
+}
+
+function flipPuri(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'FLIP_PURI' }>): string | null {
+  const s = ctx.s;
+  const err = eaterError(s, p);
+  if (err) return err;
+  const e = s.eating!;
+  if (e.pendingAkabare) return 'You bit an Akabare: flip a power and pray for Dahi, or accept the bust.';
+  const target = findPlayer(s, a.targetPlayerId);
+  if (!target) return 'There is no such stack.';
+  if (!flipPuriTargets(s).includes(target.id)) {
+    if (p.stack.length > 0) return 'Finish your own stack first.';
+    if (target.id === p.id) return 'Your stack is empty: flip from someone else\'s.';
+    return `${target.name}'s stack is empty.`;
+  }
+  const card = target.stack.pop()!;
+  const cancelled = e.skipNext;
+  e.skipNext = false;
+  if (!cancelled && card.kind === 'panipuri') e.eaten += 1;
+  e.plate.push({ card, fromStackOf: target.id, cancelled, saved: false });
+  emit(ctx, {
+    type: 'flipPuri',
+    eaterId: p.id,
+    fromStackOf: target.id,
+    owner: card.owner,
+    kind: card.kind,
+    cancelled,
+    eaten: e.eaten,
+    target: e.target,
+  });
+  if (!cancelled && card.kind === 'akabare') {
+    emit(ctx, { type: 'bite', eaterId: p.id, fromStackOf: target.id, owner: card.owner });
+    if (canFlipPower(s)) e.pendingAkabare = { card, fromStackOf: target.id };
+    else bust(ctx, 'akabare', card);
+    return null;
+  }
+  checkEnd(ctx);
+  return null;
+}
+
+function flipPower(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'FLIP_POWER' }>): string | null {
+  const s = ctx.s;
+  const err = eaterError(s, p);
+  if (err) return err;
+  const e = s.eating!;
+  const max = s.config.powerFlipsMax;
+  if (e.powersFlipped >= max) return `You've already flipped ${max} power${max === 1 ? '' : 's'} this round.`;
+  const target = findPlayer(s, a.targetPlayerId);
+  if (!target) return 'There is no such stack.';
+  if (!target.power) return `${target.name} has no power card.`;
+  if (target.power.revealed) return `${target.name}'s power is already face up.`;
+
+  e.powersFlipped += 1;
+  target.power.revealed = true;
+  const kind = target.power.kind;
+  const record = (effect: PowerEffect) => {
+    e.powers.push({ kind, owner: target.id, fromStackOf: target.id, effect });
+    emit(ctx, {
+      type: 'flipPower',
+      eaterId: p.id,
+      fromStackOf: target.id,
+      owner: target.id,
+      kind,
+      effect,
+      eaten: e.eaten,
+      target: e.target,
+    });
+  };
+
+  const pending = e.pendingAkabare;
+  if (pending) {
+    if (kind === 'dahi') {
+      const plated = e.plate.find((x) => x.card.id === pending.card.id);
+      if (plated) plated.saved = true;
+      e.pendingAkabare = null;
+      record('saved');
+      checkEnd(ctx);
+    } else {
+      // Only Dahi helps after the bite; Khali/Chaat effects do not apply.
+      record('failedSave');
+      bust(ctx, 'akabare', pending.card);
+    }
+    return null;
+  }
+
+  let effect: PowerEffect;
+  switch (kind) {
+    case 'vinegar':
+      effect = e.skipNext ? 'wasted' : 'numb';
+      e.skipNext = true;
+      break;
+    case 'dahi':
+      effect = 'wasted';
+      break;
+    case 'khali':
+      e.target += 1;
+      effect = 'targetUp';
+      break;
+    case 'chaat':
+      e.eaten += 2;
+      effect = 'plusTwo';
+      break;
+  }
+  record(effect);
+  checkEnd(ctx);
+  return null;
+}
+
+function acceptBust(ctx: Ctx, p: PlayerState): string | null {
+  const s = ctx.s;
+  const err = eaterError(s, p);
+  if (err) return err;
+  const e = s.eating!;
+  if (e.pendingAkabare) {
+    bust(ctx, 'akabare', e.pendingAkabare.card);
+    return null;
+  }
+  // With no flips left an empty table busts automatically, so reaching here means flips remain.
+  if (isTableEmpty(s) && e.eaten < e.target) {
+    bust(ctx, 'emptyTable', null);
+    return null;
+  }
+  return 'You can only give up after biting an Akabare, or when the table is empty and you are short.';
+}
+
+function checkEnd(ctx: Ctx): void {
+  const s = ctx.s;
+  const e = s.eating!;
+  if (e.eaten >= e.target) finishRound(ctx, 'success', null, null);
+  else if (isTableEmpty(s) && !canFlipPower(s)) bust(ctx, 'emptyTable', null);
+}
+
+function bust(ctx: Ctx, reason: BustReason, akabare: PuriCard | null): void {
+  finishRound(ctx, 'bust', reason, akabare);
+}
+
+function finishRound(ctx: Ctx, outcome: RoundOutcome, reason: BustReason | null, akabare: PuriCard | null): void {
+  const s = ctx.s;
+  const e = s.eating!;
+  const eater = findPlayer(s, e.eaterId)!;
+  const deltas: Record<PlayerId, number> = Object.fromEntries(s.players.map((p) => [p.id, 0]));
+  const akabareOwnerId = akabare ? akabare.owner : null;
+  let trapRewardTo: PlayerId | null = null;
+  if (outcome === 'success') {
+    deltas[eater.id] += e.target;
+  } else {
+    deltas[eater.id] -= e.target;
+    eater.busts += 1;
+    if (akabareOwnerId !== null && akabareOwnerId !== eater.id && s.config.trapReward > 0) {
+      trapRewardTo = akabareOwnerId;
+      deltas[akabareOwnerId] += s.config.trapReward;
+    }
+  }
+  for (const p of s.players) p.score += deltas[p.id];
+  e.pendingAkabare = null;
+
+  if (outcome === 'success') {
+    emit(ctx, { type: 'success', eaterId: eater.id, target: e.target, eaten: e.eaten });
+  } else {
+    emit(ctx, {
+      type: 'bust',
+      eaterId: eater.id,
+      reason: reason!,
+      target: e.target,
+      eaten: e.eaten,
+      akabareOwnerId,
+      trapRewardTo,
+    });
+  }
+  const result: RoundResult = {
+    round: s.round,
+    eaterId: eater.id,
+    bid: e.bid,
+    target: e.target,
+    eaten: e.eaten,
+    outcome,
+    bustReason: reason,
+    akabareOwnerId,
+    trapRewardTo,
+    scoreDeltas: deltas,
+    scoresAfter: Object.fromEntries(s.players.map((p) => [p.id, p.score])),
+  };
+  s.results.push(result);
+  s.phase = 'roundEnd';
+  for (const p of s.players) p.ready = p.isBot;
+  emit(ctx, { type: 'roundEnd', result: structuredClone(result) });
+}
+
+// ---------------------------------------------------------------------------
+// Round end
+// ---------------------------------------------------------------------------
+
+const allHumansReady = (s: GameState) => s.players.every((p) => p.isBot || p.ready);
+
+function ready(ctx: Ctx, p: PlayerState): string | null {
+  const s = ctx.s;
+  if (s.phase !== 'roundEnd') return 'Nothing to be ready for right now.';
+  if (p.ready) return "You're already ready.";
+  p.ready = true;
+  emit(ctx, { type: 'ready', playerId: p.id });
+  if (allHumansReady(s)) continueRound(ctx);
+  return null;
+}
+
+function forceContinue(ctx: Ctx): string | null {
+  if (ctx.s.phase !== 'roundEnd') return 'You can only continue from the end of a round.';
+  continueRound(ctx);
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Bots, pending actors, legal actions
+// ---------------------------------------------------------------------------
+
+/** Host replaces an absent player with a bot, or a player reclaims their seat. Pure. */
+export function setBot(state: GameState, playerId: PlayerId, isBot: boolean): GameState {
+  if (!findPlayer(state, playerId)) throw new EngineError(`Unknown player "${playerId}".`);
+  const ctx: Ctx = { s: cloneState(state), events: [] };
+  const p = findPlayer(ctx.s, playerId)!;
+  if (p.isBot === isBot) return ctx.s;
+  p.isBot = isBot;
+  // Bots are always ready at roundEnd; a returning human gets to look at the result first.
+  if (ctx.s.phase === 'roundEnd') p.ready = isBot;
+  emit(ctx, { type: 'botSet', playerId, isBot });
+  return ctx.s;
+}
+
+/** Who the game is waiting on. At roundEnd with every human ready (e.g. all bots), the bots advance it. */
+export function pendingActors(state: GameState): PlayerId[] {
+  switch (state.phase) {
+    case 'setup':
+      return state.players.filter((p) => !p.setupDone).map((p) => p.id);
+    case 'serving':
+      return [state.serving!.turnId];
+    case 'bidding':
+      return [state.bidding!.turnId];
+    case 'eating':
+      return [state.eating!.eaterId];
+    case 'roundEnd': {
+      const waiting = state.players.filter((p) => !p.isBot && !p.ready).map((p) => p.id);
+      return waiting.length > 0 ? waiting : state.players.filter((p) => p.isBot).map((p) => p.id);
+    }
+    case 'gameOver':
+      return [];
+  }
+}
+
+export function noLegalActions(): LegalActions {
+  return {
+    setup: null,
+    place: null,
+    startBid: null,
+    raise: null,
+    pass: false,
+    flipPuri: [],
+    flipPower: [],
+    acceptBust: false,
+    ready: false,
+    forceContinue: false,
+  };
+}
+
+export function legalActions(state: GameState, playerId: PlayerId): LegalActions {
+  const legal = noLegalActions();
+  const p = findPlayer(state, playerId);
+  if (!p) return legal;
+  const c = state.config;
+  switch (state.phase) {
+    case 'setup':
+      legal.setup = {
+        hand: countKinds(fullSet(p.id, c)),
+        stackSize: c.startingStack,
+        availablePowers: availablePowers(state, p.id),
+        submitted: p.setupDone,
+      };
+      break;
+    case 'serving':
+      if (state.serving!.turnId !== p.id) break;
+      if (p.hand.length > 0) {
+        const kinds = PURI_KINDS.filter((k) => p.hand.some((card) => card.kind === k));
+        legal.place = { kinds, targets: state.players.map((q) => q.id) };
+      }
+      legal.startBid = { min: c.minBid };
+      break;
+    case 'bidding':
+      if (state.bidding!.turnId !== p.id) break;
+      legal.raise = { min: state.bidding!.highBid + 1 };
+      legal.pass = true;
+      break;
+    case 'eating': {
+      const e = state.eating!;
+      if (e.eaterId !== p.id) break;
+      legal.flipPuri = flipPuriTargets(state);
+      legal.flipPower = flipPowerTargets(state);
+      legal.acceptBust = e.pendingAkabare !== null || (isTableEmpty(state) && e.eaten < e.target);
+      break;
+    }
+    case 'roundEnd':
+      legal.ready = !p.ready;
+      legal.forceContinue = true;
+      break;
+    case 'gameOver':
+      break;
+  }
+  return legal;
+}

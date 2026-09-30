@@ -12,6 +12,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "sync:function": "node scripts/sync-function.mjs",
     "art:extract": "node scripts/extract-art.mjs",
+    "art:wordmarks": "node scripts/build-wordmarks.mjs",
+    "art:palette": "node scripts/render-palette.mjs",
+    "art:render-backs": "node scripts/render-backs.mjs",
     "art:backs": "node scripts/export-backs.mjs"
   },
   "dependencies": {
@@ -20,10 +23,12 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "harfbuzzjs": "^1.6.2",
     "sharp": "^0.35.5",
     "typescript": "^5.9.3",
     "vite": "^8.3.1",

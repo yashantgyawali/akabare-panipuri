@@ -1,0 +1,159 @@
+{
+  "fills": {
+    "red": "#B84A3A",
+    "blue": "#2D6281",
+    "yellow": "#D29B2E",
+    "green": "#47704D",
+    "purple": "#71506F",
+    "orange": "#C66D38"
+  },
+  "bboxes": {
+    "panipuri_1": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "panipuri_2": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "panipuri_3": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "panipuri_4": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "panipuri_5": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "akabare": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "vinegar": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "dahi": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "khali": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    },
+    "chaat": {
+      "x": 65,
+      "y": 145,
+      "width": 620,
+      "height": 620,
+      "outsideRingFill": 1
+    }
+  },
+  "verification": {
+    "panipuri": {
+      "variants": 30,
+      "maxChannelDiff": 0,
+      "maxDifferingBytes": 0
+    },
+    "akabare": {
+      "variants": 6,
+      "maxChannelDiff": 0,
+      "maxDifferingBytes": 0
+    },
+    "vinegar": {
+      "variants": 6,
+      "maxChannelDiff": 0,
+      "maxDifferingBytes": 0
+    },
+    "dahi": {
+      "variants": 6,
+      "maxChannelDiff": 0,
+      "maxDifferingBytes": 0
+    },
+    "khali": {
+      "variants": 6,
+      "maxChannelDiff": 0,
+      "maxDifferingBytes": 0
+    },
+    "chaat": {
+      "variants": 6,
+      "maxChannelDiff": 0,
+      "maxDifferingBytes": 0
+    }
+  },
+  "outputs": {
+    "panipuri": {
+      "file": "public/art/panipuri.webp",
+      "width": 620,
+      "height": 620,
+      "bytes": 116626
+    },
+    "akabare": {
+      "file": "public/art/akabare.webp",
+      "width": 620,
+      "height": 620,
+      "bytes": 109070
+    },
+    "vinegar": {
+      "file": "public/art/vinegar.webp",
+      "width": 620,
+      "height": 620,
+      "bytes": 110098
+    },
+    "dahi": {
+      "file": "public/art/dahi.webp",
+      "width": 620,
+      "height": 620,
+      "bytes": 116192
+    },
+    "khali": {
+      "file": "public/art/khali.webp",
+      "width": 620,
+      "height": 620,
+      "bytes": 106516
+    },
+    "chaat": {
+      "file": "public/art/chaat.webp",
+      "width": 620,
+      "height": 620,
+      "bytes": 131598
+    }
+  },
+  "bbox": {
+    "x": 65,
+    "y": 145,
+    "width": 620,
+    "height": 620
+  },
+  "worstChannelDiff": 0
+}
