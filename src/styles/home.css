@@ -20,6 +20,7 @@
 .ak-hero__kicker {
   font-weight: 700;
   font-size: 14px;
+  text-wrap: balance;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ak-gold);

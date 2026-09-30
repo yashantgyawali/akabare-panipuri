@@ -50,6 +50,8 @@
   align-items: baseline;
   gap: 10px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: 6px 16px 4px;
   border-radius: 999px;
   background: rgb(255 240 210 / 0.06);
@@ -232,6 +234,12 @@
 .ak-oppslot--side {
   align-self: center;
 }
+/* Seats fill the arena's named areas in clockwise order (see .ak-arena--mN). */
+.ak-oppslot:nth-child(1) { grid-area: s1; }
+.ak-oppslot:nth-child(2) { grid-area: s2; }
+.ak-oppslot:nth-child(3) { grid-area: s3; }
+.ak-oppslot:nth-child(4) { grid-area: s4; }
+.ak-oppslot:nth-child(5) { grid-area: s5; }
 .ak-center {
   grid-area: c;
   position: relative;
@@ -736,6 +744,9 @@
   font-size: 13px;
   padding-top: 2px;
   color: #fff;
+  /* initials keep their case ("An", not "AN") inside an uppercase pass chip */
+  text-transform: none;
+  letter-spacing: 0;
 }
 .ak-bidchip--pass {
   font-family: var(--ak-font-ui);
@@ -1398,18 +1409,6 @@
   margin-top: 8px;
 }
 
-/* the "return to the result" button when peeking at the table */
-.ak-peekback {
-  position: fixed;
-  z-index: 90;
-  left: 50%;
-  bottom: max(20px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  box-shadow:
-    0 2px 0 #7a1c0c,
-    0 10px 30px rgb(0 0 0 / 0.6);
-}
-
 .ak-phase-setup .ak-arena {
   min-height: 0;
 }
@@ -1445,11 +1444,73 @@
   .ak-setup__col--powers {
     grid-column: 1 / -1;
   }
-  .ak-seat__plate {
-    min-width: 146px;
+  .ak-thead {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
   }
-  .ak-seat__name {
-    max-width: 96px;
+  .ak-thead__brand {
+    display: none;
+  }
+  .ak-thead__round {
+    border-left: 0;
+    padding-left: 0;
+  }
+  /* seats: a two-line plate (name / hand + score) so five fit across the rim */
+  .ak-oppslot {
+    max-width: 100%;
+  }
+  .ak-oppslot .ak-seat__plate {
+    min-width: 0;
+    width: 100%;
+    max-width: 170px;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'av name name'
+      'av meta score';
+    column-gap: 6px;
+    row-gap: 0;
+    padding: 4px 10px 4px 4px;
+    border-radius: 16px;
+  }
+  .ak-oppslot .ak-seat__avatar {
+    grid-area: av;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  .ak-oppslot .ak-seat__who {
+    display: contents;
+  }
+  .ak-oppslot .ak-seat__name {
+    grid-area: name;
+    max-width: 100%;
+    font-size: 14px;
+  }
+  .ak-oppslot .ak-seat__meta {
+    grid-area: meta;
+  }
+  .ak-oppslot .ak-seat__score {
+    grid-area: score;
+    font-size: 20px;
+  }
+  .ak-oppslot .ak-seat__bot {
+    font-size: 0;
+  }
+}
+
+/* Small tablets: five opponents need narrower side columns (cards shrink too, see Table.tsx). */
+@media (min-width: 641px) and (max-width: 900px) {
+  .ak-arena--m4,
+  .ak-arena--m5 {
+    column-gap: 8px;
+    padding-left: 1%;
+    padding-right: 1%;
+  }
+  .ak-arena--m4 {
+    grid-template-columns: minmax(116px, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(116px, 1fr);
+  }
+  .ak-arena--m5 {
+    grid-template-columns: minmax(116px, 0.8fr) repeat(3, minmax(0, 1fr)) minmax(116px, 0.8fr);
   }
 }
 
@@ -1505,7 +1566,7 @@
   .ak-arena--m5 {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
     margin: 8px 8px 0;
     padding: 0;
@@ -1521,12 +1582,20 @@
     gap: 6px;
     pointer-events: auto;
   }
-  .ak-arena--m1 .ak-opps {
+  /* columns by seat count (your seat is the grid's last cell on phones) */
+  .ak-opps--n1 {
     grid-template-columns: minmax(0, 1fr);
   }
-  .ak-arena--m2 .ak-opps,
-  .ak-arena--m4 .ak-opps {
+  .ak-opps--n2,
+  .ak-opps--n4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ak-oppslot--me {
+    background: rgb(59 33 23 / 0.8);
+    box-shadow: inset 0 0 0 1px rgb(255 240 210 / 0.22);
+  }
+  .ak-opps > .ak-oppslot {
+    grid-area: auto;
   }
   .ak-oppslot,
   .ak-oppslot--side {
@@ -1534,7 +1603,7 @@
     align-self: stretch;
     display: flex;
     justify-content: center;
-    padding: 6px 4px 18px;
+    padding: 4px 4px 12px;
     border-radius: 14px;
     background: rgb(59 33 23 / 0.55);
     box-shadow: inset 0 0 0 1px rgb(255 240 210 / 0.07);
@@ -1544,7 +1613,8 @@
   .ak-arena--m2 .ak-center {
     position: relative;
     width: auto;
-    padding: 10px 10px 14px;
+    gap: 6px;
+    padding: 6px 8px 8px;
     border-radius: 18px;
     background:
       radial-gradient(ellipse 80% 70% at 50% 40%, rgb(140 72 34 / 0.35), transparent 75%),
@@ -1633,19 +1703,59 @@
     gap: 6px;
   }
   .ak-seat__power::before {
-    bottom: -14px;
-    font-size: 9px;
+    bottom: -11px;
+    font-size: 8px;
   }
 
+  /* medallion beside the history chips: one short band instead of a tall column */
+  .ak-bidboard {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    max-width: 100%;
+  }
   .ak-bidboard__high {
-    width: 104px;
-    height: 104px;
+    flex: none;
+  }
+  .ak-bidchips {
+    justify-content: flex-start;
+    gap: 4px;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .ak-bidchip {
+    gap: 4px;
+    padding: 1px 8px 0 2px;
+    font-size: 16px;
+  }
+  .ak-bidchip__who {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+  .ak-bidchip--pass {
+    font-size: 11px;
+  }
+  .ak-bidboard__high {
+    width: 88px;
+    height: 88px;
+    padding: 0 0 4px;
+    align-content: center;
+    gap: 1px;
+  }
+  .ak-bidboard__label {
+    font-size: 9px;
   }
   .ak-bidboard__num {
-    font-size: 44px;
+    font-size: 38px;
   }
+  .ak-bidboard__by {
+    font-size: 11px;
+    max-width: 62px;
+  }
+
   .ak-hud {
-    padding: 8px 12px 10px;
+    padding: 6px 12px 8px;
     gap: 2px 12px;
     width: 100%;
   }
@@ -1659,12 +1769,28 @@
   .ak-hud__flips {
     font-size: 13px;
   }
+  /* flipped powers: one line each ("Your Dahi saved by Dahi!") so the dock stays on screen */
+  .ak-hud__powers {
+    margin-top: 2px;
+    gap: 4px;
+  }
+  .ak-pchip {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 5px;
+    padding: 2px 8px;
+  }
   .ak-plate__rim {
     padding: 10px 14px;
     border-radius: 22px;
     min-width: 0;
     width: 100%;
-    gap: 6px 3px;
+    min-height: calc(var(--w) * 1.4 + 20px);
+    gap: 6px 0;
+  }
+  /* overlap the eaten cards so a full plate stays on one row */
+  .ak-plate__card:not(:first-child) {
+    margin-left: -12px;
   }
 
   .ak-dock,
@@ -1674,13 +1800,38 @@
       'panel panel'
       'seat hand';
     gap: 8px 10px;
-    padding: 12px 8px max(10px, env(safe-area-inset-bottom));
+    padding: 8px 8px max(10px, env(safe-area-inset-bottom));
     align-items: start;
   }
   .ak-dock--setup {
     grid-template-areas:
       'setup setup'
       'seat seat';
+  }
+  .ak-dock--noseat {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'panel'
+      'hand';
+    gap: 4px;
+  }
+  .ak-dock--noseat.ak-dock--setup {
+    grid-template-areas: 'setup';
+  }
+  .ak-dock--noseat .ak-dock__hand {
+    justify-self: center;
+  }
+  /* Two rows of seats: drop what the header and the dock's panel already say. */
+  .is-crowded.ak-phase-serving .ak-stage__title,
+  .is-crowded.ak-phase-serving .ak-stage__text,
+  .is-crowded.ak-phase-bidding .ak-stage__kicker,
+  .is-crowded .ak-panel__text--bidinfo,
+  .is-crowded.ak-phase-eating .ak-panel--turn .ak-panel__title {
+    display: none;
+  }
+  /* Setup: the setup panel below already explains what to do. */
+  .ak-stage--setup .ak-stage__text {
+    display: none;
   }
   .ak-dock__seat {
     padding-bottom: 16px;
@@ -1696,7 +1847,8 @@
     padding: 8px 0 0;
   }
   .ak-panel {
-    padding: 12px;
+    gap: 8px;
+    padding: 10px 12px;
     min-height: 0;
   }
   .ak-panel__title {
@@ -1743,4 +1895,15 @@
   .ak-setup__todo {
     text-align: center;
   }
+}
+
+/* Phones: the host's crown sits on the avatar instead of taking name width ("Bik…"). */
+.ak-seat--compact .ak-seat__plate {
+  position: relative;
+}
+.ak-seat--compact .ak-seat__icon {
+  position: absolute;
+  left: 10px;
+  top: -4px;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.85));
 }

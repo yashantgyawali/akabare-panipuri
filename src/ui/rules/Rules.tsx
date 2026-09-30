@@ -1,11 +1,12 @@
 /** The rules (v0.6), condensed from the PDF plus the clarifications the engine implements. */
 import { useEffect } from 'react';
-import { POWER_KINDS, type PowerKind } from '../../engine/types.ts';
+import { DEFAULT_CONFIG, POWER_KINDS, type GameConfig, type PowerKind } from '../../engine/types.ts';
 import { CardFront, Card } from '../../cards/index.ts';
 import { Wordmark } from '../common/Brand.tsx';
 import { Icon } from '../common/Icon.tsx';
 import { cx, usePhone } from '../common/hooks.ts';
 import { HOME } from '../router.ts';
+import { goalText } from '../text.ts';
 
 const POWER_ROWS: Record<PowerKind, { when: string; effect: string }> = {
   vinegar: { when: 'Before a puri', effect: 'Numbs your tongue: the next card you eat is cancelled. An Akabare can’t hurt you, a Panipuri doesn’t count. Only the next card.' },
@@ -24,7 +25,9 @@ const EXAMPLES: { title: string; text: string }[] = [
   { title: 'The planted chili', text: 'Sita slips her Akabare onto Anil’s stack. Ramesh wins the bid, clears his own stack, flips Anil’s top card: Akabare. He flips a power hoping for Dahi; it’s Khali Puri. Ramesh busts, and Sita gets +2.' },
 ];
 
-export function RulesContent({ compact = false }: { compact?: boolean }) {
+/** `config`: the game's house rules (the in-game drawer); defaults to the standard v0.6 rules. */
+export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { compact?: boolean; config?: GameConfig }) {
+  const { targetScore: t, maxRounds: r, trapReward } = config;
   const phone = usePhone();
   const cardW = compact || phone ? 64 : 92;
   return (
@@ -38,7 +41,7 @@ export function RulesContent({ compact = false }: { compact?: boolean }) {
         </p>
         <p className="ak-rules__facts">
           <span>3–6 players</span>
-          <span>First to 30 points, or best after 5 rounds</span>
+          <span>{goalText(config)}</span>
         </p>
         <div className="ak-rules__set" aria-label="Each player’s set">
           <figure>
@@ -204,7 +207,14 @@ export function RulesContent({ compact = false }: { compact?: boolean }) {
             <strong>Bust:</strong> − your final bid.
           </li>
           <li>
-            <strong>Trap reward:</strong> if the eater busts on an Akabare, the owner of that Akabare (its colour, whoever’s stack it sat on) gets <strong>+2</strong>.
+            <strong>Trap reward:</strong>{' '}
+            {trapReward > 0 ? (
+              <>
+                if the eater busts on an Akabare, the owner of that Akabare (its colour, whoever’s stack it sat on) gets <strong>+{trapReward}</strong>.
+              </>
+            ) : (
+              'none in this game (the host set it to 0).'
+            )}
           </li>
         </ul>
         <p>No trap reward when the eater busts on their own Akabare, when the Akabare was cancelled by Vinegar or neutralised by Dahi, or when the table ran out.</p>
@@ -213,8 +223,9 @@ export function RulesContent({ compact = false }: { compact?: boolean }) {
       <section className="ak-rules__sec">
         <h2>Winning</h2>
         <p>
-          At the end of each round everyone takes back their own puri and the first player moves clockwise. If anyone has 30 or more points, the highest score wins.
-          If nobody reaches 30, the highest score after round 5 wins.
+          At the end of each round everyone takes back their own puri and the first player moves clockwise.{' '}
+          {t !== null ? `If anyone has ${t} or more points, the highest score wins.` : ''}
+          {t !== null && r !== null ? ` If nobody reaches ${t}, the highest score after round ${r} wins.` : r !== null ? `The highest score after round ${r} wins.` : ' There is no round limit.'}
         </p>
         <p>
           <strong>Tiebreak:</strong> fewer busts across the game. Still tied? You share the win.

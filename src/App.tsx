@@ -1,13 +1,26 @@
 /** Hash-routed app shell: #/ home, #/g/<CODE> game, #/rules, #/cards (gallery). */
-import { useEffect } from 'react';
-import { CardGallery } from './cards/index.ts';
+import { Suspense, lazy, useEffect } from 'react';
 import { Wordmark } from './ui/common/Brand.tsx';
 import { Icon } from './ui/common/Icon.tsx';
 import { ToastProvider } from './ui/common/Toasts.tsx';
-import { GameRoute } from './ui/game/GameRoute.tsx';
 import { Home } from './ui/home/Home.tsx';
-import { RulesPage } from './ui/rules/Rules.tsx';
 import { HOME, useRoute } from './ui/router.ts';
+
+// Code-split: the home page loads first; the table, the rules and the card gallery load on demand.
+const GameRoute = lazy(() => import('./ui/game/GameRoute.tsx').then((m) => ({ default: m.GameRoute })));
+const RulesPage = lazy(() => import('./ui/rules/Rules.tsx').then((m) => ({ default: m.RulesPage })));
+const CardGallery = lazy(() => import('./cards/CardGallery.tsx').then((m) => ({ default: m.CardGallery })));
+
+function Loading() {
+  return (
+    <main className="ak-screen">
+      <div className="ak-loading" role="status">
+        <span className="ak-loading__puri" aria-hidden="true" />
+        <p>Loading…</p>
+      </div>
+    </main>
+  );
+}
 
 function CardsPage() {
   useEffect(() => {
@@ -46,5 +59,9 @@ export function App() {
     default:
       page = <Home />;
   }
-  return <ToastProvider>{page}</ToastProvider>;
+  return (
+    <ToastProvider>
+      <Suspense fallback={<Loading />}>{page}</Suspense>
+    </ToastProvider>
+  );
 }

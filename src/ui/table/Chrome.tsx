@@ -29,10 +29,16 @@ export function turnText(view: PlayerView, names: NameBook): string {
       return pa[0] === you ? 'Your turn' : `${names.name(pa[0])}’s turn`;
     case 'eating':
       return pa[0] === you ? 'Your turn to eat' : `${names.name(pa[0])} is eating`;
-    case 'roundEnd':
-      return 'Round over';
-    case 'gameOver':
-      return 'Game over';
+    case 'roundEnd': {
+      // The pill already says "Round over"; say who we're waiting for instead.
+      const waiting = view.players.filter((p) => !p.isBot && !p.ready);
+      if (you && waiting.some((p) => p.id === you)) return 'Ready when you are';
+      return waiting.length > 0 ? `Waiting for ${waiting.length === 1 ? names.name(waiting[0].id) : `${waiting.length} players`}` : 'Next round…';
+    }
+    case 'gameOver': {
+      const w = view.winners ?? [];
+      return w.length === 1 ? (w[0] === you ? 'You win!' : `${names.name(w[0])} wins`) : w.length > 1 ? 'Shared win' : 'Final scores';
+    }
   }
 }
 
@@ -76,7 +82,7 @@ export function TableHeader({
     setMenu(false);
   };
   const turn = turnText(view, names);
-  const yourTurn = turn.startsWith('Your turn') || turn === 'Set up your stack';
+  const yourTurn = turn.startsWith('Your turn') || turn === 'Set up your stack' || turn === 'Ready when you are';
   const goal = view.config.targetScore !== null ? `to ${view.config.targetScore}` : 'no target';
   return (
     <header className="ak-thead">
@@ -87,7 +93,7 @@ export function TableHeader({
         <span className="ak-thead__r">{roundText(view.round, view.config, phone)}</span>
         <span className="ak-thead__goal">{goal}</span>
       </div>
-      <div className={cx('ak-thead__phase', yourTurn && 'is-you')} aria-live="polite">
+      <div className={cx('ak-thead__phase', yourTurn && 'is-you')}>
         <span className="ak-thead__phasename">{PHASE_LABELS[view.phase]}</span>
         <span className="ak-thead__turn">{turn}</span>
       </div>
@@ -223,7 +229,7 @@ export function ScoresPanel({
       <p className="ak-small ak-muted">
         Ties go to fewer busts; still tied, you share the win.{' '}
         {view.config.targetScore !== null ? `First to ${view.config.targetScore}` : 'No target'}
-        {view.config.maxRounds !== null ? ` · ${view.config.maxRounds} rounds max.` : ' · no round limit.'}
+        {view.config.maxRounds !== null ? ` · ${view.config.maxRounds} round${view.config.maxRounds === 1 ? '' : 's'} max.` : ' · no round limit.'}
       </p>
 
       {view.results.length > 0 ? (

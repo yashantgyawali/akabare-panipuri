@@ -4,7 +4,7 @@
  * once the events before them have played.
  */
 import { useEffect, useId, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import type { Action, ColorId, PlayerId, PlayerView, PowerKind, RoundResult } from '../../engine/types.ts';
 import { Card, PLAYER_PALETTE, type FaceKind } from '../../cards/index.ts';
 import { Button } from '../common/Button.tsx';
@@ -32,8 +32,60 @@ function Overlay({ className, labelledBy, children, focusKey }: { className?: st
     const target = el.querySelector<HTMLElement>('[data-autofocus]') ?? el;
     target.focus({ preventScroll: true });
   }, [focusKey]);
+  useEffect(() => {
+    // Focus that lands behind the overlay (e.g. a closing drawer hands it back
+    // to the covered header button) comes back in. Open dialogs and toasts sit
+    // above the overlay and keep theirs.
+    const el = ref.current;
+    if (!el) return;
+    const into = () => (el.querySelector<HTMLElement>('[data-autofocus]') ?? el).focus({ preventScroll: true });
+    const pull = (e: FocusEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element) || el.contains(t) || t.closest('dialog[open], .ak-toasts')) return;
+      into();
+    };
+    // While a modal dialog was open the overlay couldn't take focus (the page is
+    // inert); when it closes, focus often just drops to <body>: take it then.
+    let timer: number | undefined;
+    const closed = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const at = document.activeElement;
+        if (!document.querySelector('dialog[open]') && (!at || !el.contains(at))) into();
+      }, 0);
+    };
+    document.addEventListener('focusin', pull);
+    document.addEventListener('close', closed, true);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('focusin', pull);
+      document.removeEventListener('close', closed, true);
+    };
+  }, []);
+  // aria-modal: keep Tab inside the overlay instead of wandering into the table hidden behind it.
+  const trapTab = (e: KeyboardEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (e.key !== 'Tab' || !el) return;
+    const items = [...el.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), [tabindex]:not([tabindex="-1"])')].filter(
+      (x) => x.offsetParent !== null,
+    );
+    if (items.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = items[0];
+    const last = items[items.length - 1];
+    const at = document.activeElement;
+    if (e.shiftKey && (at === first || at === el || !el.contains(at))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (at === last || !el.contains(at))) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
   return (
-    <div ref={ref} className={cx('ak-overlay', className)} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1}>
+    <div ref={ref} className={cx('ak-overlay', className)} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1} onKeyDown={trapTab}>
       {children}
     </div>
   );
@@ -58,6 +110,7 @@ export function AkabareMoment({
   pending,
   act,
   onDismiss,
+  watch,
 }: {
   moment: Moment;
   view: PlayerView;
@@ -67,23 +120,38 @@ export function AkabareMoment({
   pending: string | null;
   act: (key: string, action: Action) => void;
   onDismiss: () => void;
+  /** Set for everyone but the deciding eater while they decide (stage 'bitten'). */
+  watch?: {
+    /** The eater seems to be offline (after the presence grace period). */
+    offline: boolean;
+    /** Host only: hand the eater's seat to a bot so the game can go on. */
+    onReplace?: () => void;
+    replacing: boolean;
+    /** Set the overlay aside to look at the table (and reach the header). */
+    onPeek: () => void;
+  };
 }) {
   const titleId = useId();
   const you = view.youId;
   const eaterIsYou = moment.eaterId === you;
+  // A bot playing your seat decides for you: you watch like everyone else.
+  const youDecide = eaterIsYou && !watch;
   const ownerText =
     moment.owner === moment.eaterId ? (eaterIsYou ? 'your own' : 'their own') : moment.owner === you ? 'your' : `${names.name(moment.owner)}’s`;
   const legal = view.legal;
-  const choices = moment.stage === 'bitten' && eaterIsYou ? legal.flipPower : [];
-  const canAccept = moment.stage === 'bitten' && eaterIsYou && legal.acceptBust;
+  const choices = moment.stage === 'bitten' && youDecide ? legal.flipPower : [];
+  const canAccept = moment.stage === 'bitten' && youDecide && legal.acceptBust;
   const target = moment.target ?? view.eating?.target ?? 0;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
   // Leave room for the choices under the chili card: one row of picks is ~150px tall.
-  const pickW = phone ? 100 : 132;
-  const perRow = Math.max(1, Math.floor((Math.min(760, vw - 32) - 32 + 10) / (pickW + 10)));
+  // Phones lay the picks out in a grid of >= 96px columns (see overlays.css).
+  const pickW = phone ? 96 : 132;
+  const pickGap = phone ? 8 : 10;
+  const avail = phone ? vw - 44 : Math.min(760, vw - 32) - 32;
+  const perRow = Math.max(1, Math.floor((avail + pickGap) / (pickW + pickGap)));
   const rows = choices.length > 0 ? Math.ceil(choices.length / perRow) : 0;
-  const reserve = moment.stage === 'bitten' && eaterIsYou ? (phone ? 440 : 500) + Math.max(0, rows - 1) * (phone ? 124 : 150) : 330;
+  const reserve = moment.stage === 'bitten' && youDecide ? (phone ? 440 : 500) + Math.max(0, rows - 1) * (phone ? 136 : 150) : 330;
   const bigW = Math.round(Math.min(phone ? 124 : 180, Math.max(phone ? 72 : 96, (vh - reserve) * 0.72)));
   const trap = moment.trapRewardTo;
   const stageClass = `ak-bite--${moment.stage}`;
@@ -93,15 +161,17 @@ export function AkabareMoment({
   switch (moment.stage) {
     case 'bitten':
       headline = eaterIsYou ? `You bit ${ownerText} Akabare!` : `${names.name(moment.eaterId)} bit ${ownerText} Akabare…`;
-      sub = eaterIsYou ? (
+      sub = youDecide ? (
         choices.length > 0 ? (
-          'One last chance: flip a power and pray for Dahi.'
+          'Only Dahi can save you now.'
         ) : (
           'No power flips left to save you…'
         )
+      ) : watch?.offline ? (
+        <>Waiting on {names.who(moment.eaterId)}, who seems to be offline.</>
       ) : (
         <>
-          will they find Dahi?
+          {moment.eaterId === you ? 'Your bot decides: will it find Dahi?' : 'will they find Dahi?'}
           <span className="ak-waiting__dots ak-waiting__dots--light" aria-hidden="true">
             <i />
             <i />
@@ -112,7 +182,13 @@ export function AkabareMoment({
       break;
     case 'saved':
       headline = 'Saved by Dahi!';
-      sub = eaterIsYou ? 'Cool yoghurt, calm tongue. Keep eating.' : `${names.name(moment.eaterId)} is safe and keeps eating.`;
+      sub = eaterIsYou
+        ? 'Cool yoghurt, calm tongue. Keep eating.'
+        : moment.owner === you
+          ? `Your chili is wasted: ${names.name(moment.eaterId)} is safe and keeps eating.`
+          : moment.power?.owner === you
+            ? `Your Dahi saved ${names.name(moment.eaterId)}, who keeps eating.`
+            : `${names.name(moment.eaterId)} is safe and keeps eating.`;
       break;
     case 'failed':
       headline = moment.power ? `It’s ${powerName(moment.power.kind)}. No Dahi…` : 'No Dahi…';
@@ -165,7 +241,8 @@ export function AkabareMoment({
                     const p = view.players.find((x) => x.id === id);
                     const pw = p?.power;
                     const known = id === you && pw?.kind ? pw.kind : null;
-                    const text = known ? `Your ${powerName(known)}${known === 'dahi' ? ': safe!' : ': won’t save you'}` : `${names.name(id)}’s power: blind gamble`;
+                    const who = known ? `Your ${powerName(known)}` : `${names.name(id)}’s power`;
+                    const what = known ? (known === 'dahi' ? 'safe!' : 'won’t save you') : 'blind gamble';
                     return (
                       <li key={id}>
                         <button
@@ -176,7 +253,9 @@ export function AkabareMoment({
                           data-autofocus={id === choices[0] ? '' : undefined}
                         >
                           <Card back="power" color={names.color(id)} peek={known} badge={names.initial(id)} width={phone ? 46 : 58} decorative />
-                          <span className="ak-bite__picktext">{text}</span>
+                          <span className="ak-bite__picktext">
+                            <span className="ak-bite__pickwho">{who}:</span> <span className="ak-bite__pickwhat">{what}</span>
+                          </span>
                           {pending === `power:${id}` ? <span className="ak-spinner" aria-hidden="true" /> : null}
                         </button>
                       </li>
@@ -193,9 +272,22 @@ export function AkabareMoment({
           </div>
         ) : null}
 
+        {moment.stage === 'bitten' && watch ? (
+          <div className="ak-bite__watch">
+            {watch.offline && watch.onReplace ? (
+              <Button variant="secondary" busy={watch.replacing} disabled={busy} onClick={watch.onReplace}>
+                Replace {names.name(moment.eaterId)} with a bot
+              </Button>
+            ) : null}
+            <button type="button" className="ak-linkbtn ak-linkbtn--light" onClick={watch.onPeek} data-autofocus="">
+              <Icon name="eye" size={16} /> Look at the table
+            </button>
+          </div>
+        ) : null}
+
         {moment.stage === 'saved' ? (
           <Button variant="leaf" size="lg" onClick={onDismiss} data-autofocus="">
-            {eaterIsYou ? 'Keep eating' : 'Phew. Carry on'}
+            {eaterIsYou ? 'Keep eating' : moment.owner === you ? 'Oh well' : 'Carry on'}
           </Button>
         ) : null}
       </div>
@@ -235,6 +327,7 @@ export function RoundEndPanel({
   pending,
   act,
   onPeek,
+  onTakeSeatBack,
 }: {
   view: PlayerView;
   names: NameBook;
@@ -244,6 +337,8 @@ export function RoundEndPanel({
   pending: string | null;
   act: (key: string, action: Action) => void;
   onPeek: () => void;
+  /** Set while a bot plays the viewer's seat: the banner with this button is hidden behind the overlay. */
+  onTakeSeatBack?: () => void;
 }) {
   const titleId = useId();
   const you = view.youId;
@@ -252,6 +347,10 @@ export function RoundEndPanel({
   const { targetScore, maxRounds } = view.config;
   const willEnd = (targetScore !== null && view.players.some((p) => p.score >= targetScore)) || (maxRounds !== null && view.round >= maxRounds);
   const waiting = view.players.filter((p) => !p.isBot && !p.ready);
+  // Whether YOU are ready comes from your seat, not from legal.ready: legal is
+  // empty for a moment whenever someone else's Ready plays back.
+  const mine = view.players.find((p) => p.id === you);
+  const youReady = !mine || mine.isBot || mine.ready;
   const reason =
     result.outcome === 'bust'
       ? result.bustReason === 'emptyTable'
@@ -265,7 +364,7 @@ export function RoundEndPanel({
         ? `Overshot to ${result.eaten}, but the score is the bid.`
         : null;
   return (
-    <Overlay className="ak-result" labelledBy={titleId} focusKey={`r${result.round}:${view.legal.ready}`}>
+    <Overlay className="ak-result" labelledBy={titleId} focusKey={`r${result.round}:${youReady}:${!!onTakeSeatBack}`}>
       <div className={cx('ak-result__card ak-paper', success ? 'is-success' : 'is-bust')}>
         <p className="ak-kicker ak-kicker--ink">Round {result.round} result</p>
         <h2 className="ak-result__title" id={titleId}>
@@ -298,8 +397,28 @@ export function RoundEndPanel({
           </p>
         ) : null}
         <div className="ak-result__actions">
-          {view.legal.ready ? (
-            <Button variant="primary" size="lg" busy={pending === 'ready'} disabled={busy} onClick={() => act('ready', { type: 'READY' })} data-autofocus="">
+          {onTakeSeatBack ? (
+            <>
+              <p className="ak-result__waiting" role="status">
+                <Icon name="bot" size={18} /> A bot is playing your seat.
+              </p>
+              <Button variant="primary" busy={pending === `bot:${you}`} disabled={busy} onClick={onTakeSeatBack} data-autofocus="">
+                Take my seat back
+              </Button>
+            </>
+          ) : !youReady ? (
+            <Button
+              variant="primary"
+              size="lg"
+              busy={pending === 'ready'}
+              disabled={busy}
+              // Not `disabled` while a move plays back: that would drop keyboard focus.
+              aria-disabled={!view.legal.ready || undefined}
+              onClick={() => {
+                if (view.legal.ready) act('ready', { type: 'READY' });
+              }}
+              data-autofocus=""
+            >
               {willEnd ? 'See the final scores' : `Ready for round ${view.round + 1}`}
             </Button>
           ) : (
@@ -371,7 +490,8 @@ export function GameOverPanel({
 }) {
   const titleId = useId();
   const you = view.youId;
-  const winners = view.winners ?? [];
+  // You first ("Shared win: You and Bikash!", never "Bikash and You!").
+  const winners = [...(view.winners ?? [])].sort((a, b) => Number(b === view.youId) - Number(a === view.youId));
   const standings = [...view.players].sort((a, b) => b.score - a.score || a.busts - b.busts || a.seat - b.seat);
   const top = standings[0]?.score ?? 0;
   const leaders = standings.filter((p) => p.score === top);

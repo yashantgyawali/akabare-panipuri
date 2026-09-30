@@ -104,6 +104,60 @@ describe('rewindView', () => {
   });
 });
 
+describe('displayAt across a round change (forwardView)', () => {
+  for (const seed of [5, 7, 42, 2026]) {
+    it(`plays the rest of an old round forward when the next view is already in a new round (seed ${seed})`, () => {
+      for (const viewer of ['p0', 'p3']) {
+        const views = playGame(seed, viewer);
+        let compared = 0;
+        let ends = 0;
+        for (let i = 0; i < views.length; i++) {
+          const from = views[i];
+          if (from.phase !== 'bidding' && from.phase !== 'eating') continue;
+          const next = views.find((v) => v.round === from.round + 1);
+          if (!next) continue;
+          const roundEnd = next.log.find((e) => e.type === 'roundEnd' && e.round === from.round);
+          if (!roundEnd || next.log[0].seq > from.lastSeq + 1) continue;
+          for (let c = from.lastSeq + 1; c <= roundEnd.seq; c++) {
+            const d = displayAt([from, next], c);
+            expect(d).not.toBeNull();
+            expect(d!.round).toBe(from.round);
+            expect(d!.lastSeq).toBe(c);
+            expect(d!.legal.flipPuri).toEqual([]);
+            const real = views.find((v) => v.lastSeq === c);
+            if (real && real.round === from.round) {
+              expect(shape(d!)).toEqual(shape(real));
+              compared++;
+            }
+          }
+          const end = displayAt([from, next], roundEnd.seq)!;
+          expect(end.phase).toBe('roundEnd');
+          expect(end.results.find((r) => r.round === from.round)).toEqual((roundEnd as Extract<typeof roundEnd, { type: 'roundEnd' }>).result);
+          ends++;
+        }
+        expect(compared).toBeGreaterThan(10);
+        expect(ends).toBeGreaterThan(3);
+      }
+    });
+  }
+
+  it('also moves a serving-phase table forward (no frozen table), keeping others’ cards face down', () => {
+    const views = playGame(9, 'p1');
+    const from = views.find((v) => v.phase === 'serving' && v.round === 1)!;
+    const next = views.find((v) => v.round === 2)!;
+    const roundEnd = next.log.find((e) => e.type === 'roundEnd' && e.round === 1)!;
+    expect(next.log[0].seq).toBeLessThanOrEqual(from.lastSeq + 1);
+    const phases = new Set<string>();
+    for (let c = from.lastSeq + 1; c <= roundEnd.seq; c++) {
+      const d = displayAt([from, next], c)!;
+      phases.add(d.phase);
+      for (const p of d.players) for (const card of p.stack) if (card.owner !== 'p1') expect(card.kind).toBeNull();
+    }
+    expect(phases.has('bidding')).toBe(true);
+    expect(phases.has('roundEnd')).toBe(true);
+  });
+});
+
 describe('displayAt', () => {
   it('never offers the legal actions of a superseded view', () => {
     const views = playGame(11, 'p0');

@@ -93,6 +93,8 @@ export interface PanelProps {
   selectedKind: PuriKind | null;
   onClearSelection: () => void;
   act: (key: string, action: Action) => void;
+  /** Set while an overlay (the round result, or a bite you are watching) is set aside to look at the table: brings it back. */
+  onUnpeek?: () => void;
 }
 
 function Waiting({ text }: { text: string }) {
@@ -109,7 +111,7 @@ function Waiting({ text }: { text: string }) {
 }
 
 export function ActionPanel(props: PanelProps) {
-  const { view, names, busy, pending, playing, selectedKind, onClearSelection, act } = props;
+  const { view, names, busy, pending, playing, selectedKind, onClearSelection, act, onUnpeek } = props;
   const legal = view.legal;
   const you = view.youId;
   const pendingNames = joinNames(view.pendingActors.filter((id) => id !== you).map((id) => names.name(id)));
@@ -173,7 +175,7 @@ export function ActionPanel(props: PanelProps) {
               Raise or pass?
             </h2>
             {b ? (
-              <p className="ak-panel__text">
+              <p className="ak-panel__text ak-panel__text--bidinfo">
                 High bid <strong>{b.highBid}</strong> by {names.who(b.highBidderId)}. The last one standing eats.
               </p>
             ) : null}
@@ -221,10 +223,19 @@ export function ActionPanel(props: PanelProps) {
       const e = view.eating;
       if (!e) return null;
       if (e.eaterId !== you) {
+        // Only tease the trap reward when your Akabare is actually out on the table.
+        const trapSet = view.config.trapReward > 0 && view.players.some((p) => p.stack.some((c) => c.owner === you && c.kind === 'akabare'));
         return (
           <div className="ak-panel">
-            <Waiting text={`${names.name(e.eaterId)} is eating ${e.target}…`} />
-            <p className="ak-panel__text ak-small">Watch the plate. If they bite your Akabare, you get +{view.config.trapReward}.</p>
+            <Waiting text={e.pendingAkabare ? `${names.name(e.eaterId)} bit an Akabare and is deciding…` : `${names.name(e.eaterId)} is eating ${e.target}…`} />
+            <p className="ak-panel__text ak-small">
+              {trapSet ? `Watch the plate. If they bite your Akabare, you get +${view.config.trapReward}.` : 'Watch the plate.'}
+            </p>
+            {onUnpeek ? (
+              <Button variant="secondary" size="sm" onClick={onUnpeek} icon={<Icon name="chili" size={16} />}>
+                Back to the bite
+              </Button>
+            ) : null}
           </div>
         );
       }
@@ -247,16 +258,16 @@ export function ActionPanel(props: PanelProps) {
               <strong>Table’s empty.</strong> Flip a power and hope for Chaat, or give up.
             </p>
           ) : ownFirst ? (
-            <p className="ak-panel__text">Finish your own stack first: tap it to eat the top card.</p>
+            <p className="ak-panel__text">Finish your own stack first: tap it to eat.</p>
           ) : (
             <p className="ak-panel__text">Tap any glowing stack to eat its top card.</p>
           )}
           {legal.flipPower.length > 0 ? (
             <p className="ak-panel__text ak-small">
-              You may flip {view.config.powerFlipsMax - e.powersFlipped} more power{view.config.powerFlipsMax - e.powersFlipped === 1 ? '' : 's'}: tap a glowing power card.
+              Or flip a glowing power ({view.config.powerFlipsMax - e.powersFlipped} left).
               {(() => {
                 const mine = view.players.find((p) => p.id === you)?.power;
-                return mine && !mine.revealed && mine.kind ? ` Yours is ${powerName(mine.kind)}; the rest are blind gambles.` : ' Every one of them is a blind gamble.';
+                return mine && !mine.revealed && mine.kind ? ` Yours is ${powerName(mine.kind)}; the rest are blind gambles.` : ' Each one is a blind gamble.';
               })()}
             </p>
           ) : null}
@@ -268,24 +279,39 @@ export function ActionPanel(props: PanelProps) {
         </div>
       );
     }
-    case 'roundEnd':
+    case 'roundEnd': {
+      const { targetScore, maxRounds } = view.config;
+      const last = (targetScore !== null && view.players.some((p) => p.score >= targetScore)) || (maxRounds !== null && view.round >= maxRounds);
       return (
         <div className="ak-panel">
-          {legal.ready ? (
-            <Button variant="primary" busy={pending === 'ready'} disabled={busy} onClick={() => act('ready', { type: 'READY' })}>
-              Ready for the next round
-            </Button>
-          ) : (
-            <Waiting text={pendingNames ? `Waiting for ${pendingNames}…` : 'Next round coming up…'} />
-          )}
+          <div className="ak-row">
+            {legal.ready ? (
+              <Button variant="primary" busy={pending === 'ready'} disabled={busy} onClick={() => act('ready', { type: 'READY' })}>
+                {last ? 'See the final scores' : 'Ready for the next round'}
+              </Button>
+            ) : (
+              <Waiting text={pendingNames ? `Waiting for ${pendingNames}…` : last ? 'Final scores coming up…' : 'Next round coming up…'} />
+            )}
+            {onUnpeek ? (
+              <Button variant="secondary" onClick={onUnpeek}>
+                Back to the result
+              </Button>
+            ) : null}
+          </div>
         </div>
       );
+    }
     case 'gameOver':
       return (
         <div className="ak-panel">
           <p className="ak-panel__text">
             <Icon name="trophy" size={18} /> Game over.
           </p>
+          {onUnpeek ? (
+            <Button variant="primary" onClick={onUnpeek}>
+              Back to the results
+            </Button>
+          ) : null}
         </div>
       );
   }

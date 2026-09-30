@@ -4,7 +4,7 @@
  * other players' moves play one at a time and the table always matches the
  * announcer. Actions come only from view.legal (empty while events play).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Action, GameEvent, PlayerId, PlayerView, PublicPlayerView } from '../../engine/types.ts';
 import type { UseGame } from '../../net/useGame.ts';
 import { noLegalActions } from '../../engine/index.ts';
@@ -17,7 +17,7 @@ import { HOME, navigate } from '../router.ts';
 import { RulesContent } from '../rules/Rules.tsx';
 import { usePlayback } from '../playback/usePlayback.ts';
 import { describeEvent, makeNameBook, powerName, type NameBook } from '../text.ts';
-import { LogList, ScoresPanel, TableHeader, type DrawerName } from './Chrome.tsx';
+import { LogList, ScoresPanel, TableHeader, turnText, type DrawerName } from './Chrome.tsx';
 import { EatingHud } from './EatingHud.tsx';
 import { Hand, handCards } from './Hand.tsx';
 import { AkabareMoment, GameOverPanel, RoundEndPanel, type Moment } from './Overlays.tsx';
@@ -169,6 +169,57 @@ function CenterStage({ view, names, plateW, reduced, compact }: { view: PlayerVi
   }
 }
 
+/** The Akabare moment after `e` plays (bite → saved | failed → bust; cleared by later events). */
+function nextMoment(m: Moment | null, e: GameEvent): Moment | null {
+  if (e.type === 'bite') return { eaterId: e.eaterId, owner: e.owner, fromStackOf: e.fromStackOf, stage: 'bitten' };
+  if (e.type === 'flipPower' && (e.effect === 'saved' || e.effect === 'failedSave')) {
+    return {
+      eaterId: e.eaterId,
+      owner: m?.owner ?? e.owner,
+      fromStackOf: m?.fromStackOf ?? e.fromStackOf,
+      stage: e.effect === 'saved' ? 'saved' : 'failed',
+      power: { kind: e.kind, owner: e.owner },
+    };
+  }
+  if (e.type === 'bust' && e.reason === 'akabare') {
+    return m
+      ? { ...m, stage: 'bust', trapRewardTo: e.trapRewardTo, target: e.target }
+      : { eaterId: e.eaterId, owner: e.akabareOwnerId ?? e.eaterId, fromStackOf: e.eaterId, stage: 'bust', trapRewardTo: e.trapRewardTo, target: e.target };
+  }
+  if (e.type === 'roundEnd' || e.type === 'roundStart' || e.type === 'success' || e.type === 'flipPuri') {
+    return m && (e.type !== 'flipPuri' || m.stage === 'saved') ? null : m;
+  }
+  return m;
+}
+
+/** Where keyboard focus was when you acted: a stable selector for "the same control", '*' for "whatever you can do next". */
+function focusMemoOf(el: Element | null): string | null {
+  if (!(el instanceof HTMLElement) || el === document.body) return null;
+  if (el.closest('.ak-overlay')) return '*';
+  const stack = el.closest<HTMLElement>('[data-stack-of]');
+  if (stack?.dataset.stackOf) return `[data-stack-of="${CSS.escape(stack.dataset.stackOf)}"] > button`;
+  const power = el.closest<HTMLElement>('[data-power-of]');
+  if (power?.dataset.powerOf) return `[data-power-of="${CSS.escape(power.dataset.powerOf)}"] > button`;
+  if (el.closest('.ak-dock__panel') && el.classList.contains('ak-btn--primary')) return '.ak-dock__panel .ak-btn--primary';
+  return el.closest('.ak-tablescreen') ? '*' : null;
+}
+
+/** The control to focus for a remembered spot: the same one if it's still actionable, else the first thing you can act on. */
+function focusTargetFor(memo: string): HTMLElement | null {
+  const usable = (el: Element | null): el is HTMLElement =>
+    el instanceof HTMLElement && !(el as HTMLButtonElement).disabled && el.offsetParent !== null && !el.classList.contains('ak-card-stack--dim');
+  if (memo !== '*') {
+    const same = document.querySelector(memo);
+    if (usable(same)) return same;
+  }
+  const next = [
+    ...document.querySelectorAll('.ak-arena [data-stack-of] > button.ak-card-stack--selectable, .ak-dock [data-stack-of] > button.ak-card-stack--selectable'),
+    ...document.querySelectorAll('.ak-arena [data-power-of] > button.ak-card--selectable, .ak-dock [data-power-of] > button.ak-card--selectable'),
+    ...document.querySelectorAll('.ak-dock__hand button, .ak-dock__panel .ak-btn--primary, .ak-dock__panel button, .ak-dock__setup button'),
+  ];
+  return next.find(usable) ?? null;
+}
+
 export function Table({ game }: { game: UseGame }) {
   const snap = game.snapshot!;
   const live = snap.view!;
@@ -176,6 +227,7 @@ export function Table({ game }: { game: UseGame }) {
   const reduced = useReducedMotion();
   const phone = usePhone();
   const big = useMediaQuery('(min-width: 1180px) and (min-height: 880px)');
+  const narrow = useMediaQuery('(min-width: 641px) and (max-width: 900px)');
   const pb = usePlayback(live, you, reduced);
   const view = pb.display ?? live;
   const names = useMemo(() => makeNameBook(view.players, you), [view.players, you]);
@@ -183,8 +235,14 @@ export function Table({ game }: { game: UseGame }) {
   const { pending, run } = useRunner();
   const busy = game.busy;
   const gameAct = game.act;
+  // Keyboard focus: the control you act with usually unmounts (a stack is a
+  // <button> only while you may tap it, and the panel shows "Playing…" while
+  // your move plays back). Remember where you were and put focus back on the
+  // same control, or the next thing you can act on, once the table settles.
+  const focusWant = useRef<string | null>(null);
   const act = useCallback(
     (key: string, action: Action) => {
+      focusWant.current = focusMemoOf(document.activeElement);
       void run(key, () => gameAct(action));
     },
     [run, gameAct],
@@ -194,7 +252,6 @@ export function Table({ game }: { game: UseGame }) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
   const [peek, setPeek] = useState(false);
-  const [moment, setMoment] = useState<Moment | null>(null);
 
   const me = view.players.find((p) => p.id === you) ?? null;
   // While a bot plays your seat you only watch (take the seat back to act again).
@@ -210,30 +267,21 @@ export function Table({ game }: { game: UseGame }) {
   useEffect(() => setPeek(false), [view.phase, view.round]);
 
   // The Akabare moment follows the playback: bite → (saved | failed) → bust.
+  // Derived during render (not in an effect) so the overlay never drops out
+  // for a frame between stages, which would remount it and replay the flips.
   const current = pb.current;
-  useEffect(() => {
-    const e = current;
-    if (!e) return;
-    if (e.type === 'bite') {
-      setMoment({ eaterId: e.eaterId, owner: e.owner, fromStackOf: e.fromStackOf, stage: 'bitten' });
-    } else if (e.type === 'flipPower' && (e.effect === 'saved' || e.effect === 'failedSave')) {
-      setMoment((m) => ({
-        eaterId: e.eaterId,
-        owner: m?.owner ?? e.owner,
-        fromStackOf: m?.fromStackOf ?? e.fromStackOf,
-        stage: e.effect === 'saved' ? 'saved' : 'failed',
-        power: { kind: e.kind, owner: e.owner },
-      }));
-    } else if (e.type === 'bust' && e.reason === 'akabare') {
-      setMoment((m) =>
-        m
-          ? { ...m, stage: 'bust', trapRewardTo: e.trapRewardTo, target: e.target }
-          : { eaterId: e.eaterId, owner: e.akabareOwnerId ?? e.eaterId, fromStackOf: e.eaterId, stage: 'bust', trapRewardTo: e.trapRewardTo, target: e.target },
-      );
-    } else if (e.type === 'roundEnd' || e.type === 'roundStart' || e.type === 'success' || e.type === 'flipPuri') {
-      setMoment((m) => (m && (e.type !== 'flipPuri' || m.stage === 'saved') ? null : m));
-    }
-  }, [current]);
+  const [momentState, setMomentState] = useState<{ seq: number | null; cursor: number; moment: Moment | null }>(() => ({ seq: null, cursor: pb.cursor, moment: null }));
+  let moment = momentState.moment;
+  if (current && current.seq !== momentState.seq) {
+    moment = nextMoment(moment, current);
+    setMomentState({ seq: current.seq, cursor: pb.cursor, moment });
+  } else if (!current && pb.cursor !== momentState.cursor) {
+    // Playback jumped (skip, or a gap too long to replay): no played event led
+    // here, so an earlier moment is stale. A live bite is re-derived below.
+    moment = null;
+    setMomentState({ seq: null, cursor: pb.cursor, moment: null });
+  }
+  const setMoment = useCallback((m: Moment | null) => setMomentState((st) => ({ ...st, moment: m })), []);
   useEffect(() => {
     if (moment?.stage !== 'saved') return;
     const t = setTimeout(() => setMoment(null), 2600);
@@ -245,20 +293,60 @@ export function Table({ game }: { game: UseGame }) {
   }, [pb.playing, moment, view.phase]);
 
   const bite = view.phase === 'eating' ? (view.eating?.pendingAkabare ?? null) : null;
-  const shownMoment: Moment | null =
-    moment && (moment.stage !== 'bitten' || bite)
+  const eaterId = view.eating?.eaterId ?? null;
+  // A 'bitten' moment only stands while it IS the bite on the table (same eater, owner and stack).
+  const sameBite = (x: Moment) => !!bite && x.eaterId === eaterId && x.owner === bite.owner && x.fromStackOf === bite.fromStackOf;
+  const momentNow: Moment | null =
+    moment && (moment.stage !== 'bitten' || sameBite(moment))
       ? moment
-      : bite && view.eating
-        ? { eaterId: view.eating.eaterId, owner: bite.owner, fromStackOf: bite.fromStackOf, stage: 'bitten' }
+      : bite && eaterId
+        ? { eaterId, owner: bite.owner, fromStackOf: bite.fromStackOf, stage: 'bitten' }
         : null;
+  // Watchers may set the suspense aside to look at the table (and reach the
+  // header, e.g. to replace an eater who went offline). Keyed to this bite.
+  const biteKey = bite && view.eating ? `${view.round}:${view.eating.plate.length}:${bite.fromStackOf}` : null;
+  const [bitePeek, setBitePeek] = useState<string | null>(null);
+  const watchingBite = momentNow?.stage === 'bitten' && (momentNow.eaterId !== you || !!me?.isBot);
+  const peekingBite = watchingBite && biteKey !== null && bitePeek === biteKey;
+  const shownMoment = peekingBite ? null : momentNow;
 
   const result = view.phase === 'roundEnd' || view.phase === 'gameOver' ? (view.results.find((r) => r.round === view.round) ?? null) : null;
   const showResult = view.phase === 'roundEnd' && !!result && !shownMoment && !peek;
   const showGameOver = view.phase === 'gameOver' && !shownMoment && !peek;
+  const overlayKey = shownMoment ? `m:${shownMoment.stage}` : showResult ? `r:${view.round}` : showGameOver ? 'over' : null;
+
+  // An overlay can't take focus while a drawer (a native modal <dialog>) is
+  // open, and closing the drawer later would hand focus back to the covered
+  // header. So a new overlay closes the drawer; when an overlay goes away,
+  // focus goes back to the table.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (overlayKey) setDrawer(null);
+    else if (mounted.current && (!document.activeElement || document.activeElement === document.body)) focusWant.current ??= '*';
+    mounted.current = true;
+  }, [overlayKey]);
+  useEffect(() => {
+    const clear = (e: FocusEvent) => {
+      if (e.target !== document.body) focusWant.current = null;
+    };
+    document.addEventListener('focusin', clear);
+    return () => document.removeEventListener('focusin', clear);
+  }, []);
+  useEffect(() => {
+    const want = focusWant.current;
+    if (!want || pb.playing || overlayKey) return;
+    const at = document.activeElement;
+    if (at && at !== document.body) return;
+    const el = focusTargetFor(want);
+    if (!el) return; // nothing to act on yet (not your turn): try again on a later render
+    focusWant.current = null;
+    el.focus({ preventScroll: true });
+  });
 
   // Browser tab title: nudge when it's your move.
   const yourMove =
     !pb.playing &&
+    !me?.isBot &&
     (!!live.legal.startBid || !!live.legal.raise || live.legal.flipPuri.length > 0 || live.legal.flipPower.length > 0 || live.legal.acceptBust || (!!live.legal.setup && !live.legal.setup.submitted) || live.legal.ready);
   useEffect(() => {
     document.title = `${yourMove ? '● Your move · ' : ''}${snap.code} · Akabare Panipuri`;
@@ -278,7 +366,7 @@ export function Table({ game }: { game: UseGame }) {
   const opponents = ordered.slice(1);
   const m = Math.min(5, Math.max(1, opponents.length));
 
-  const oppW = phone ? 38 : big ? 60 : 52;
+  const oppW = phone ? 38 : big ? 60 : narrow && opponents.length >= 4 ? 42 : 52;
   const oppMax = phone ? 90 : big ? 152 : 128;
   const meW = phone ? 42 : big ? 62 : 56;
   const meMax = phone ? 104 : big ? 150 : 132;
@@ -327,6 +415,10 @@ export function Table({ game }: { game: UseGame }) {
     }
     return { state: 'idle', label: '' };
   };
+  // Phones: your seat joins the seat grid (its last cell), and the dock keeps
+  // only what you act with, so a full table fits on one screen.
+  const meInGrid = phone && !!me;
+  const showHand = !phone || view.phase === 'serving';
   const seatProps = (p: PublicPlayerView, variant: 'opp' | 'me'): SeatProps => ({
     p,
     view,
@@ -335,8 +427,8 @@ export function Table({ game }: { game: UseGame }) {
     online: p.isBot || !graceOver ? null : p.id === you || game.online.includes(p.id),
     turn: (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating') && view.pendingActors.includes(p.id),
     status: statusFor(p, view),
-    cardW: variant === 'me' ? meW : oppW,
-    stackMax: variant === 'me' ? meMax : oppMax,
+    cardW: variant === 'me' && !meInGrid ? meW : oppW,
+    stackMax: variant === 'me' && !meInGrid ? meMax : oppMax,
     stack: stackClick(p),
     power: powerClick(p),
     cue: cueFor(p, current),
@@ -356,7 +448,7 @@ export function Table({ game }: { game: UseGame }) {
     });
 
   return (
-    <div className={cx('ak-tablescreen', `ak-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone')}>
+    <div className={cx('ak-tablescreen', `ak-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone', phone && opponents.length >= 3 && 'is-crowded')}>
       <TableHeader view={view} names={names} code={snap.code} phone={phone} onOpen={setDrawer} onLeave={() => setConfirmLeave(true)} />
 
       {me?.isBot && view.phase !== 'gameOver' ? (
@@ -381,16 +473,17 @@ export function Table({ game }: { game: UseGame }) {
 
       <main className={cx('ak-arena', `ak-arena--m${m}`)} aria-label="The table">
         <div className="ak-felt" aria-hidden="true" />
-        <div className="ak-opps">
+        <div className={cx('ak-opps', `ak-opps--n${opponents.length + (meInGrid ? 1 : 0)}`)}>
           {opponents.map((p, i) => (
-            <div
-              key={p.id}
-              className={cx('ak-oppslot', m >= 3 && (i === 0 || i === m - 1) && 'ak-oppslot--side')}
-              style={{ gridArea: `s${i + 1}` }}
-            >
+            <div key={p.id} className={cx('ak-oppslot', m >= 3 && (i === 0 || i === m - 1) && 'ak-oppslot--side')}>
               <Seat {...seatProps(p, 'opp')} />
             </div>
           ))}
+          {meInGrid && me ? (
+            <div className="ak-oppslot ak-oppslot--me">
+              <Seat {...seatProps(me, 'me')} />
+            </div>
+          ) : null}
         </div>
         <div className="ak-center">
           <div className="ak-announce" aria-hidden="true">
@@ -408,12 +501,14 @@ export function Table({ game }: { game: UseGame }) {
           <CenterStage view={view} names={names} plateW={plateW} reduced={reduced} compact={phone} />
         </div>
       </main>
-      <p className="ak-sr" aria-live="polite">
-        {line?.text ?? ''}
-      </p>
+      {/* The one live region for the table: each move as it plays, then your turn (the header pill stays quiet). */}
+      <div className="ak-sr" aria-live="polite">
+        <p key={current?.seq ?? 'none'}>{line?.text ?? ''}</p>
+        {yourMove && !overlayKey ? <p>{turnText(live, names)}.</p> : null}
+      </div>
 
-      <section className={cx('ak-dock', setupMode && 'ak-dock--setup')} aria-label="Your seat">
-        {me ? (
+      <section className={cx('ak-dock', setupMode && 'ak-dock--setup', meInGrid && 'ak-dock--noseat', !showHand && 'ak-dock--nohand')} aria-label="Your seat">
+        {me && !meInGrid ? (
           <div className="ak-dock__seat">
             <Seat {...seatProps(me, 'me')} />
           </div>
@@ -440,17 +535,19 @@ export function Table({ game }: { game: UseGame }) {
           </div>
         ) : (
           <>
-            <div className="ak-dock__hand">
-              <Hand
-                cards={hand}
-                color={me?.color ?? 'red'}
-                width={handW}
-                selected={legal.place ? sel : null}
-                pickable={legal.place && !busy ? legal.place.kinds : null}
-                onPick={(i) => setSel((s) => (s === i ? null : i))}
-                emptyText={view.phase === 'serving' || view.phase === 'bidding' ? 'Your hand is empty.' : 'No cards in hand.'}
-              />
-            </div>
+            {showHand ? (
+              <div className="ak-dock__hand">
+                <Hand
+                  cards={hand}
+                  color={me?.color ?? 'red'}
+                  width={handW}
+                  selected={legal.place ? sel : null}
+                  pickable={legal.place && !busy ? legal.place.kinds : null}
+                  onPick={(i) => setSel((s) => (s === i ? null : i))}
+                  emptyText={view.phase === 'serving' || view.phase === 'bidding' ? 'Your hand is empty.' : 'No cards in hand.'}
+                />
+              </div>
+            ) : null}
             <div className="ak-dock__panel">
               <ActionPanel
                 view={actView}
@@ -461,6 +558,9 @@ export function Table({ game }: { game: UseGame }) {
                 selectedKind={selKind}
                 onClearSelection={() => setSel(null)}
                 act={act}
+                onUnpeek={
+                  peekingBite ? () => setBitePeek(null) : peek && (view.phase === 'roundEnd' || view.phase === 'gameOver') ? () => setPeek(false) : undefined
+                }
               />
             </div>
           </>
@@ -468,10 +568,39 @@ export function Table({ game }: { game: UseGame }) {
       </section>
 
       {shownMoment ? (
-        <AkabareMoment moment={shownMoment} view={actView} names={names} phone={phone} busy={busy} pending={pending} act={act} onDismiss={() => setMoment(null)} />
+        <AkabareMoment
+          moment={shownMoment}
+          view={actView}
+          names={names}
+          phone={phone}
+          busy={busy}
+          pending={pending}
+          act={act}
+          onDismiss={() => setMoment(null)}
+          watch={
+            watchingBite
+              ? {
+                  offline: offlineWaiting.includes(shownMoment.eaterId),
+                  onReplace: game.isHost ? () => setBot(shownMoment.eaterId, true) : undefined,
+                  replacing: pending === `bot:${shownMoment.eaterId}`,
+                  onPeek: () => setBitePeek(biteKey),
+                }
+              : undefined
+          }
+        />
       ) : null}
       {showResult && result ? (
-        <RoundEndPanel view={actView} names={names} result={result} isHost={game.isHost} busy={busy} pending={pending} act={act} onPeek={() => setPeek(true)} />
+        <RoundEndPanel
+          view={actView}
+          names={names}
+          result={result}
+          isHost={game.isHost}
+          busy={busy}
+          pending={pending}
+          act={act}
+          onPeek={() => setPeek(true)}
+          onTakeSeatBack={me?.isBot && you ? () => setBot(you, false) : undefined}
+        />
       ) : null}
       {showGameOver ? (
         <GameOverPanel
@@ -484,14 +613,9 @@ export function Table({ game }: { game: UseGame }) {
           onPeek={() => setPeek(true)}
         />
       ) : null}
-      {peek && (view.phase === 'roundEnd' || view.phase === 'gameOver') ? (
-        <button type="button" className="ak-peekback ak-btn ak-btn--primary ak-btn--md" onClick={() => setPeek(false)}>
-          <span className="ak-btn__label">{view.phase === 'gameOver' ? 'Back to the results' : 'Back to the round result'}</span>
-        </button>
-      ) : null}
 
       <Drawer open={drawer === 'rules'} onClose={() => setDrawer(null)} title="Rules" wide>
-        <RulesContent compact />
+        <RulesContent compact config={view.config} />
       </Drawer>
       <Drawer open={drawer === 'log'} onClose={() => setDrawer(null)} title="Game log">
         <LogList log={view.log} names={names} trapReward={view.config.trapReward} />

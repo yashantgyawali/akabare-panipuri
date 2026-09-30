@@ -70,7 +70,11 @@ export function usePlayback(view: PlayerView | null, youId: PlayerId | null, red
     if (s.cursor < 0 || s.cursor >= latestSeq) return;
     const cur = s.current && s.current.seq === s.cursor ? s.current : null;
     const queued = latestSeq - s.cursor;
-    const hold = cur ? eventDuration(cur, !!youId && actorOf(cur) === youId, queued, reducedMotion) : 0;
+    let hold = cur ? eventDuration(cur, !!youId && actorOf(cur) === youId, queued, reducedMotion) : 0;
+    // Catching up past a round that already ended (the device slept, or the
+    // host continued before this client saw the result): the old round's
+    // result shows only until the next round starts, so give it time to read.
+    if (cur?.type === 'roundEnd' && s.views[s.views.length - 1].round > cur.round) hold = Math.max(hold, 3200);
     const wait = Math.max(0, hold - (Date.now() - s.playedAt));
     const t = setTimeout(() => {
       setState((prev) => {

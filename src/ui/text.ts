@@ -62,9 +62,9 @@ export const puriName = (k: PuriKind): string => PURI_LABELS[k];
 
 export function goalText(config: GameConfig): string {
   const { targetScore, maxRounds } = config;
-  if (targetScore !== null && maxRounds !== null) return `First to ${targetScore}, or best after ${maxRounds} rounds`;
+  if (targetScore !== null && maxRounds !== null) return `First to ${targetScore}, or best after ${maxRounds} round${maxRounds === 1 ? '' : 's'}`;
   if (targetScore !== null) return `First to ${targetScore} points, no round limit`;
-  return `Best score after ${maxRounds} rounds`;
+  return `Best score after ${maxRounds} round${maxRounds === 1 ? '' : 's'}`;
 }
 
 export function roundText(round: number, config: GameConfig, short = false): string {
@@ -152,7 +152,7 @@ export function describeEvent(e: GameEvent, b: NameBook, trapReward = 2): EventL
     case 'roundEnd':
       return { text: `Round ${e.result.round} is over.`, tone: 'quiet', actor: null };
     case 'ready':
-      return { text: `${b.who(e.playerId)} ${e.playerId === b.you ? 'are' : 'is'} ready for the next round.`, tone: 'quiet', actor: e.playerId };
+      return { text: `${b.who(e.playerId)} ${e.playerId === b.you ? 'are' : 'is'} ready.`, tone: 'quiet', actor: e.playerId };
     case 'gameOver': {
       const w = e.winners.map((id) => b.who(id));
       const text = w.length === 1 ? `Game over! ${w[0]} ${e.winners[0] === b.you ? 'win' : 'wins'}.` : `Game over! Shared win: ${joinNames(w)}.`;

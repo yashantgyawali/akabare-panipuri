@@ -142,6 +142,16 @@ function YouEditor({ game }: { game: UseGame }) {
       <h2 className="ak-h3" id="you-h">
         Your seat
       </h2>
+      {me.isBot ? (
+        // A seat handed to a bot last game stays a bot through a rematch until you take it back.
+        <div className="ak-lobby__botseat" role="status">
+          <Icon name="bot" size={18} />
+          <span>A bot will play your seat.</span>
+          <Button size="sm" variant="primary" busy={pending === 'seat'} disabled={game.busy} onClick={() => void run('seat', () => game.setBot(me.id, false))}>
+            Take my seat back
+          </Button>
+        </div>
+      ) : null}
       <form
         className="ak-row ak-row--tight"
         onSubmit={(e) => {

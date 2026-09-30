@@ -10,8 +10,8 @@
  *   events aren't all in v.log, or they cross into v's round from an earlier
  *   one (the previous round's table is gone from v).
  * - `displayAt(views, c)` picks the closest view at or after c and rewinds it;
- *   failing that it shows the newest view before c, with the few events that
- *   are trivial to apply forward (ready, botSet).
+ *   failing that (c is in an older round than every later view) it takes the
+ *   newest view before c and applies the events up to c forward (forwardView).
  *
  * Rewound views never gain information: kinds only come from the events
  * themselves (public), and un-revealing hides every card that isn't the
@@ -261,18 +261,169 @@ export function rewindView(v: PlayerView, cursor: number): PlayerView | null {
   return out;
 }
 
-/** v with the forward-trivial events (ready, botSet) applied; everything else is left as it was. */
-export function forwardTrivial(v: PlayerView, events: readonly GameEvent[], cursor: number): PlayerView {
-  const relevant = events.filter((e) => e.seq > v.lastSeq && e.seq <= cursor && (e.type === 'ready' || e.type === 'botSet'));
-  if (relevant.length === 0) return v;
+/**
+ * v with the events after it (up to `cursor`, within v's round) applied
+ * FORWARD, as far as public information allows. Used when a newer view can't
+ * be rewound to the cursor because it is already in a later round (e.g. the
+ * device slept through the end of a round): the rest of the old round still
+ * plays on the old table, ending on its result. Events carry everything the
+ * table shows (flipped kinds, eaten/target, the round result); cards placed by
+ * others stay face down. Only the viewer's own placement (a bot playing their
+ * seat) loses its kind, which the viewer then just doesn't see.
+ */
+export function forwardView(v: PlayerView, events: readonly GameEvent[], cursor: number): PlayerView {
+  const todo = events.filter((e) => e.seq > v.lastSeq && e.seq <= cursor && (e.round === v.round || e.type === 'ready' || e.type === 'botSet'));
+  if (todo.length === 0) return v;
   const out: PlayerView = structuredClone(v);
-  for (const e of relevant) {
-    const p = out.players.find((x) => x.id === (e as { playerId: PlayerId }).playerId);
-    if (!p) continue;
-    if (e.type === 'ready') p.ready = true;
-    if (e.type === 'botSet') p.isBot = e.isBot;
+  const me = out.youId;
+  const player = (id: PlayerId) => out.players.find((p) => p.id === id);
+  const roundEnd = events.find((e) => e.type === 'roundEnd' && e.round === v.round) as Extract<GameEvent, { type: 'roundEnd' }> | undefined;
+  const applyScores = () => {
+    if (!roundEnd) return;
+    for (const p of out.players) p.score = roundEnd.result.scoresAfter[p.id] ?? p.score;
+  };
+  const bid = (entry: BidEntry) => {
+    out.bidding = biddingFromHistory([...(entry.action === 'start' ? [] : (out.bidding?.history ?? [])), entry], out.players);
+  };
+
+  for (const e of todo) {
+    if (e.round !== v.round && e.type !== 'ready' && e.type !== 'botSet') continue;
+    switch (e.type) {
+      case 'ready': {
+        const p = player(e.playerId);
+        if (p) p.ready = true;
+        break;
+      }
+      case 'botSet': {
+        const p = player(e.playerId);
+        if (p) p.isBot = e.isBot;
+        break;
+      }
+      case 'setupDone': {
+        const p = player(e.playerId);
+        if (!p || p.setupDone) break;
+        const own = e.playerId === me ? (out.me?.setup ?? null) : null;
+        const n = out.config.startingStack;
+        p.setupDone = true;
+        p.stack = Array.from({ length: n }, (_, i) => ({ owner: p.id, kind: own ? (own.stack[i] ?? null) : null }));
+        p.power = { owner: p.id, revealed: false, kind: own ? own.power : null };
+        p.handCount = Math.max(0, p.handCount - n);
+        if (own && out.me) {
+          const hand = { ...out.me.hand };
+          for (const k of own.stack) hand[k] = Math.max(0, hand[k] - 1);
+          out.me.hand = hand;
+        }
+        break;
+      }
+      case 'servingStart':
+        out.phase = 'serving';
+        out.serving = { turnId: e.turnId };
+        break;
+      case 'place': {
+        const target = player(e.onStackOf);
+        if (target) target.stack = [...target.stack, { owner: e.playerId, kind: null }];
+        const placer = player(e.playerId);
+        if (placer) placer.handCount = Math.max(0, placer.handCount - 1);
+        out.serving = { turnId: nextSeatId(out.players, e.playerId) };
+        break;
+      }
+      case 'bidStart':
+      case 'raise':
+      case 'pass': {
+        const entry = bidEntryOf(e);
+        if (!entry) break;
+        if (e.type === 'bidStart') {
+          out.phase = 'bidding';
+          out.serving = null;
+        }
+        bid(entry);
+        break;
+      }
+      case 'eater': {
+        out.phase = 'eating';
+        if (out.bidding) out.bidding = { ...out.bidding, turnId: e.playerId };
+        out.eating = {
+          eaterId: e.playerId,
+          bid: e.bid,
+          target: e.bid,
+          eaten: 0,
+          powersFlipped: 0,
+          skipNext: false,
+          pendingAkabare: null,
+          plate: [],
+          powers: [],
+          ownStackEmpty: false,
+        };
+        break;
+      }
+      case 'flipPuri': {
+        const p = player(e.fromStackOf);
+        if (p) p.stack = p.stack.slice(0, -1);
+        const eat = out.eating;
+        if (eat) {
+          eat.plate = [...eat.plate, { owner: e.owner, kind: e.kind, fromStackOf: e.fromStackOf, cancelled: e.cancelled, saved: false }];
+          eat.eaten = e.eaten;
+          eat.target = e.target;
+          eat.skipNext = false;
+        }
+        break;
+      }
+      case 'bite':
+        break; // pendingAkabare is derived from the log below
+      case 'flipPower': {
+        const p = player(e.fromStackOf);
+        if (p?.power) p.power = { owner: p.power.owner, revealed: true, kind: e.kind };
+        const eat = out.eating;
+        if (eat) {
+          eat.powersFlipped += 1;
+          eat.powers = [...eat.powers, { kind: e.kind, owner: e.owner, fromStackOf: e.fromStackOf, effect: e.effect }];
+          eat.eaten = e.eaten;
+          eat.target = e.target;
+          if (e.effect === 'numb') eat.skipNext = true;
+          if (e.effect === 'saved' && eat.plate.length > 0) {
+            const last = eat.plate[eat.plate.length - 1];
+            eat.plate = [...eat.plate.slice(0, -1), { ...last, saved: true }];
+          }
+        }
+        break;
+      }
+      case 'success':
+        applyScores();
+        break;
+      case 'bust': {
+        applyScores();
+        const p = player(e.eaterId);
+        if (p) p.busts += 1;
+        break;
+      }
+      case 'roundEnd':
+        out.phase = 'roundEnd';
+        out.results = [...out.results.filter((r) => r.round !== e.round), e.result];
+        for (const p of out.players) {
+          p.score = e.result.scoresAfter[p.id] ?? p.score;
+          p.ready = p.isBot;
+        }
+        break;
+      case 'gameOver':
+        out.phase = 'gameOver';
+        out.winners = [...e.winners];
+        for (const p of out.players) p.score = e.scores[p.id] ?? p.score;
+        break;
+      case 'roundStart':
+        break; // a later round: never applied forward
+    }
   }
+
+  const known = new Set(v.log.map((e) => e.seq));
+  out.log = [...v.log, ...events.filter((e) => e.seq > v.lastSeq && e.seq <= cursor && !known.has(e.seq))];
+  out.lastSeq = cursor;
   out.legal = noLegalActions();
+  if (out.eating) {
+    const eater = player(out.eating.eaterId);
+    out.eating.ownStackEmpty = !eater || eater.stack.length === 0;
+    out.eating.pendingAkabare = out.phase === 'eating' ? pendingBite(out.log, out.round) : null;
+  }
+  out.tableMax = out.players.reduce((n, p) => n + p.stack.length, 0) + 2 * out.config.powerFlipsMax;
   out.pendingActors = derivePendingActors(out);
   return out;
 }
@@ -292,7 +443,7 @@ export function displayAt(views: readonly PlayerView[], cursor: number): PlayerV
     if (r) return stale(r);
   }
   const earlier = [...views].reverse().find((v) => v.lastSeq <= cursor);
-  if (earlier) return stale(forwardTrivial(earlier, later?.log ?? [], cursor));
+  if (earlier) return stale(forwardView(earlier, later?.log ?? [], cursor));
   return stale(later ?? newest);
 }
 

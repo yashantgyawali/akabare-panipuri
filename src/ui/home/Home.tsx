@@ -75,7 +75,7 @@ function CreateForm() {
   return (
     <form className="ak-home__card ak-paper" onSubmit={submit}>
       <h2 className="ak-h2">Start a table</h2>
-      <p className="ak-muted">You'll get a 5-letter code to share. Add bots if you're short of friends.</p>
+      <p className="ak-muted">You’ll get a 5-letter code to share. Add bots if you’re short of friends.</p>
       <label className="ak-field">
         <span className="ak-field__label">Your name</span>
         <input
@@ -160,6 +160,7 @@ function RecentGames() {
             <Button
               size="sm"
               variant="secondary"
+              aria-label={`Rejoin game ${s.code} as ${s.name}`}
               onClick={() => {
                 saveSession(s);
                 navigate(gameHref(s.code));

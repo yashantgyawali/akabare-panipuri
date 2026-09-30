@@ -73,6 +73,8 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
   const you = p.id === view.youId;
   const items = stackItems(p, view, names);
   const pw = p.power;
+  // Never below 35px: the back's owner badge needs that much room for a wide letter (M, W).
+  const powerW = Math.max(35, Math.round(cardW * 0.86));
   const pwUp = !!pw && (pw.revealed || view.revealed) && pw.kind !== null;
   const pwLabel = !pw
     ? ''
@@ -160,14 +162,15 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
               face={pwUp ? pw.kind : null}
               faceUp={pwUp}
               peek={!pwUp && you ? pw.kind : null}
-              badge={names.initial(p.id)}
-              width={Math.round(cardW * 0.86)}
+              // A small power card has room for one letter (two would ellipsize to "A…"); it sits in its seat anyway.
+              badge={powerW < 40 ? names.initial(p.id).slice(0, 1) : names.initial(p.id)}
+              width={powerW}
               state={power.state}
               onClick={power.onClick}
               ariaLabel={power.onClick ? power.label : pwLabel}
             />
           ) : (
-            <span className="ak-seat__nopower" style={{ width: Math.round(cardW * 0.86), height: Math.round(cardW * 0.86 * (88 / 63)) }} aria-hidden="true" />
+            <span className="ak-seat__nopower" style={{ width: powerW, height: Math.round(powerW * (88 / 63)) }} aria-hidden="true" />
           )}
         </div>
       </div>

@@ -230,8 +230,32 @@
 .ak-bite__picktext {
   padding-top: 2px;
 }
+/* "Sita's power:" on one line, "blind gamble" on the next, the same for every pick */
+.ak-bite__pickwho,
+.ak-bite__pickwhat {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.ak-bite__pickwhat {
+  font-weight: 500;
+}
 .ak-bite__accept {
   align-self: center;
+}
+/* Watchers while a human eater decides: a way out (look at the table, or replace an offline eater). */
+.ak-bite__watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 18px;
+  margin-top: 14px;
+}
+.ak-bite__watch .ak-linkbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
 }
 
 /* ─── Round result + game over ───────────────────────────────────────────── */
@@ -673,9 +697,23 @@
     font-size: 16px;
   }
   .ak-bite__choices {
+    width: 100%;
+    min-width: 0;
     padding: 12px;
   }
+  .ak-bite__choose {
+    font-size: 19px;
+  }
+  .ak-bite__powers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 8px;
+  }
   .ak-bite__pick {
-    width: calc(50% - 5px);
+    width: auto;
+    height: 100%;
+    gap: 6px;
+    padding: 8px 4px 7px;
+    font-size: 13px;
   }
 }
