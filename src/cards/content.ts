@@ -20,8 +20,16 @@ export interface CardInfo {
   art: string;
   /** When the card may be flipped (powers), or null for puri cards. */
   timing: string | null;
-  /** Rule text for the card's lower third. */
+  /** Rule text (PDF power-table wording, shortened), timing sentence included. */
   rule: string;
+  /**
+   * Small-caps line above the rule on the card front ("Flip before a puri").
+   * Together with `body` this is how <CardFront> prints the rule: the timing
+   * lives in the label, so the body never repeats it.
+   */
+  label: string;
+  /** The rule without its timing sentence (printed under `label`). */
+  body: string;
   /** One-line summary. */
   short: string;
   /**
@@ -41,6 +49,8 @@ export const CARD_INFO: Record<CardKind, CardInfo> = {
     timing: null,
     rule: 'Counts as 1 eaten.',
     short: 'Counts as 1 eaten.',
+    label: 'Puri · safe to eat',
+    body: 'Counts as 1 eaten.',
     index: 1,
     family: 'puri',
   },
@@ -49,8 +59,10 @@ export const CARD_INFO: Record<CardKind, CardInfo> = {
     devanagari: 'अकबरे',
     art: '/art/akabare.webp',
     timing: null,
-    rule: "Bite it without the right power and you're out. If it busts someone else, its owner gets +2.",
-    short: "The chili trap: bite it unprotected and you're out.",
+    rule: 'Bite it without Vinegar or Dahi and you bust. If it busts someone else, its owner gets +2.',
+    short: 'The chili trap: bite it unprotected and you bust.',
+    label: 'Puri · the chili trap',
+    body: 'Bite it without Vinegar or Dahi and you bust. If it busts someone else, its owner gets +2.',
     index: 6,
     family: 'puri',
   },
@@ -61,6 +73,8 @@ export const CARD_INFO: Record<CardKind, CardInfo> = {
     timing: 'Before a puri',
     rule: "Flip before a puri. The next card you eat is cancelled: an Akabare can't hurt you, a Panipuri doesn't count.",
     short: 'Cancels the next card you eat.',
+    label: 'Flip before a puri',
+    body: 'The next card you eat is cancelled: an Akabare can’t hurt you, a Panipuri doesn’t count.',
     index: 7,
     family: 'power',
   },
@@ -71,6 +85,8 @@ export const CARD_INFO: Record<CardKind, CardInfo> = {
     timing: 'Right after an Akabare bite',
     rule: "Flip right after biting an Akabare: you're saved and keep eating. Any other time: nothing.",
     short: 'Saves you from a bitten Akabare.',
+    label: 'Flip right after an Akabare bite',
+    body: 'You’re saved and keep eating. Any other time it does nothing.',
     index: 8,
     family: 'power',
   },
@@ -81,6 +97,8 @@ export const CARD_INFO: Record<CardKind, CardInfo> = {
     timing: 'Any time',
     rule: 'Any time. An empty shell: your bid goes up by 1.',
     short: 'Your bid goes up by 1.',
+    label: 'Flip any time',
+    body: 'An empty shell: your bid goes up by 1.',
     index: 9,
     family: 'power',
   },
@@ -91,6 +109,8 @@ export const CARD_INFO: Record<CardKind, CardInfo> = {
     timing: 'Any time',
     rule: 'Any time. Counts as 2 Panipuri eaten.',
     short: 'Counts as 2 eaten.',
+    label: 'Flip any time',
+    body: 'Counts as 2 Panipuri eaten.',
     index: 10,
     family: 'power',
   },

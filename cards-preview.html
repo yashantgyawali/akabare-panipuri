@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Card Gallery · Akabare Panipuri</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700;800&family=Rozha+One&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html {
+        background: #1c110c;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        /* a dark cloth table: warm dusk light in the middle, a faint woven texture */
+        background:
+          radial-gradient(ellipse 90% 60% at 50% 0%, rgb(140 70 32 / 0.32), transparent 70%),
+          repeating-linear-gradient(45deg, rgb(255 230 190 / 0.018) 0 2px, transparent 2px 5px),
+          repeating-linear-gradient(-45deg, rgb(0 0 0 / 0.08) 0 2px, transparent 2px 5px),
+          #24160f;
+        background-attachment: fixed;
+        color: #efe0bf;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/cards/preview-main.tsx"></script>
+  </body>
+</html>

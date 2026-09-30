@@ -61,3 +61,23 @@ describe('wordmarks', () => {
     expect(wordmarkMetrics('AKABARE PANIPURI', { height: 50, maxWidth: 300 }).width).toBe(300);
   });
 });
+
+describe('backs', () => {
+  it('are standalone, deterministic SVGs with ids unique across all 12', async () => {
+    const { puriBackSvg, powerBackSvg, backDataUri, ownerPips, BACK_VERSION } = await import('./backs.ts');
+    expect(BACK_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+    const all: string[] = [];
+    for (const c of COLORS) for (const f of [puriBackSvg, powerBackSvg]) {
+      const svg = f(c);
+      expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050"')).toBe(true);
+      expect(f(c)).toBe(svg);
+      expect(svg).not.toMatch(/<text[\s>]/);
+      const ids = [...svg.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+      for (const m of svg.matchAll(/(?:href="|url\()#([^")]+)/g)) expect(ids).toContain(m[1]);
+      all.push(...ids);
+    }
+    expect(new Set(all).size).toBe(all.length);
+    expect(backDataUri('puri', 'red').startsWith('data:image/svg+xml')).toBe(true);
+    expect(COLORS.map(ownerPips)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+});

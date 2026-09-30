@@ -1,0 +1,709 @@
+/*
+ * Akabare Panipuri — card styles (plain CSS, every class prefixed `ak-card`).
+ * Used by src/cards/Card.tsx. See the header comment there for the component API.
+ *
+ * Units: inside a face, 1 card unit (the print sheets' 750-px space) = var(--u) = 100cqw / 750.
+ * Every face is its own inline-size query container, so the whole layout scales with the card
+ * and a 56-px card is a faithful miniature of a 360-px one. Geometry is measured from the v0.6
+ * print sheets (src/cards/geometry.ts).
+ *
+ * Customisation hooks: --ak-card-flip-ms (flip duration), --ak-card-font-display, --ak-card-font-ui.
+ */
+
+.ak-card,
+.ak-card-front,
+.ak-card-back,
+.ak-card-stack {
+  --ak-card-font-display: 'Rozha One', 'Yatra One', 'Tiro Devanagari Hindi', Georgia, serif;
+  --ak-card-font-ui: 'Mukta', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ak-card-cream: #f5e8ca;
+  --ak-card-cream-bright: #f9efd3;
+  --ak-card-ink: #3a2418;
+  --ak-card-gold: #e9b44c;
+  --ak-card-chili: #e0452a;
+  --ak-card-radius: 4.8% / 3.436%; /* 36 card units: a real poker-card corner */
+  --u: calc(100cqw / 750);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+.ak-card *,
+.ak-card-front *,
+.ak-card-back *,
+.ak-card-stack * {
+  box-sizing: border-box;
+}
+
+/* ─── Faces (shared) ─────────────────────────────────────────────────────────────── */
+
+.ak-card-front,
+.ak-card-back {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  container: ak-face / inline-size;
+  border-radius: var(--ak-card-radius);
+  box-shadow:
+    0 calc(var(--ak-card-w, 120px) * 0.02) calc(var(--ak-card-w, 120px) * 0.055) rgb(14 7 3 / 0.5),
+    0 0 0 0.5px rgb(14 7 3 / 0.45);
+  user-select: none;
+  -webkit-user-select: none;
+  line-height: 1;
+  font-synthesis: none;
+}
+.ak-card-front img,
+.ak-card-back img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+/* ─── Front ─────────────────────────────────────────────────────────────────────── */
+
+.ak-card-front {
+  background-color: var(--ak-base);
+  /* one neutral-grey wash + grain pair (public/art/front-*.webp) serves every owner colour */
+  background-image: var(--ak-grain), var(--ak-wash);
+  background-size: 33.333% auto, 100% 100%;
+  background-repeat: repeat, no-repeat;
+  background-blend-mode: soft-light, soft-light;
+  color: var(--ak-card-cream-bright);
+}
+
+.ak-card-front__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--ak-card-cream);
+  pointer-events: none;
+}
+
+/* Title: cap height 42 u, cap top 82 u, baseline 124 u (as printed). Rozha One:
+   ascent .998 / descent .422 em, cap .56 em → with line-height 1 the cap top sits .228 em
+   below the line top, so a 75 u font starts its line at 82 − 17.1 = 64.9 u. */
+.ak-card-front__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(64.9 * var(--u));
+  font-family: var(--ak-card-font-display);
+  font-weight: 400;
+  font-size: calc(75 * var(--u));
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-indent: 0.03em; /* re-centre: letter-spacing adds trailing space */
+  text-align: center;
+  white-space: nowrap;
+  color: var(--ak-card-cream-bright);
+  text-shadow: 0 calc(3 * var(--u)) calc(5 * var(--u)) rgb(20 8 2 / 0.3);
+}
+
+/* Art square (with its deckled paper edge): x 65, y 145, 620 × 620. */
+.ak-card-front__art {
+  position: absolute;
+  left: calc(65 * var(--u));
+  top: calc(145 * var(--u));
+  width: calc(620 * var(--u));
+  height: calc(620 * var(--u));
+  box-shadow:
+    0 calc(3 * var(--u)) calc(9 * var(--u)) rgb(20 8 2 / 0.32),
+    0 0 calc(1.5 * var(--u)) rgb(20 8 2 / 0.35);
+  background: #eee1c9;
+}
+.ak-card-front__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The empty lower third: from the art (765) to the inner line (41 u from the bottom). */
+.ak-card-front__lower {
+  position: absolute;
+  left: calc(44 * var(--u));
+  right: calc(44 * var(--u));
+  top: calc(765 * var(--u));
+  bottom: calc(44 * var(--u));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: calc(10 * var(--u));
+  text-align: center;
+}
+.ak-card-front--rule .ak-card-front__lower {
+  justify-content: flex-start;
+  padding-top: calc(12 * var(--u));
+  padding-bottom: 0;
+}
+
+.ak-card-front__deva {
+  display: flex;
+  align-items: center;
+  gap: calc(16 * var(--u));
+  font-family: var(--ak-card-font-display);
+  font-weight: 400;
+  font-size: calc(58 * var(--u));
+  line-height: 1.3;
+  white-space: nowrap;
+  color: var(--ak-card-cream-bright);
+  text-shadow: 0 calc(3 * var(--u)) calc(5 * var(--u)) rgb(20 8 2 / 0.28);
+}
+/* hand-drawn flourish either side: a stroke fading outward, then a turmeric-cream dot */
+.ak-card-front__deva::before,
+.ak-card-front__deva::after {
+  content: '';
+  flex: none;
+  width: calc(66 * var(--u));
+  height: calc(12 * var(--u));
+  background:
+    radial-gradient(circle closest-side, var(--ak-card-cream) 78%, transparent 100%) right center / calc(10 * var(--u)) calc(10 * var(--u)) no-repeat,
+    linear-gradient(90deg, transparent, var(--ak-card-cream)) left center / calc(46 * var(--u)) calc(3 * var(--u)) no-repeat;
+  opacity: 0.8;
+}
+.ak-card-front__deva::after {
+  transform: scaleX(-1);
+}
+.ak-card-front--rule .ak-card-front__deva {
+  flex: none;
+  font-size: calc(44 * var(--u));
+  gap: calc(12 * var(--u));
+}
+.ak-card-front--rule .ak-card-front__deva::before,
+.ak-card-front--rule .ak-card-front__deva::after {
+  width: calc(54 * var(--u));
+  background-size: calc(9 * var(--u)) calc(9 * var(--u)), calc(38 * var(--u)) calc(3 * var(--u));
+}
+
+/* label + body fill the space under the Devanagari, centred in it; 540 u wide keeps the
+   last line clear of the index circle (x ≥ 650 u). */
+.ak-card-front__rule {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(540 * var(--u));
+  padding-bottom: calc(22 * var(--u));
+  color: var(--ak-text);
+  font-family: var(--ak-card-font-ui);
+}
+.ak-card-front__label {
+  font-weight: 700;
+  font-size: calc(22 * var(--u));
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+.ak-card-front__body {
+  margin-top: calc(9 * var(--u));
+  font-weight: 600;
+  font-size: calc(33 * var(--u));
+  line-height: 1.17;
+  text-wrap: balance;
+}
+
+/* Index circle: centred 71 u from the right, 91 u from the bottom (circle drawn in the SVG). */
+.ak-card-front__index {
+  position: absolute;
+  right: calc(43 * var(--u));
+  bottom: calc(63 * var(--u));
+  width: calc(56 * var(--u));
+  height: calc(56 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ak-card-font-ui);
+  font-weight: 500;
+  font-size: calc(28 * var(--u));
+  line-height: 1;
+  padding-top: calc(1 * var(--u));
+  color: var(--ak-card-cream-bright);
+}
+
+@container ak-face (width < 110px) {
+  .ak-card-front__rule {
+    display: none;
+  }
+  .ak-card-front--rule .ak-card-front__lower {
+    justify-content: center;
+    padding-top: 0;
+    padding-bottom: calc(10 * var(--u));
+  }
+  .ak-card-front--rule .ak-card-front__deva {
+    font-size: calc(58 * var(--u));
+    gap: calc(16 * var(--u));
+  }
+}
+@container ak-face (width < 80px) {
+  .ak-card-front__deva {
+    display: none;
+  }
+}
+
+/* ─── Back ──────────────────────────────────────────────────────────────────────── */
+
+.ak-card-back {
+  background: var(--ak-base);
+}
+.ak-card-back__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* Owner badge (top-left) and peek chip (top-right): both inside the top strip, so they stay
+   visible on the lower cards of a <CardStack>. Min sizes keep them legible on 56-px cards. */
+.ak-card-back__badge,
+.ak-card-peek {
+  position: absolute;
+  top: max(2px, 4cqw);
+  height: clamp(13px, 13cqw, 26px);
+  border-radius: 999px;
+  font-family: var(--ak-card-font-ui);
+  font-weight: 700;
+  font-size: clamp(8.5px, 8.6cqw, 16px);
+  line-height: clamp(13px, 13cqw, 26px);
+  white-space: nowrap;
+}
+.ak-card-back__badge {
+  left: max(2px, 4cqw);
+  display: block;
+  max-width: calc(100% - 2 * max(2px, 4cqw) - clamp(13px, 13cqw, 26px) - 3px);
+  padding: 0 clamp(3.5px, 3.6cqw, 9px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.01em;
+  background: var(--ak-card-cream-bright);
+  color: var(--ak-card-ink);
+  box-shadow:
+    0 0 0 max(1px, 0.8cqw) var(--ak-darker),
+    0 1px 3px rgb(14 7 3 / 0.45);
+}
+.ak-card-peek {
+  right: max(2px, 4cqw);
+  display: flex;
+  align-items: center;
+  min-width: clamp(13px, 13cqw, 26px);
+  padding: 0;
+  background: rgb(38 22 13 / 0.8);
+  color: var(--ak-card-cream-bright);
+  box-shadow:
+    0 0 0 max(1px, 0.6cqw) rgb(249 239 211 / 0.55),
+    0 1px 3px rgb(14 7 3 / 0.45);
+}
+.ak-card-peek__letter {
+  flex: 1;
+  text-align: center;
+  padding: 0 0.28em;
+}
+.ak-card-peek--panipuri .ak-card-peek__letter {
+  color: #f6cf7c;
+}
+.ak-card-peek--akabare .ak-card-peek__letter {
+  color: #ff9a7e;
+}
+.ak-card-peek__art {
+  display: none;
+  flex: none;
+  height: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 55%;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 1px rgb(38 22 13 / 0.8);
+}
+@container ak-face (width >= 100px) {
+  .ak-card-peek__art {
+    display: block;
+  }
+  .ak-card-peek__letter {
+    padding: 0 0.42em 0 0.3em;
+  }
+}
+
+/* ─── <Card>: root, flip, states ────────────────────────────────────────────────── */
+
+.ak-card {
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  flex: none;
+  container: ak-card / inline-size;
+  border-radius: var(--ak-card-radius);
+  translate: 0 0;
+  transition: translate 180ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+button.ak-card {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.ak-card--button:focus-visible {
+  outline: 2px solid var(--ak-card-cream-bright);
+  outline-offset: 3px;
+}
+.ak-card--button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.ak-card__face {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(0deg);
+  transition:
+    transform var(--ak-card-flip-ms, 650ms) cubic-bezier(0.45, 0.05, 0.25, 1),
+    filter 200ms ease;
+}
+.ak-card__face--front {
+  transform: rotateY(180deg);
+}
+.ak-card--up > .ak-card__face--front {
+  transform: rotateY(0deg);
+}
+.ak-card--up > .ak-card__face--back {
+  transform: rotateY(-180deg);
+}
+
+/* state ring: a pseudo-element on each face, so it turns with the card */
+.ak-card__face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.ak-card--selectable > .ak-card__face::after {
+  opacity: 1;
+  box-shadow:
+    0 0 0 max(1.5px, 1.6cqw) var(--ak-card-gold),
+    0 0 max(6px, 7cqw) max(1px, 1.2cqw) rgb(233 180 76 / 0.55);
+  animation: ak-card-pulse 1.8s ease-in-out infinite;
+}
+.ak-card--selected > .ak-card__face::after {
+  opacity: 1;
+  box-shadow:
+    0 0 0 max(1.5px, 1.4cqw) var(--ak-card-cream-bright),
+    0 0 0 max(3px, 3.2cqw) var(--ak-card-gold),
+    0 0 max(10px, 10cqw) max(2px, 2cqw) rgb(233 180 76 / 0.6);
+}
+.ak-card--danger > .ak-card__face::after {
+  opacity: 1;
+  box-shadow:
+    0 0 0 max(1.5px, 1.8cqw) var(--ak-card-chili),
+    0 0 max(8px, 10cqw) max(2px, 2.5cqw) rgb(224 69 42 / 0.65);
+  animation: ak-card-pulse 0.9s ease-in-out infinite;
+}
+.ak-card--selected {
+  translate: 0 -6%;
+}
+.ak-card--button.ak-card--selectable:hover,
+.ak-card--button.ak-card--selectable:focus-visible {
+  translate: 0 -3%;
+}
+.ak-card--dim > .ak-card__face {
+  filter: brightness(0.5) saturate(0.55);
+}
+button.ak-card--dim {
+  cursor: default;
+}
+
+@keyframes ak-card-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ak-card {
+    transition: none;
+  }
+  .ak-card__face,
+  .ak-card--up > .ak-card__face--front,
+  .ak-card--up > .ak-card__face--back {
+    transform: none;
+    transition: opacity 160ms linear;
+  }
+  .ak-card__face--front,
+  .ak-card--up > .ak-card__face--back {
+    opacity: 0;
+  }
+  .ak-card--up > .ak-card__face--front {
+    opacity: 1;
+  }
+  .ak-card--selectable > .ak-card__face::after,
+  .ak-card--danger > .ak-card__face::after {
+    animation: none;
+  }
+}
+
+/* ─── <CardStack> ───────────────────────────────────────────────────────────────── */
+
+.ak-card-stack {
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  flex: none;
+  container: ak-stack / inline-size;
+}
+button.ak-card-stack {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 6cqw;
+}
+button.ak-card-stack:focus-visible {
+  outline: 2px solid var(--ak-card-cream-bright);
+  outline-offset: 4px;
+}
+button.ak-card-stack:focus:not(:focus-visible) {
+  outline: none;
+}
+.ak-card-stack__slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  border-radius: var(--ak-card-radius);
+  border: max(1px, 2cqw) dashed rgb(245 232 202 / 0.34);
+  background: rgb(245 232 202 / 0.05);
+}
+.ak-card-stack::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * max(2px, 2.5cqw));
+  border-radius: max(5px, 8cqw);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  z-index: 3;
+}
+.ak-card-stack--selectable::after {
+  opacity: 1;
+  box-shadow:
+    0 0 0 max(1.5px, 2.5cqw) var(--ak-card-gold),
+    0 0 max(8px, 12cqw) max(1px, 2cqw) rgb(233 180 76 / 0.5);
+  animation: ak-card-pulse 1.8s ease-in-out infinite;
+}
+.ak-card-stack--selected::after {
+  opacity: 1;
+  box-shadow:
+    0 0 0 max(1.5px, 2cqw) var(--ak-card-cream-bright),
+    0 0 0 max(3px, 4.5cqw) var(--ak-card-gold),
+    0 0 max(10px, 14cqw) max(2px, 3cqw) rgb(233 180 76 / 0.55);
+}
+.ak-card-stack--danger::after {
+  opacity: 1;
+  box-shadow:
+    0 0 0 max(1.5px, 2.5cqw) var(--ak-card-chili),
+    0 0 max(10px, 14cqw) max(2px, 3cqw) rgb(224 69 42 / 0.6);
+  animation: ak-card-pulse 0.9s ease-in-out infinite;
+}
+.ak-card-stack--button.ak-card-stack--selectable:hover::after {
+  box-shadow:
+    0 0 0 max(2px, 3.5cqw) var(--ak-card-gold),
+    0 0 max(10px, 14cqw) max(2px, 3cqw) rgb(233 180 76 / 0.7);
+}
+.ak-card-stack__count {
+  position: absolute;
+  right: calc(-1 * clamp(5px, 11cqw, 12px));
+  bottom: calc(-1 * clamp(5px, 9cqw, 10px));
+  z-index: 4;
+  min-width: clamp(18px, 34cqw, 30px);
+  height: clamp(18px, 34cqw, 30px);
+  padding: 0 0.3em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--ak-card-ink);
+  color: var(--ak-card-cream-bright);
+  border: max(1.5px, 2.6cqw) solid var(--ak-card-gold);
+  box-shadow: 0 2px 5px rgb(14 7 3 / 0.55);
+  font-family: var(--ak-card-font-ui);
+  font-weight: 800;
+  font-size: clamp(10px, 18cqw, 16px);
+  line-height: 1;
+  padding-top: 0.08em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ak-card-stack--selectable::after,
+  .ak-card-stack--danger::after {
+    animation: none;
+  }
+}
+
+/* ─── <CardGallery> (the #/cards page and /cards-preview.html) ──────────────────── */
+
+.ak-card-gallery {
+  --ak-card-font-display: 'Rozha One', 'Yatra One', Georgia, serif;
+  --ak-card-font-ui: 'Mukta', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  box-sizing: border-box;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  color: #efe0bf;
+  font-family: var(--ak-card-font-ui);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.ak-card-gallery *,
+.ak-card-gallery *::before,
+.ak-card-gallery *::after {
+  box-sizing: border-box;
+}
+.ak-card-gallery__title {
+  margin: 0 0 4px;
+  font-family: var(--ak-card-font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 6vw, 44px);
+  line-height: 1.15;
+  color: #f9efd3;
+}
+.ak-card-gallery__title span {
+  font-size: 0.6em;
+  color: #e9b44c;
+  margin-left: 0.3em;
+  white-space: nowrap;
+}
+.ak-card-gallery__section {
+  margin-top: 36px;
+}
+.ak-card-gallery__h {
+  margin: 0 0 6px;
+  font-family: var(--ak-card-font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.2;
+  color: #f9efd3;
+}
+.ak-card-gallery__note {
+  margin: 0 0 16px;
+  max-width: 72ch;
+  color: #cdb994;
+}
+.ak-card-gallery__note code {
+  font-size: 0.9em;
+  color: #f0c77a;
+}
+.ak-card-gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px 12px;
+  margin-bottom: 18px;
+}
+.ak-card-gallery__row--bottom {
+  align-items: flex-end;
+}
+.ak-card-gallery__rowlabel {
+  flex: 0 0 100%;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: -6px;
+}
+.ak-card-gallery__gap {
+  width: 8px;
+}
+.ak-card-gallery__cell {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ak-card-gallery__cap {
+  font-size: 12px;
+  color: #b9a37e;
+  white-space: nowrap;
+}
+.ak-card-gallery__seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.3);
+  vertical-align: middle;
+}
+.ak-card-gallery__btn {
+  appearance: none;
+  border: 1px solid rgb(233 180 76 / 0.45);
+  background: rgb(58 36 24 / 0.7);
+  color: #f5e8ca;
+  font: 600 13px/1 var(--ak-card-font-ui);
+  padding: 7px 12px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.ak-card-gallery__seg .ak-card-gallery__btn {
+  border-color: transparent;
+  background: transparent;
+}
+.ak-card-gallery__btn[aria-pressed='true'] {
+  background: #e9b44c;
+  color: #3a2418;
+}
+.ak-card-gallery__btn:focus-visible {
+  outline: 2px solid #f9efd3;
+  outline-offset: 2px;
+}
+.ak-card-gallery__table {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 20px 16px;
+  padding: 18px;
+  margin-bottom: 22px;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgb(120 60 30 / 0.28), transparent 70%),
+    rgb(0 0 0 / 0.22);
+  box-shadow: inset 0 0 0 1px rgb(233 180 76 / 0.12);
+}
+.ak-card-gallery__seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ak-card-gallery__seatname {
+  font-weight: 700;
+  font-size: 13px;
+}
+.ak-card-gallery__seatcards {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
