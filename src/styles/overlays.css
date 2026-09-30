@@ -1,0 +1,679 @@
+/* Full-screen moments (Akabare bite, round result, game over) and drawer contents (log, scores). */
+
+.ak-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: ak-fade-in 240ms ease;
+}
+.ak-overlay:focus {
+  outline: none;
+}
+@keyframes ak-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ─── The Akabare moment ─────────────────────────────────────────────────── */
+
+.ak-bite {
+  background: radial-gradient(ellipse 70% 70% at 50% 45%, rgb(50 8 3 / 0.72), rgb(70 4 0 / 0.95) 80%);
+  backdrop-filter: blur(3px) saturate(0.8);
+}
+.ak-bite__vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 160px 50px rgb(190 20 0 / 0.75),
+    inset 0 0 40px 10px rgb(255 60 20 / 0.35);
+  animation: ak-vignette 1.6s ease-in-out infinite;
+}
+.ak-bite--saved {
+  background: radial-gradient(ellipse 70% 70% at 50% 45%, rgb(18 36 40 / 0.75), rgb(10 24 30 / 0.95) 80%);
+}
+.ak-bite--saved .ak-bite__vignette {
+  box-shadow: inset 0 0 160px 40px rgb(120 190 220 / 0.35);
+  animation: none;
+}
+@keyframes ak-vignette {
+  50% {
+    box-shadow:
+      inset 0 0 200px 70px rgb(210 30 0 / 0.85),
+      inset 0 0 60px 16px rgb(255 80 30 / 0.45);
+  }
+}
+.ak-bite__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  width: min(560px, 100%);
+  padding: 12px 0 24px;
+}
+.ak-bite__cards {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(16px, 4vw, 36px);
+  margin-bottom: 8px;
+}
+.ak-bite__chili,
+.ak-bite__power {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ak-bite--bitten .ak-bite__chili .ak-card {
+  animation: ak-shake 620ms cubic-bezier(0.36, 0.07, 0.19, 0.97) 700ms both;
+}
+.ak-bite--bust .ak-bite__chili .ak-card {
+  animation: ak-shake 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.ak-bite__power {
+  animation: ak-rise 360ms var(--ak-ease) both;
+}
+@keyframes ak-shake {
+  10%,
+  90% {
+    transform: translate3d(-2px, 0, 0) rotate(-1deg);
+  }
+  20%,
+  80% {
+    transform: translate3d(4px, 0, 0) rotate(2deg);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-7px, 0, 0) rotate(-3deg);
+  }
+  40%,
+  60% {
+    transform: translate3d(7px, 0, 0) rotate(3deg);
+  }
+}
+@keyframes ak-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.9);
+  }
+}
+.ak-bite__owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 12px 0;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.45);
+  box-shadow: inset 0 0 0 1.5px var(--c);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ak-cream-bright);
+}
+.ak-bite__title {
+  font-family: var(--ak-font-display);
+  font-weight: 400;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.05;
+  color: #fff1dc;
+  text-shadow:
+    0 3px 0 rgb(0 0 0 / 0.4),
+    0 0 30px rgb(255 60 20 / 0.6);
+  animation: ak-title-in 420ms var(--ak-ease) both;
+}
+.ak-bite--saved .ak-bite__title {
+  text-shadow:
+    0 3px 0 rgb(0 0 0 / 0.4),
+    0 0 30px rgb(140 210 240 / 0.6);
+}
+@keyframes ak-title-in {
+  from {
+    opacity: 0;
+    transform: scale(1.3);
+    letter-spacing: 0.06em;
+  }
+}
+.ak-bite__sub {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffd9c6;
+}
+.ak-bite__sub .ak-waiting__dots {
+  vertical-align: 3px;
+}
+.ak-bite--saved .ak-bite__sub {
+  color: #d8eef6;
+}
+.ak-bite__choices {
+  width: 100%;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgb(20 6 2 / 0.6);
+  border: 1px solid rgb(255 150 120 / 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: ak-rise 360ms 500ms var(--ak-ease) both;
+}
+.ak-bite__choose {
+  font-family: var(--ak-font-display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--ak-cream-bright);
+}
+.ak-bite__powers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.ak-bite__pick {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 132px;
+  min-height: 44px;
+  padding: 10px 8px 8px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--ak-cream);
+  color: var(--ak-ink);
+  font: 700 14px/1.2 var(--ak-font-ui);
+  text-align: center;
+  cursor: pointer;
+  box-shadow:
+    0 3px 0 #a88a5a,
+    0 8px 18px rgb(0 0 0 / 0.35);
+  transition: transform 120ms var(--ak-ease);
+}
+.ak-bite__pick .ak-spinner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.ak-bite__pick:hover:not(:disabled) {
+  transform: translateY(-3px);
+}
+.ak-bite__pick:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.ak-bite__pick:focus-visible {
+  outline: 3px solid var(--ak-gold);
+  outline-offset: 3px;
+}
+.ak-bite__pick--safe {
+  background: linear-gradient(180deg, #e8f4f8, #cfe4ec);
+  box-shadow:
+    0 3px 0 #6f9fb5,
+    0 0 0 3px rgb(140 210 240 / 0.5),
+    0 8px 18px rgb(0 0 0 / 0.35);
+}
+.ak-bite__picktext {
+  padding-top: 2px;
+}
+.ak-bite__accept {
+  align-self: center;
+}
+
+/* ─── Round result + game over ───────────────────────────────────────────── */
+
+.ak-result,
+.ak-gameover {
+  background: rgb(10 5 2 / 0.62);
+  backdrop-filter: blur(3px);
+}
+.ak-result__card {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 26px 26px 22px;
+  animation: ak-pop-in 280ms var(--ak-ease);
+}
+.ak-result__card.is-success {
+  box-shadow:
+    inset 0 0 0 4px var(--ak-cream),
+    inset 0 0 0 6px rgb(79 122 50 / 0.6),
+    0 18px 50px rgb(0 0 0 / 0.5);
+}
+.ak-result__card.is-bust {
+  box-shadow:
+    inset 0 0 0 4px var(--ak-cream),
+    inset 0 0 0 6px rgb(200 50 26 / 0.6),
+    0 18px 50px rgb(0 0 0 / 0.5);
+}
+.ak-result__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--ak-font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 5vw, 38px);
+  margin: 2px 0 6px;
+}
+.ak-result__big {
+  font-size: 1.3em;
+  color: var(--ak-leaf-deep);
+}
+.is-bust .ak-result__big {
+  color: var(--ak-chili);
+}
+.ak-result__facts {
+  font-weight: 700;
+  color: var(--ak-ink-2);
+  margin-bottom: 4px;
+}
+.ak-result__reason {
+  color: var(--ak-ink-2);
+}
+.ak-result__trap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgb(200 50 26 / 0.1);
+  color: var(--ak-chili-deep);
+  font-weight: 700;
+}
+.ak-deltas {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.ak-deltas__row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto 52px 44px;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 12px;
+  background: rgb(255 252 242 / 0.55);
+}
+.ak-deltas__chip {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff6e2;
+  font-family: var(--ak-font-display);
+  font-size: 14px;
+  padding-top: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.ak-deltas__row .ak-deltas__chip {
+  margin-right: 0;
+}
+.ak-deltas__name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ak-deltas__why {
+  font-size: 13px;
+  color: var(--ak-ink-2);
+}
+.ak-deltas__d {
+  font-family: var(--ak-font-display);
+  font-size: 20px;
+  text-align: right;
+  padding-top: 3px;
+  color: var(--ak-ink-3);
+}
+.ak-deltas__row.is-up .ak-deltas__d {
+  color: var(--ak-leaf-deep);
+}
+.ak-deltas__row.is-down .ak-deltas__d {
+  color: var(--ak-chili);
+}
+.ak-deltas__score {
+  font-family: var(--ak-font-display);
+  font-size: 22px;
+  text-align: right;
+  padding-top: 3px;
+}
+.ak-result__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 14px;
+}
+.ak-result__waiting {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--ak-leaf-deep);
+}
+
+.ak-gameover__card {
+  text-align: left;
+}
+.ak-gameover__card.is-you {
+  box-shadow:
+    inset 0 0 0 4px var(--ak-cream),
+    inset 0 0 0 6px var(--ak-turmeric),
+    0 0 60px rgb(233 180 76 / 0.45),
+    0 18px 50px rgb(0 0 0 / 0.5);
+}
+.ak-gameover__winners {
+  display: flex;
+  gap: 12px;
+  margin: 26px 0 6px;
+}
+.ak-gameover__crown {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff6e2;
+  font-family: var(--ak-font-display);
+  font-size: 26px;
+  padding-top: 4px;
+  box-shadow:
+    inset 0 0 0 3px rgb(255 240 210 / 0.5),
+    0 0 0 3px var(--ak-gold),
+    0 6px 14px rgb(0 0 0 / 0.3);
+  animation: ak-chip-pop 500ms var(--ak-ease) both;
+}
+.ak-gameover__crown .ak-icon {
+  position: absolute;
+  top: -16px;
+  color: var(--ak-turmeric);
+  filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.3));
+}
+.ak-gameover__title {
+  display: block;
+}
+.ak-standings {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.ak-standings__row {
+  display: grid;
+  grid-template-columns: 22px 30px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 3px 12px 3px 8px;
+  border-radius: 12px;
+  background: rgb(255 252 242 / 0.55);
+}
+.ak-standings__row.is-winner {
+  background: rgb(217 154 34 / 0.2);
+  box-shadow: inset 0 0 0 1.5px rgb(217 154 34 / 0.6);
+}
+.ak-standings__rank {
+  font-family: var(--ak-font-display);
+  font-size: 18px;
+  color: var(--ak-ink-3);
+  text-align: center;
+  padding-top: 3px;
+}
+.ak-standings__name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ak-standings__busts {
+  font-size: 13px;
+  color: var(--ak-ink-2);
+}
+.ak-standings__score {
+  font-family: var(--ak-font-display);
+  font-size: 24px;
+  text-align: right;
+  padding-top: 3px;
+}
+
+.ak-confetti {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ak-confetti i {
+  position: absolute;
+  top: -24px;
+  width: 10px;
+  height: 15px;
+  border-radius: 2px;
+  clip-path: var(--s);
+  opacity: 0.9;
+  animation-name: ak-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes ak-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(var(--r));
+  }
+  100% {
+    transform: translate3d(40px, 110vh, 0) rotate(calc(var(--r) + 720deg));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ak-confetti {
+    display: none;
+  }
+}
+
+/* ─── Drawer contents: log, scores ───────────────────────────────────────── */
+
+.ak-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.ak-log__item {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 2px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.ak-log__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translateY(1px);
+}
+.ak-log__item--quiet {
+  color: var(--ak-ink-2);
+}
+.ak-log__item--bad {
+  color: var(--ak-chili-deep);
+  font-weight: 600;
+}
+.ak-log__item--good {
+  color: var(--ak-leaf-deep);
+  font-weight: 600;
+}
+.ak-log__item--spicy {
+  font-weight: 700;
+}
+.ak-log__round {
+  margin: 12px 0 2px;
+  padding-top: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ak-ink-3);
+  border-top: 1px dashed rgb(107 74 51 / 0.3);
+}
+.ak-log__round:first-child {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ak-scores .ak-h3 {
+  margin: 20px 0 8px;
+}
+.ak-scoretable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+.ak-scoretable th,
+.ak-scoretable td {
+  text-align: left;
+  padding: 6px 8px;
+}
+.ak-scoretable thead th {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ak-ink-2);
+  padding-bottom: 0;
+}
+.ak-scoretable tbody tr {
+  background: rgb(255 252 242 / 0.55);
+}
+.ak-scoretable tbody th {
+  border-radius: 12px 0 0 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ak-scoretable tbody td:last-child {
+  border-radius: 0 12px 12px 0;
+}
+.ak-scoretable__pts {
+  font-family: var(--ak-font-display);
+  font-size: 22px;
+}
+.ak-scoretable__crown {
+  color: var(--ak-turmeric);
+  margin-left: 6px;
+}
+.ak-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.ak-history__row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgb(255 252 242 / 0.45);
+  font-size: 14px;
+}
+.ak-history__r {
+  font-weight: 800;
+  color: var(--ak-ink-3);
+}
+.ak-history__d {
+  font-family: var(--ak-font-display);
+  font-size: 18px;
+}
+.ak-history__row.is-success .ak-history__d {
+  color: var(--ak-leaf-deep);
+}
+.ak-history__row.is-bust .ak-history__d {
+  color: var(--ak-chili);
+}
+.ak-seatlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.ak-seatlist__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.ak-seatlist__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+.ak-scores__leave {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1.5px dashed rgb(107 74 51 / 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .ak-overlay {
+    padding: 10px;
+    place-items: start center;
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+  .ak-overlay.ak-bite {
+    place-items: center;
+  }
+  .ak-result__card {
+    padding: 20px 16px 18px;
+  }
+  .ak-deltas__row {
+    grid-template-columns: 28px minmax(0, 1fr) 40px 36px;
+    gap: 8px;
+  }
+  .ak-deltas__why {
+    display: none;
+  }
+  .ak-standings__row {
+    grid-template-columns: 18px 28px minmax(0, 1fr) auto 36px;
+    gap: 8px;
+  }
+  .ak-bite__sub {
+    font-size: 16px;
+  }
+  .ak-bite__choices {
+    padding: 12px;
+  }
+  .ak-bite__pick {
+    width: calc(50% - 5px);
+  }
+}

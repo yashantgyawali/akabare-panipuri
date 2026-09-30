@@ -1,0 +1,409 @@
+/* Join form, loading/error screens, lobby. */
+
+.ak-loading {
+  display: grid;
+  place-items: center;
+  gap: 16px;
+  padding: 80px 0;
+  color: var(--ak-text-2);
+  text-align: center;
+}
+.ak-loading__puri {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 45%, #ab5417 0 38%, transparent 40%),
+    radial-gradient(circle at 40% 35%, #f3c46a, #e39a36 60%, #ab5417);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.4);
+  animation: ak-bob 1.2s ease-in-out infinite;
+}
+@keyframes ak-bob {
+  50% {
+    transform: translateY(-10px) rotate(8deg);
+  }
+}
+.ak-center-panel {
+  padding: 28px;
+  margin-top: 40px;
+}
+.ak-center-panel .ak-h1 {
+  margin-bottom: 10px;
+}
+.ak-center-panel p {
+  margin-bottom: 20px;
+}
+
+/* join */
+.ak-join {
+  padding: 28px 26px;
+  margin-top: 12px;
+}
+.ak-join__code {
+  font-family: var(--ak-font-display);
+  font-weight: 400;
+  font-size: clamp(48px, 12vw, 72px);
+  letter-spacing: 0.18em;
+  line-height: 1;
+  margin: 2px 0 20px;
+  color: var(--ak-ink);
+}
+.ak-join__suggest {
+  padding: 16px;
+  margin-bottom: 18px;
+  border-radius: var(--ak-radius);
+  background: rgb(217 154 34 / 0.14);
+  border: 1px solid rgb(217 154 34 / 0.4);
+}
+.ak-join__suggest p {
+  margin-bottom: 12px;
+}
+.ak-join__or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 0 !important;
+  font-size: 14px;
+  color: var(--ak-ink-2);
+}
+.ak-join__or::before,
+.ak-join__or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed rgb(107 74 51 / 0.4);
+}
+.ak-join .ak-localbadge {
+  margin-top: 18px;
+}
+
+/* ─── Lobby ──────────────────────────────────────────────────────────────── */
+
+.ak-lobby__hero {
+  text-align: center;
+  padding: 8px 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ak-lobby__invite {
+  margin: 12px 0 0;
+}
+.ak-share {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.ak-share__code {
+  display: flex;
+  gap: clamp(6px, 1.4vw, 12px);
+}
+.ak-share__ch {
+  display: grid;
+  place-items: center;
+  width: clamp(52px, 12vw, 76px);
+  height: clamp(66px, 15vw, 96px);
+  padding-top: 0.12em;
+  border-radius: 12px;
+  font-family: var(--ak-font-display);
+  font-size: clamp(38px, 9vw, 58px);
+  color: var(--ak-ink);
+  background: var(--ak-grain), linear-gradient(180deg, var(--ak-cream-bright), var(--ak-cream-2));
+  box-shadow:
+    inset 0 0 0 3px var(--ak-cream-bright),
+    inset 0 0 0 4.5px rgb(107 74 51 / 0.3),
+    0 3px 0 #a88a5a,
+    0 10px 20px rgb(0 0 0 / 0.35);
+}
+.ak-share__ch:nth-child(odd) {
+  rotate: -2deg;
+}
+.ak-share__ch:nth-child(even) {
+  rotate: 1.5deg;
+}
+.ak-share__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ak-lobby__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas:
+    'players rules'
+    'you rules';
+  gap: 20px;
+  align-items: start;
+}
+.ak-lobby__players {
+  grid-area: players;
+  padding: 22px 22px 18px;
+}
+.ak-lobby__you {
+  grid-area: you;
+  padding: 22px;
+}
+.ak-lobby__you .ak-field {
+  margin-bottom: 8px;
+}
+.ak-lobby__you form {
+  align-items: flex-end;
+  margin: 12px 0 8px;
+}
+.ak-lobby__you form .ak-field {
+  margin-bottom: 0;
+}
+.ak-lobby__rules {
+  grid-area: rules;
+  padding: 22px;
+}
+.ak-lplayers {
+  list-style: none;
+  margin: 14px 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.ak-lplayer {
+  display: grid;
+  grid-template-columns: 22px 40px minmax(0, 1fr) auto 12px 44px;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 14px;
+  background: rgb(255 252 242 / 0.6);
+  border: 1px solid rgb(107 74 51 / 0.16);
+  box-shadow: inset 5px 0 0 var(--c);
+  animation: ak-row-in 260ms var(--ak-ease);
+}
+.ak-lplayer--you {
+  background: rgb(255 252 242 / 0.95);
+  border-color: rgb(107 74 51 / 0.3);
+}
+.ak-lplayer--empty {
+  box-shadow: none;
+  border-style: dashed;
+  background: transparent;
+  animation: none;
+}
+.ak-lplayer--empty .ak-lplayer__name {
+  grid-column: 2 / -1;
+  font-weight: 600;
+}
+.ak-lplayer__seat {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ak-ink-3);
+  text-align: center;
+}
+.ak-lplayer__chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff6e2;
+  font-family: var(--ak-font-display);
+  font-size: 20px;
+  padding-top: 3px;
+  box-shadow:
+    inset 0 0 0 2px rgb(255 240 210 / 0.5),
+    0 2px 4px rgb(0 0 0 / 0.25);
+}
+.ak-lplayer__name {
+  font-weight: 700;
+  font-size: 17px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ak-lplayer__color {
+  font-size: 13px;
+  color: var(--ak-ink-2);
+}
+.ak-lplayer__kick {
+  width: 44px;
+  height: 44px;
+}
+@keyframes ak-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.ak-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 16px;
+}
+.ak-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid rgb(107 74 51 / 0.25);
+  background: rgb(255 252 242 / 0.6);
+  color: var(--ak-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.ak-preset:hover:not(:disabled) {
+  border-color: rgb(107 74 51 / 0.5);
+}
+.ak-preset--on {
+  border-color: var(--ak-chili);
+  background: rgb(200 50 26 / 0.08);
+  box-shadow: inset 0 0 0 1px var(--ak-chili);
+}
+.ak-preset__label {
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ak-preset__sub {
+  font-size: 13px;
+  color: var(--ak-ink-2);
+  line-height: 1.25;
+}
+.ak-custom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+.ak-custom__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ak-custom__item:last-child {
+  grid-column: 1 / -1;
+}
+.ak-numfield {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ak-numfield__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ak-numfield__suffix {
+  font-size: 14px;
+  color: var(--ak-ink-2);
+}
+.ak-lobby__goal {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgb(107 74 51 / 0.3);
+}
+.ak-rulelist {
+  margin: 12px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.ak-rulelist div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+}
+.ak-rulelist dt {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ak-ink-2);
+}
+.ak-rulelist dd {
+  margin: 0;
+}
+
+.ak-lobby__start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  text-align: center;
+}
+.ak-lobby__start .ak-btn--lg {
+  min-width: 260px;
+}
+.ak-lobby__reason {
+  color: var(--ak-gold);
+  font-weight: 600;
+  max-width: 44ch;
+}
+.ak-waiting {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: rgb(255 240 210 / 0.07);
+  border: 1px solid rgb(255 240 210 / 0.14);
+  font-weight: 600;
+}
+.ak-waiting p {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .ak-lobby__grid {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'players' 'you' 'rules';
+  }
+}
+@media (max-width: 640px) {
+  .ak-lobby__players,
+  .ak-lobby__you,
+  .ak-lobby__rules {
+    padding: 18px 14px;
+  }
+  .ak-lplayer {
+    grid-template-columns: 34px minmax(0, 1fr) 12px 44px;
+    gap: 8px;
+  }
+  .ak-lplayer__seat,
+  .ak-lplayer__color {
+    display: none;
+  }
+  .ak-lplayer--empty .ak-lplayer__name {
+    grid-column: 1 / -1;
+    padding-left: 6px;
+  }
+  .ak-lplayer__chip {
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
+  }
+  .ak-lplayer .ak-tag {
+    margin-left: 4px;
+    padding: 0 6px;
+  }
+  .ak-presets {
+    grid-template-columns: 1fr;
+  }
+  .ak-preset {
+    min-height: 52px;
+  }
+  .ak-custom {
+    grid-template-columns: 1fr;
+  }
+  .ak-lobby__start .ak-btn--lg {
+    width: 100%;
+  }
+}

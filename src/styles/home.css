@@ -1,0 +1,222 @@
+/* Home: hero with a fanned hand, create / join cards, recent games, teaser. */
+
+.ak-home {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--ak-gutter) 40px;
+  overflow-x: clip;
+}
+
+.ak-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-height: min(560px, 78vh);
+  padding: 40px 0 24px;
+}
+.ak-hero__kicker {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ak-gold);
+  margin-bottom: 14px;
+}
+.ak-hero__title {
+  margin: 0;
+}
+.ak-hero__tag {
+  margin: 18px 0 0;
+  font-size: clamp(19px, 2.2vw, 24px);
+  font-weight: 600;
+  color: var(--ak-text);
+  max-width: 30ch;
+}
+.ak-hero__fan {
+  --w: 124px;
+  position: relative;
+  height: calc(var(--w) * 1.397 + 90px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.ak-hero__fan::before {
+  /* a warm pool of lantern light under the hand */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  width: calc(var(--w) * 5);
+  height: calc(var(--w) * 1.6);
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgb(233 180 76 / 0.28), transparent);
+  pointer-events: none;
+}
+.ak-hero__fancard {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform-origin: 50% 120%;
+  transform: translateX(-50%) translateX(calc(var(--i) * var(--w) * 0.52)) rotate(calc(var(--i) * 11deg)) translateY(calc(var(--i) * var(--i) * 6px));
+  animation: ak-fan-in 900ms var(--ak-ease) both;
+  animation-delay: calc((var(--i) + 2) * 70ms);
+  filter: drop-shadow(0 12px 16px rgb(0 0 0 / 0.4));
+}
+.ak-hero__fancard:nth-child(3) {
+  z-index: 2;
+  bottom: 48px;
+}
+.ak-hero__fancard:hover {
+  bottom: 44px;
+  transition: bottom 200ms var(--ak-ease);
+}
+.ak-hero__fancard:nth-child(3):hover {
+  bottom: 60px;
+}
+@keyframes ak-fan-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(40px) rotate(0deg);
+  }
+}
+
+.ak-home__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.ak-home__card {
+  padding: 26px 26px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.ak-home__card .ak-muted {
+  margin-bottom: 18px;
+}
+.ak-home__card > .ak-btn {
+  margin-top: auto;
+}
+
+.ak-home__recent {
+  margin-top: 20px;
+  padding: 22px 26px;
+}
+.ak-recent {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.ak-recent__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+  border-top: 1px dashed rgb(107 74 51 / 0.25);
+}
+.ak-recent__row:first-child {
+  border-top: 0;
+}
+.ak-recent__code {
+  font-family: var(--ak-font-display);
+  font-size: 22px;
+  letter-spacing: 0.14em;
+  padding-top: 4px;
+}
+.ak-recent__as {
+  flex: 1;
+  min-width: 0;
+  color: var(--ak-ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ak-teaser {
+  margin-top: 36px;
+  padding: 8px 0 0;
+}
+.ak-teaser__h {
+  color: var(--ak-cream-bright);
+  margin-bottom: 16px;
+}
+.ak-teaser__steps {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.ak-teaser__step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: var(--ak-radius);
+  background: rgb(255 240 210 / 0.04);
+  border: 1px solid rgb(255 240 210 / 0.09);
+}
+.ak-teaser__step p {
+  color: var(--ak-text-2);
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+.ak-teaser__title {
+  font-family: var(--ak-font-display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--ak-cream-bright);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ak-teaser__n {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ak-chili);
+  color: #fff4df;
+  font-family: var(--ak-font-ui);
+  font-weight: 800;
+  font-size: 15px;
+  padding-top: 2px;
+}
+
+@media (max-width: 860px) {
+  .ak-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding-top: 28px;
+    gap: 8px;
+  }
+  .ak-hero__fan {
+    order: -1;
+    margin-top: 12px;
+    height: calc(var(--w) * 1.397 + 64px);
+  }
+  .ak-teaser__steps {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .ak-home__grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .ak-home__card {
+    padding: 22px 18px 20px;
+  }
+  .ak-home__recent {
+    padding: 18px;
+  }
+  .ak-hero__fancard {
+    transform: translateX(-50%) translateX(calc(var(--i) * var(--w) * 0.5)) rotate(calc(var(--i) * 10deg)) translateY(calc(var(--i) * var(--i) * 5px));
+  }
+}
