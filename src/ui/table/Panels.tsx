@@ -3,6 +3,7 @@
  * view.legal (empty while events are still playing back).
  */
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Action, PlayerView, PuriKind } from '../../engine/types.ts';
 import { Button } from '../common/Button.tsx';
 import { Icon } from '../common/Icon.tsx';
@@ -19,6 +20,7 @@ export function BidControl({
   pending,
   onBid,
   initial,
+  extra,
 }: {
   min: number;
   tableMax: number;
@@ -27,6 +29,8 @@ export function BidControl({
   pending: boolean;
   onBid: (amount: number) => void;
   initial?: number;
+  /** Rendered at the end of the stepper row (e.g. the Pass button). */
+  extra?: ReactNode;
 }) {
   const [amount, setAmount] = useState(Math.max(min, initial ?? min));
   const [confirming, setConfirming] = useState(false);
@@ -54,6 +58,7 @@ export function BidControl({
             {label}
           </Button>
         ) : null}
+        {!confirming ? extra : null}
       </div>
       {over && !confirming ? (
         <p className="ak-bid__hint ak-small">
@@ -172,21 +177,34 @@ export function ActionPanel(props: PanelProps) {
                 High bid <strong>{b.highBid}</strong> by {names.who(b.highBidderId)}. The last one standing eats.
               </p>
             ) : null}
-            {legal.raise ? (
-              <BidControl
-                min={legal.raise.min}
-                tableMax={view.tableMax}
-                verb="Raise"
-                busy={busy}
-                pending={pending === 'raise'}
-                onBid={(amount) => act('raise', { type: 'RAISE', amount })}
-              />
-            ) : null}
-            {legal.pass ? (
-              <Button variant="ghost" size="lg" busy={pending === 'pass'} disabled={busy} onClick={() => act('pass', { type: 'PASS' })}>
-                Pass (out for this round)
-              </Button>
-            ) : null}
+            {(() => {
+              const passBtn = legal.pass ? (
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className="ak-bid__pass"
+                  busy={pending === 'pass'}
+                  disabled={busy}
+                  aria-label="Pass: you're out of the bidding for this round"
+                  onClick={() => act('pass', { type: 'PASS' })}
+                >
+                  Pass
+                </Button>
+              ) : null;
+              return legal.raise ? (
+                <BidControl
+                  min={legal.raise.min}
+                  tableMax={view.tableMax}
+                  verb="Raise"
+                  busy={busy}
+                  pending={pending === 'raise'}
+                  onBid={(amount) => act('raise', { type: 'RAISE', amount })}
+                  extra={passBtn}
+                />
+              ) : (
+                passBtn
+              );
+            })()}
           </div>
         );
       }

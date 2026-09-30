@@ -78,7 +78,13 @@ export function AkabareMoment({
   const canAccept = moment.stage === 'bitten' && eaterIsYou && legal.acceptBust;
   const target = moment.target ?? view.eating?.target ?? 0;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-  const bigW = Math.round(Math.min(phone ? 124 : 180, Math.max(96, (vh - (moment.stage === 'bitten' && eaterIsYou ? 520 : 330)) * 0.72)));
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  // Leave room for the choices under the chili card: one row of picks is ~150px tall.
+  const pickW = phone ? 100 : 132;
+  const perRow = Math.max(1, Math.floor((Math.min(760, vw - 32) - 32 + 10) / (pickW + 10)));
+  const rows = choices.length > 0 ? Math.ceil(choices.length / perRow) : 0;
+  const reserve = moment.stage === 'bitten' && eaterIsYou ? (phone ? 440 : 500) + Math.max(0, rows - 1) * (phone ? 124 : 150) : 330;
+  const bigW = Math.round(Math.min(phone ? 124 : 180, Math.max(phone ? 72 : 96, (vh - reserve) * 0.72)));
   const trap = moment.trapRewardTo;
   const stageClass = `ak-bite--${moment.stage}`;
 

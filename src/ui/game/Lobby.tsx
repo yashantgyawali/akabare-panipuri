@@ -296,14 +296,14 @@ function RulesPanel({ game }: { game: UseGame }) {
             min={1}
             max={1000}
             suffix="points"
-            disabled={game.busy || c.targetScore === null}
+            disabled={c.targetScore === null}
             onCommit={(n) => set('target', { targetScore: n })}
           />
           <label className={cx('ak-check', c.maxRounds === null && 'ak-check--disabled')}>
             <input
               type="checkbox"
               checked={c.targetScore === null}
-              disabled={game.busy || c.maxRounds === null}
+              disabled={c.maxRounds === null}
               onChange={(e) => set('target', { targetScore: e.target.checked ? null : lastTarget })}
             />
             <span>No target (play every round)</span>
@@ -316,21 +316,21 @@ function RulesPanel({ game }: { game: UseGame }) {
             min={1}
             max={100}
             suffix="max"
-            disabled={game.busy || c.maxRounds === null}
+            disabled={c.maxRounds === null}
             onCommit={(n) => set('rounds', { maxRounds: n })}
           />
           <label className={cx('ak-check', c.targetScore === null && 'ak-check--disabled')}>
             <input
               type="checkbox"
               checked={c.maxRounds === null}
-              disabled={game.busy || c.targetScore === null}
+              disabled={c.targetScore === null}
               onChange={(e) => set('rounds', { maxRounds: e.target.checked ? null : lastRounds })}
             />
             <span>No round limit</span>
           </label>
         </div>
         <div className="ak-custom__item">
-          <NumberField label="Trap reward" value={c.trapReward} min={0} max={100} suffix="points" disabled={game.busy} onCommit={(n) => set('trap', { trapReward: n })} />
+          <NumberField label="Trap reward" value={c.trapReward} min={0} max={100} suffix="points" onCommit={(n) => set('trap', { trapReward: n })} />
           <span className="ak-field__hint">Paid to the owner of the Akabare that busts someone else.</span>
         </div>
         <div className="ak-custom__item">
@@ -339,7 +339,6 @@ function RulesPanel({ game }: { game: UseGame }) {
               type="checkbox"
               role="switch"
               checked={c.revealOnRoundEnd}
-              disabled={game.busy}
               onChange={(e) => set('reveal', { revealOnRoundEnd: e.target.checked })}
             />
             <span className="ak-switch__track" aria-hidden="true" />

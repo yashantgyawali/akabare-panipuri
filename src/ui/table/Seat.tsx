@@ -64,7 +64,7 @@ export function stackLabel(p: PublicPlayerView, names: NameBook): string {
   if (p.stack.length === 0) return `${whose} stack is empty`;
   const top = p.stack[p.stack.length - 1];
   const topOwner = top.owner === names.you ? 'yours' : `${names.name(top.owner)}’s`;
-  const known = top.kind ? `, a ${top.kind === 'akabare' ? 'Akabare' : 'Panipuri'}` : '';
+  const known = top.kind ? (top.kind === 'akabare' ? ', an Akabare' : ', a Panipuri') : '';
   return `${whose} stack: ${p.stack.length} card${p.stack.length === 1 ? '' : 's'}, top card ${topOwner}${known}`;
 }
 

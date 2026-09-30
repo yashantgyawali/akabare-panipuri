@@ -175,7 +175,7 @@ export function Table({ game }: { game: UseGame }) {
   const you = snap.youId;
   const reduced = useReducedMotion();
   const phone = usePhone();
-  const big = useMediaQuery('(min-width: 1180px) and (min-height: 760px)');
+  const big = useMediaQuery('(min-width: 1180px) and (min-height: 880px)');
   const pb = usePlayback(live, you, reduced);
   const view = pb.display ?? live;
   const names = useMemo(() => makeNameBook(view.players, you), [view.players, you]);
