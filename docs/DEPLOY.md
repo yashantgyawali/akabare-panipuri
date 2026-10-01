@@ -38,24 +38,28 @@ npx -y deno@2 check supabase/functions/game/index.ts   # optional typecheck
 supabase functions deploy game --no-verify-jwt --project-ref ibayovdptlrvoepwrqpz
 ```
 
-With the MCP `deploy_edge_function` tool instead, use:
+With the MCP `deploy_edge_function` tool instead (this is how the live function was deployed), upload one bundled file instead of 11 sources. That's 60 KB instead of 106 KB, and one file is less likely to stall the upload:
+
+```sh
+npm run build:function       # sync:function + rolldown → supabase/.build/game/index.js (types stripped, npm: import kept external)
+```
+
+Then deploy with:
 
 - name `game`
-- entrypoint `index.ts`
-- `verify_jwt: false`
-- these files, with paths relative to `supabase/functions/game/`:
-  - `index.ts`
-  - `handler.ts`
-  - `_lib/engine/{bot,engine,index,rules,types,view}.ts`
-  - `_lib/server/{types,core,crypto}.ts`
+- entrypoint `index.js`
+- `verify_jwt: true`
+- one file, `index.js` = the contents of `supabase/.build/game/index.js`
 
-Always run `sync:function` first. `_lib/` is a generated copy: edit `src/`, not `_lib/`.
+You can smoke-test the bundle locally first with `PORT=8787 npx -y deno@2 run --allow-net --allow-env --allow-read supabase/.build/game/index.js`. It should answer `{"ok":false,"error":{"code":"internal","message":"The game server is not configured."}}`.
+
+Always run `sync:function` first (`build:function` does it for you). `_lib/` and `.build/` are generated and gitignored: edit `src/`, not `_lib/`.
 
 The hosted runtime injects `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` automatically, so there are no secrets to set.
 
 ### verify_jwt
 
-The function does its own auth: it hashes the per-game token and looks it up in `akabare_tokens`. It doesn't use Supabase Auth, so **deploy with `verify_jwt = false`**.
+The function does its own auth: it hashes the per-game token and looks it up in `akabare_tokens`. It doesn't use Supabase Auth. The live deployment uses `verify_jwt = true`, which works because the app uses the legacy anon JWT. **Switch to `verify_jwt = false`** if you move the client to a `sb_publishable_…` key.
 
 - The client sends `apikey: <anon key>` and `Authorization: Bearer <anon key>`. That means `verify_jwt = true` also works while the anon key is the legacy JWT (`eyJ…`).
 - New-style publishable keys (`sb_publishable_…`) aren't JWTs. The gateway rejects them when `verify_jwt = true`.
