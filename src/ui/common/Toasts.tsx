@@ -32,11 +32,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <div className="ak-toasts" aria-live="polite" aria-relevant="additions">
+      <div className="tp-toasts" aria-live="polite" aria-relevant="additions">
         {toasts.map((t) => (
-          <div key={t.id} className={cx('ak-toast', `ak-toast--${t.tone}`)} role={t.tone === 'error' ? 'alert' : 'status'}>
-            <span className="ak-toast__text">{t.text}</span>
-            <button type="button" className="ak-toast__x" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
+          <div key={t.id} className={cx('tp-toast', `tp-toast--${t.tone}`)} role={t.tone === 'error' ? 'alert' : 'status'}>
+            <span className="tp-toast__text">{t.text}</span>
+            <button type="button" className="tp-toast__x" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
               <Icon name="close" size={16} />
             </button>
           </div>

@@ -24,10 +24,10 @@ export function Stepper({ value, min, max, onChange, label, id, disabled, size =
     if (next !== value) onChange(next);
   };
   return (
-    <div className={`ak-stepper ak-stepper--${size}`} role="group" aria-label={label}>
+    <div className={`tp-stepper tp-stepper--${size}`} role="group" aria-label={label}>
       <button
         type="button"
-        className="ak-stepper__btn"
+        className="tp-stepper__btn"
         onClick={() => onChange(clamp(value - 1))}
         disabled={disabled || value <= min}
         aria-label={`Decrease ${label}`}
@@ -36,7 +36,7 @@ export function Stepper({ value, min, max, onChange, label, id, disabled, size =
       </button>
       <input
         id={id}
-        className="ak-stepper__input"
+        className="tp-stepper__input"
         type="number"
         inputMode="numeric"
         min={min}
@@ -56,7 +56,7 @@ export function Stepper({ value, min, max, onChange, label, id, disabled, size =
       />
       <button
         type="button"
-        className="ak-stepper__btn"
+        className="tp-stepper__btn"
         onClick={() => onChange(clamp(value + 1))}
         disabled={disabled || (max !== undefined && value >= max)}
         aria-label={`Increase ${label}`}

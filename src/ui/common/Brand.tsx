@@ -1,36 +1,29 @@
-/** The wordmark and the local-mode badge. */
+/** The wordmark ("Akabare Panipuri" + "by Tumlet") and the local-mode badge. */
 import { isLocalMode } from '../../net/index.ts';
 import { HOME } from '../router.ts';
 import { cx } from './hooks.ts';
 
-export function Wordmark({ size = 'md', link = false, className }: { size?: 'sm' | 'md' | 'xl'; link?: boolean; className?: string }) {
+export function Wordmark({ link = false, byline = true, className }: { link?: boolean; byline?: boolean; className?: string; size?: 'sm' | 'md' | 'xl' }) {
   const body = (
     <>
-      <span className="ak-wordmark__latin">
-        Akabare <span className="ak-wordmark__pani">Panipuri</span>
-      </span>
-      {size !== 'sm' ? (
-        <span className="ak-wordmark__deva" lang="ne">
-          अकबरे पानीपुरी
-        </span>
-      ) : null}
+      <span>Akabare Panipuri</span>
+      {byline ? <span className="tp-brand__by">by Tumlet</span> : null}
     </>
   );
-  const cls = cx('ak-wordmark', `ak-wordmark--${size}`, className);
   return link ? (
-    <a href={HOME} className={cls} aria-label="Akabare Panipuri: home">
+    <a href={HOME} className={cx('tp-brand', className)} aria-label="Akabare Panipuri: home">
       {body}
     </a>
   ) : (
-    <span className={cls}>{body}</span>
+    <span className={cx('tp-brand', className)}>{body}</span>
   );
 }
 
 export function LocalBadge({ className }: { className?: string }) {
   if (!isLocalMode()) return null;
   return (
-    <p className={cx('ak-localbadge', className)}>
-      <span className="ak-localbadge__dot" aria-hidden="true" />
+    <p className={cx('tp-localbadge', className)}>
+      <span className="tp-localbadge__dot" aria-hidden="true" />
       <span>
         <strong>Offline demo:</strong> open more tabs to add players.
       </span>
