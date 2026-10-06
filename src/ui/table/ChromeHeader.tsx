@@ -48,9 +48,15 @@ export function TableHeader({
       }
       if (!menuRef.current?.contains(e.target as Node)) setMenu(false);
     };
+    // Focus moving elsewhere (an overlay opening) also closes the menu.
+    const away = (e: FocusEvent) => {
+      if (e.target instanceof Node && !menuRef.current?.contains(e.target)) setMenu(false);
+    };
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', close);
+    document.addEventListener('focusin', away);
     return () => {
+      document.removeEventListener('focusin', away);
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', close);
     };

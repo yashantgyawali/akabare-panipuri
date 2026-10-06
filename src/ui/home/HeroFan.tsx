@@ -1,11 +1,12 @@
 /** Three real cards fanned on the right of the hero: blue puri back, red Akabare, yellow Panipuri. */
 import { Card } from '../../cards/index.ts';
-import { usePhone } from '../common/hooks.ts';
+import { useMediaQuery, usePhone } from '../common/hooks.ts';
 
 export function HeroFan() {
   const phone = usePhone();
-  const w = phone ? 104 : 190;
-  const mid = phone ? 114 : 210;
+  const tablet = useMediaQuery('(min-width: 641px) and (max-width: 859px)');
+  const w = phone ? 104 : tablet ? 140 : 190;
+  const mid = phone ? 114 : tablet ? 154 : 210;
   return (
     <div className="tp-home-fan" aria-hidden="true">
       <div className="tp-home-fan__card tp-home-fan__card--l">

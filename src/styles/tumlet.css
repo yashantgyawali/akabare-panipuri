@@ -352,6 +352,11 @@ input:focus-visible {
   font-size: 14px;
   padding: 8px 16px;
 }
+@media (max-width: 640px) {
+  .tp-btn--sm {
+    min-height: 44px;
+  }
+}
 .tp-btn--lg {
   font-size: 17px;
   padding: 13px 28px;
@@ -606,6 +611,18 @@ input:focus-visible {
 .tp-stepper--md {
   border-radius: 10px;
 }
+.tp-stepper__input {
+  min-height: 44px;
+}
+@media (max-width: 640px) {
+  .tp-stepper--md .tp-stepper__btn {
+    width: 44px;
+    height: 44px;
+  }
+  .tp-stepper--md .tp-stepper__input {
+    width: 48px;
+  }
+}
 
 /* ===== surfaces ===== */
 .tp-panel {
@@ -827,4 +844,22 @@ input:focus-visible {
   height: 8px;
   border-radius: 50%;
   background: var(--tumlet-ink);
+}
+
+/* Phone tap targets: 44px minimum for links, the brand, and the colour dots (the dot keeps its look, its hit area grows). */
+@media (max-width: 640px) {
+  .tp-link,
+  .tp-brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .tp-swatch {
+    position: relative;
+  }
+  .tp-swatch::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
 }

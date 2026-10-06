@@ -127,6 +127,11 @@
   flex: none;
   border-radius: 6px;
 }
+.tp-seat .ak-card-stack__slot {
+  /* the empty-pile slot is cream-on-dark by default; on the beige plate it needs the same dashed line as the power slot */
+  border: 2px dashed var(--tumlet-line);
+  background: transparent;
+}
 .tp-seat__nopower {
   display: block;
   border: 2px dashed var(--tumlet-line);

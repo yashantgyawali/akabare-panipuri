@@ -180,6 +180,11 @@
     max-width: none;
   }
 }
+@media (min-width: 641px) and (max-width: 859px) {
+  .tp-home-fan {
+    height: 290px;
+  }
+}
 @media (max-width: 520px) {
   .tp-home-hero__text {
     gap: 22px;
@@ -219,8 +224,8 @@
 }
 @media (max-width: 520px) {
   .tp-home-create__row .tp-swatch {
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
   }
 }
 @media (max-width: 520px) {

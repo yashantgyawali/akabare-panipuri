@@ -31,7 +31,7 @@ export type IconName = keyof typeof PATHS;
 export function Icon({ name, size = 20, className, style, title }: { name: IconName; size?: number; className?: string; style?: CSSProperties; title?: string }) {
   return (
     <svg
-      className={className ? `ak-icon ${className}` : 'ak-icon'}
+      className={className ? `tp-icon ${className}` : 'tp-icon'}
       style={style}
       width={size}
       height={size}

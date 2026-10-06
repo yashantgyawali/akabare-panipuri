@@ -58,6 +58,18 @@ export function SetupPanel({
   const submitted = view.me?.setup ?? null;
   const [slots, setSlots] = useState<(PuriKind | null)[]>(() => submitted?.stack.slice(0, size) ?? Array(size).fill(null));
   const [power, setPower] = useState<PowerKind | null>(() => submitted?.power ?? (available.length === 1 ? available[0] : null));
+  // The tapped card leaves the hand (or the slot button turns into an empty slot), which would drop keyboard focus on <body>: keep it nearby.
+  const rootRef = useRef<HTMLElement>(null);
+  const refocus = useRef<{ from: 'hand' | 'slot'; idx: number } | null>(null);
+  useEffect(() => {
+    const want = refocus.current;
+    refocus.current = null;
+    const root = rootRef.current;
+    if (!want || !root || (document.activeElement && document.activeElement !== document.body && root.contains(document.activeElement))) return;
+    const hand = [...root.querySelectorAll<HTMLElement>('.tp-hand-row__card button')];
+    const target = want.from === 'hand' ? hand[Math.min(want.idx, hand.length - 1)] : hand[0];
+    (target ?? root.querySelector<HTMLElement>('.tp-slot__btn, .tp-setup__powers button:not(:disabled)'))?.focus();
+  }, [slots]);
   const [editing, setEditing] = useState(!submitted);
 
   // A fresh round (nothing submitted) opens the editor; a setup that lands from elsewhere
@@ -116,14 +128,20 @@ export function SetupPanel({
   const fill = (kind: PuriKind) => {
     const i = slots.findIndex((s) => s === null);
     if (i < 0) return;
+    const hand = [...(rootRef.current?.querySelectorAll<HTMLElement>('.tp-hand-row__card button') ?? [])];
+    const at = hand.indexOf(document.activeElement as HTMLElement);
+    if (at >= 0) refocus.current = { from: 'hand', idx: at };
     setSlots(slots.map((s, j) => (j === i ? kind : s)));
   };
-  const clear = (i: number) => setSlots(slots.map((s, j) => (j === i ? null : s)));
+  const clear = (i: number) => {
+    refocus.current = { from: 'slot', idx: i };
+    setSlots(slots.map((s, j) => (j === i ? null : s)));
+  };
   const empty = slots.filter((x) => x === null).length;
   const todo = [empty > 0 ? `fill ${empty} more slot${empty === 1 ? '' : 's'}` : '', !power ? 'pick a power' : ''].filter(Boolean).join(' and ');
 
   return (
-    <section className="tp-setup" aria-labelledby="setup-h">
+    <section className="tp-setup" aria-labelledby="setup-h" ref={rootRef}>
       <h2 className="tp-prompt__title tp-setup__title" id="setup-h">
         Round {view.round} · set up
       </h2>

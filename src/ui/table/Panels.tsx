@@ -184,14 +184,14 @@ export function ActionPanel(props: PanelProps) {
       const mine = view.players.find((p) => p.id === you)?.power;
       const canNaya = !!mine && !mine.revealed && mine.kind === 'nayaplate';
       let text = tableEmpty
-        ? 'The table’s empty. Flip a power and hope for Chaat, or give up.'
+        ? 'The table’s empty. Hope for Chaat, or give up.'
         : e.freePlate
           ? 'Naya Plate: tap any glowing stack, yours included.'
           : !e.ownStackEmpty
             ? `Finish your own stack first: tap it to eat${canNaya ? ', or flip your Naya Plate to eat from any stack' : ''}.`
             : 'Tap any glowing stack to eat its top card.';
       if (legal.flipPower.length > 0) {
-        text += ` Or flip a glowing power (${view.config.powerFlipsMax - e.powersFlipped} left)${
+        text += ` ${tableEmpty ? 'Flip' : 'Or flip'} a glowing power (${view.config.powerFlipsMax - e.powersFlipped} left)${
           mine && !mine.revealed && mine.kind ? `. Yours is ${powerName(mine.kind)}; the rest are blind gambles.` : '. Each one is a blind gamble.'
         }`;
       }

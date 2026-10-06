@@ -352,6 +352,13 @@ export function Table({ game }: { game: UseGame }) {
   const setupMode = view.phase === 'setup' && !!me && !me.isBot;
   const setupView = live.phase === 'setup' && live.round === view.round ? live : view;
   const placing = !!legal.place && selKind !== null;
+  // Keyboard: the stacks sit before the hand in tab order, so picking a card hops focus to the first stack you can place on.
+  useEffect(() => {
+    if (!placing) return;
+    const a = document.activeElement;
+    if (!(a instanceof HTMLElement) || !a.closest('.tp-dock__hand') || !a.matches(':focus-visible')) return;
+    document.querySelector<HTMLElement>('.tp-seats [data-stack-of] > button.ak-card-stack--selectable')?.focus();
+  }, [placing]);
   const botSeat = !!me?.isBot && view.phase !== 'gameOver';
   const showHud = view.phase === 'eating' || view.phase === 'roundEnd' || view.phase === 'gameOver';
   const showHand = !!me && !botSeat && (view.phase === 'serving' || (!phone && hand.length > 0 && (view.phase === 'bidding' || view.phase === 'eating')));
@@ -533,14 +540,14 @@ export function Table({ game }: { game: UseGame }) {
       </Drawer>
       <ConfirmDialog
         open={confirmLeave}
-        title="Leave this game?"
-        confirmLabel="Leave the game"
+        title="Leave the table?"
+        confirmLabel="Leave"
         danger
         busy={pending === 'leave'}
         onCancel={() => setConfirmLeave(false)}
         onConfirm={leave}
       >
-        <p>A bot will take over your seat so the others can finish. You won’t be able to take it back from this browser.</p>
+        <p>A bot takes over your seat so the others can keep playing.</p>
       </ConfirmDialog>
     </div>
   );

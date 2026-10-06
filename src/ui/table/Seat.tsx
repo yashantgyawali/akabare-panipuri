@@ -84,7 +84,7 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
   const items = stackItems(p, view, names);
   const pw = p.power;
   // Never below 35px: the back's owner badge needs that much room for a wide letter (M, W).
-  const powerW = Math.max(35, Math.round(cardW * 0.78));
+  const powerW = Math.max(44, Math.round(cardW * 0.78));
   const pwUp = !!pw && (pw.revealed || view.revealed) && pw.kind !== null;
   const pwLabel = !pw
     ? ''
