@@ -114,7 +114,11 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
           {p.name}
           {you ? <span className="tp-seat__you"> (you)</span> : null}
         </span>
-        {isHost ? <Icon name="crown" size={14} title="host" /> : null}
+        {isHost ? (
+          <span className="tp-seat__host">
+            <Icon name="crown" size={14} title="host" />
+          </span>
+        ) : null}
         <span className="tp-seat__score tp-num" aria-label={`${p.score} points`}>
           {num(p.score)}
         </span>

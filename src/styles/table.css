@@ -79,6 +79,11 @@
   font-weight: 400;
   color: var(--tumlet-brown);
 }
+
+.tp-seat__host {
+  display: inline-flex;
+  color: var(--tumlet-brown);
+}
 .tp-seat__score {
   font-size: 22px;
 }
@@ -573,6 +578,9 @@
   }
   .tp-seat__name {
     font-size: 15px;
+  }
+  .tp-seat__host {
+    display: none;
   }
   .tp-seat__score {
     font-size: 20px;

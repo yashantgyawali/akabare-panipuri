@@ -354,7 +354,7 @@ export function Table({ game }: { game: UseGame }) {
   const placing = !!legal.place && selKind !== null;
   const botSeat = !!me?.isBot && view.phase !== 'gameOver';
   const showHud = view.phase === 'eating' || view.phase === 'roundEnd' || view.phase === 'gameOver';
-  const showHand = !!me && !botSeat && (view.phase === 'serving' || (!phone && (view.phase === 'bidding' || view.phase === 'eating')));
+  const showHand = !!me && !botSeat && (view.phase === 'serving' || (!phone && hand.length > 0 && (view.phase === 'bidding' || view.phase === 'eating')));
 
   const leave = () =>
     void run('leave', async () => {

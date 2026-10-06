@@ -446,3 +446,17 @@
     width: 100%;
   }
 }
+
+@media (max-width: 760px) {
+  .tp-lobby .tp-brand,
+  .tp-lobby .tp-btn {
+    white-space: nowrap;
+  }
+  .tp-lobby .tp-brand__by {
+    display: none;
+  }
+  .tp-lobby-share__btns .tp-btn {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
