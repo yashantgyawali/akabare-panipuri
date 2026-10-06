@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/tumlet-design-system-806a1149-50f5-44c6-9582-6125154bd9bc/tokens.css">
+  <script src="_ds/tumlet-design-system-806a1149-50f5-44c6-9582-6125154bd9bc/_ds_bundle.js"></script>
+  <script src="engine.js"></script>
+  <style>
+    body { margin:0; background:#FAF1E4; }
+    a { color:#130D01; text-decoration:underline; text-underline-offset:3px; }
+    a:hover { color:#F16147; }
+    input:focus { outline:3px solid #F3B952; outline-offset:1px; }
+    button:focus-visible { outline:3px solid #F3B952; outline-offset:3px; }
+    @keyframes akDots { 0%,80%,100% { opacity:.25 } 40% { opacity:1 } }
+  </style>
+</helmet>
+<div style="min-height:100vh; background:#FAF1E4; color:#130D01; font-family:var(--font-body); font-size:16px;">
+
+  <!-- ============ HOME ============ -->
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Home" style="max-width:1160px; margin:0 auto; padding:32px 48px 64px; display:flex; flex-direction:column; gap:56px;">
+      <header style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:baseline; gap:10px;">
+          <span style="font-family:var(--font-display); font-weight:800; font-size:18px; letter-spacing:-.01em;">Akabare Panipuri</span>
+          <span style="font-family:var(--font-hand); font-size:16px; color:#5A3A1F;">by Tumlet</span>
+        </div>
+        <button onClick="{{ goRules }}" style="background:none; border:0; font:inherit; font-weight:700; cursor:pointer; color:#130D01; padding:8px 0; text-decoration:underline; text-underline-offset:4px;">How to play</button>
+      </header>
+
+      <section style="display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:48px; align-items:center;">
+        <div style="display:flex; flex-direction:column; gap:28px;">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <span style="font-family:var(--font-hand); font-size:22px; color:#F16147;">a street-food bluffing game · 3–6 players</span>
+            <h1 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:76px; line-height:.98; letter-spacing:-.025em;">Akabare<br>Panipuri</h1>
+            <span lang="ne" style="font-family:var(--font-nepali); font-weight:700; font-size:26px; color:#5A3A1F;">अकबरे पानीपुरी</span>
+          </div>
+          <p style="margin:0; font-size:20px; max-width:420px; text-wrap:pretty;">Stack the puri. Bluff the bid. Don’t bite the chili.</p>
+
+          <div style="display:flex; flex-direction:column; gap:16px; max-width:460px;">
+            <div style="display:flex; gap:12px; align-items:center;">
+              <input value="{{ name }}" onChange="{{ onName }}" maxlength="16" placeholder="Your name" style="flex:1; min-width:0; font:inherit; font-size:18px; padding:14px 16px; border:2px solid #5A3A1F; border-radius:12px; background:#FDF8F0; color:#130D01;">
+              <div style="display:flex; gap:6px;">
+                <sc-for list="{{ colorDots }}" as="d" hint-placeholder-count="6">
+                  <button onClick="{{ d.pick }}" title="{{ d.label }}" style="width:26px; height:26px; border-radius:50%; border:2px solid #FAF1E4; background:{{ d.hex }}; box-shadow:{{ d.ring }}; cursor:pointer; padding:0;"></button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:20px; padding-top:8px;">
+              <button class="btn-cta red" onClick="{{ create }}" disabled="{{ createDisabled }}" style="font-size:18px; padding:16px 48px; opacity:{{ createOp }};">Start a table</button>
+              <span style="font-size:14px; color:#5A3A1F;">Add bots if you’re short of friends.</span>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px; padding-top:20px; border-top:2px dashed rgba(90,58,31,.35); max-width:460px;">
+            <span style="font-weight:700; white-space:nowrap;">Got a code?</span>
+            <input value="{{ joinCode }}" onChange="{{ onJoinCode }}" placeholder="ABCDE" spellcheck="false" style="width:130px; font-family:var(--font-display); font-weight:800; font-size:18px; letter-spacing:.2em; text-transform:uppercase; padding:10px 12px; border:2px solid #5A3A1F; border-radius:12px; background:#FDF8F0; color:#130D01;">
+            <button onClick="{{ join }}" disabled="{{ joinDisabled }}" style="font:inherit; font-weight:700; padding:10px 20px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer; opacity:{{ joinOp }};" style-hover="background:#F3B952;">Join</button>
+          </div>
+
+          <sc-if value="{{ hasRecent }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; max-width:460px;">
+              <span style="font-size:14px; color:#5A3A1F;">Recent:</span>
+              <sc-for list="{{ recent }}" as="r" hint-placeholder-count="2">
+                <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 6px 4px 12px; border-radius:999px; background:#F3B952; font-size:14px; font-weight:700;">
+                  <button onClick="{{ r.rejoin }}" style="background:none; border:0; padding:0; font:inherit; cursor:pointer; color:#130D01;">{{ r.code }} · {{ r.name }}</button>
+                  <button onClick="{{ r.forget }}" title="Forget" style="background:none; border:0; width:20px; height:20px; border-radius:50%; cursor:pointer; color:#5A3A1F; font-size:14px; line-height:1; padding:0;">×</button>
+                </span>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="position:relative; height:440px;">
+          <div style="position:absolute; left:6%; top:70px; transform:rotate(-12deg);">
+            <dc-import name="PuriCard" back="puri" color="blue" w="190" hint-size="190px,265px"></dc-import>
+          </div>
+          <div style="position:absolute; left:30%; top:20px; transform:rotate(2deg); z-index:1;">
+            <dc-import name="PuriCard" face="akabare" back="puri" color="red" w="210" state="hard" hint-size="210px,293px"></dc-import>
+          </div>
+          <div style="position:absolute; left:58%; top:90px; transform:rotate(13deg);">
+            <dc-import name="PuriCard" face="panipuri" back="puri" color="yellow" w="190" hint-size="190px,265px"></dc-import>
+          </div>
+        </div>
+      </section>
+
+      <footer style="display:flex; gap:16px; font-size:14px; color:#5A3A1F; padding-top:24px;">
+        <span>Rules v0.6</span><span>·</span><span>Spreading playfulness, one puri at a time.</span>
+      </footer>
+    </div>
+  </sc-if>
+
+  <!-- ============ LOBBY ============ -->
+  <sc-if value="{{ isLobby }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Lobby" style="max-width:1160px; margin:0 auto; padding:32px 48px 64px; display:flex; flex-direction:column; gap:40px;">
+      <header style="display:flex; align-items:center; justify-content:space-between;">
+        <button onClick="{{ goHome }}" style="background:none; border:0; padding:0; cursor:pointer; font-family:var(--font-display); font-weight:800; font-size:18px; color:#130D01;">Akabare Panipuri</button>
+        <div style="display:flex; gap:24px;">
+          <button onClick="{{ goRules }}" style="background:none; border:0; font:inherit; font-weight:700; cursor:pointer; color:#130D01; text-decoration:underline; text-underline-offset:4px;">Rules</button>
+          <button onClick="{{ askLeave }}" style="background:none; border:0; font:inherit; font-weight:700; cursor:pointer; color:#5A3A1F;">Leave</button>
+        </div>
+      </header>
+
+      <section style="display:flex; align-items:flex-end; justify-content:space-between; gap:32px; flex-wrap:wrap;">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <span style="font-family:var(--font-hand); font-size:22px; color:#F16147;">your table code</span>
+          <div style="display:flex; gap:10px;">
+            <sc-for list="{{ codeLetters }}" as="ch" hint-placeholder-count="5">
+              <span style="width:64px; height:76px; display:flex; align-items:center; justify-content:center; border:2px solid #130D01; border-radius:12px; background:#FDF8F0; font-family:var(--font-display); font-weight:800; font-size:40px; box-shadow:4px 4px 0 0 #F3B952;">{{ ch }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+          <button onClick="{{ copyLink }}" style="font:inherit; font-weight:700; padding:10px 20px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">Copy invite link</button>
+          <span style="font-size:14px; color:#5A3A1F;">Friends join from their own phones.</span>
+        </div>
+      </section>
+
+      <div style="display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:40px; align-items:start;">
+        <section style="display:flex; flex-direction:column; gap:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:24px;">Players <span style="color:#5A3A1F; font-weight:600;">{{ playerCount }}/6</span></h2>
+            <sc-if value="{{ canAddBot }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ addBot }}" style="font:inherit; font-weight:700; font-size:14px; padding:8px 16px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">+ Add a bot</button>
+            </sc-if>
+          </div>
+          <ol style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;">
+            <sc-for list="{{ lobbyPlayers }}" as="p" hint-placeholder-count="3">
+              <li style="display:flex; align-items:center; gap:14px; padding:12px 16px; border:2px solid {{ p.border }}; border-radius:12px; background:#FDF8F0;">
+                <span style="width:20px; font-family:var(--font-display); font-weight:800; color:#5A3A1F;">{{ p.seat }}</span>
+                <span style="width:32px; height:32px; border-radius:50%; background:{{ p.hex }}; color:#FAF1E4; display:flex; align-items:center; justify-content:center; font-weight:700;">{{ p.initial }}</span>
+                <span style="flex:1; font-weight:700; font-size:17px;">{{ p.name }}</span>
+                <sc-for list="{{ p.tags }}" as="t" hint-placeholder-count="1">
+                  <span style="font-size:12px; font-weight:700; padding:2px 10px; border-radius:999px; background:{{ t.bg }}; color:#130D01;">{{ t.text }}</span>
+                </sc-for>
+                <sc-if value="{{ p.canRemove }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ p.remove }}" title="Remove" style="width:28px; height:28px; border-radius:8px; border:0; background:transparent; cursor:pointer; color:#5A3A1F; font-size:18px;" style-hover="background:#F3B952;">×</button>
+                </sc-if>
+              </li>
+            </sc-for>
+            <sc-for list="{{ emptySeats }}" as="e" hint-placeholder-count="0">
+              <li style="display:flex; align-items:center; gap:14px; padding:12px 16px; border:2px dashed rgba(90,58,31,.4); border-radius:12px; color:#5A3A1F;">
+                <span style="width:20px; font-family:var(--font-display); font-weight:800;">{{ e.seat }}</span>
+                <span>Waiting for a player…</span>
+              </li>
+            </sc-for>
+          </ol>
+          <span style="font-size:14px; color:#5A3A1F;">Seats go clockwise in this order. The first server is picked at random.</span>
+
+          <div style="display:flex; flex-direction:column; gap:10px; padding-top:16px;">
+            <span style="font-weight:700;">You</span>
+            <div style="display:flex; gap:12px; align-items:center;">
+              <input value="{{ name }}" onChange="{{ onLobbyName }}" maxlength="16" style="flex:1; min-width:0; font:inherit; padding:10px 14px; border:2px solid #5A3A1F; border-radius:12px; background:#FDF8F0; color:#130D01;">
+              <div style="display:flex; gap:6px;">
+                <sc-for list="{{ lobbyColors }}" as="d" hint-placeholder-count="6">
+                  <button onClick="{{ d.pick }}" disabled="{{ d.taken }}" title="{{ d.label }}" style="width:24px; height:24px; border-radius:50%; border:2px solid #FAF1E4; background:{{ d.hex }}; box-shadow:{{ d.ring }}; opacity:{{ d.op }}; cursor:pointer; padding:0;"></button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="display:flex; flex-direction:column; gap:16px;">
+          <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:24px;">House rules</h2>
+          <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <sc-for list="{{ presets }}" as="pr" hint-placeholder-count="3">
+                <button onClick="{{ pr.choose }}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; text-align:left; font:inherit; padding:12px 16px; border:2px solid {{ pr.border }}; border-radius:12px; background:{{ pr.bg }}; color:#130D01; cursor:pointer; box-shadow:{{ pr.shadow }};">
+                  <span style="font-weight:700;">{{ pr.label }}</span>
+                  <span style="font-size:14px; color:#5A3A1F;">{{ pr.sub }}</span>
+                </button>
+              </sc-for>
+              <button onClick="{{ toggleCustom }}" style="align-self:flex-start; background:none; border:0; padding:6px 0; font:inherit; font-weight:700; color:#5A3A1F; cursor:pointer; text-decoration:underline; text-underline-offset:4px;">{{ customLabel }}</button>
+              <sc-if value="{{ custom }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; flex-direction:column; gap:12px; padding:16px; border:2px solid #5A3A1F; border-radius:12px; background:#FDF8F0;">
+                  <sc-for list="{{ customRows }}" as="cr" hint-placeholder-count="3">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <span style="flex:1;">{{ cr.label }}</span>
+                      <sc-if value="{{ cr.hasOff }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ cr.toggle }}" style="font:inherit; font-size:13px; padding:4px 10px; border-radius:999px; border:1.5px solid #5A3A1F; background:{{ cr.offBg }}; cursor:pointer; color:#130D01;">{{ cr.offLabel }}</button>
+                      </sc-if>
+                      <button onClick="{{ cr.dec }}" style="width:32px; height:32px; border:2px solid #130D01; border-radius:8px; background:transparent; cursor:pointer; font-weight:700; color:#130D01;">−</button>
+                      <span style="width:44px; text-align:center; font-family:var(--font-display); font-weight:800; font-size:18px;">{{ cr.value }}</span>
+                      <button onClick="{{ cr.inc }}" style="width:32px; height:32px; border:2px solid #130D01; border-radius:8px; background:transparent; cursor:pointer; font-weight:700; color:#130D01;">+</button>
+                    </div>
+                  </sc-for>
+                  <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" checked="{{ revealOn }}" onChange="{{ toggleReveal }}" style="width:18px; height:18px; accent-color:#F16147;">
+                    <span>Reveal leftover cards at the end of each round</span>
+                  </label>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ notHost }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:14px; color:#5A3A1F;">Set by the host.</span>
+          </sc-if>
+          <dl style="margin:0; display:flex; flex-direction:column; gap:6px; font-size:15px;">
+            <div style="display:flex; gap:8px;"><dt style="font-weight:700; width:96px;">Goal</dt><dd style="margin:0;">{{ goalText }}</dd></div>
+            <div style="display:flex; gap:8px;"><dt style="font-weight:700; width:96px;">Trap</dt><dd style="margin:0;">{{ trapText }}</dd></div>
+            <div style="display:flex; gap:8px;"><dt style="font-weight:700; width:96px;">Leftovers</dt><dd style="margin:0;">{{ leftoverText }}</dd></div>
+          </dl>
+        </section>
+      </div>
+
+      <section style="display:flex; align-items:center; gap:24px; padding-top:8px;">
+        <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
+          <button class="btn-cta red" onClick="{{ startGame }}" disabled="{{ startDisabled }}" style="font-size:18px; padding:16px 56px; opacity:{{ startOp }};">Start the game</button>
+          <span style="color:#5A3A1F;">{{ startReason }}</span>
+        </sc-if>
+        <sc-if value="{{ notHost }}" hint-placeholder-val="{{ false }}">
+          <span style="font-family:var(--font-hand); font-size:24px;">Waiting for {{ hostName }} to start the game…</span>
+        </sc-if>
+      </section>
+    </div>
+  </sc-if>
+
+  <!-- ============ TABLE ============ -->
+  <sc-if value="{{ isTable }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Table" style="min-height:100vh; display:flex; flex-direction:column;">
+      <header style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:16px 32px; border-bottom:2px solid #5A3A1F;">
+        <button onClick="{{ askLeave }}" style="justify-self:start; background:none; border:0; padding:0; cursor:pointer; font-family:var(--font-display); font-weight:800; font-size:16px; color:#130D01;">Akabare Panipuri</button>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span style="font-family:var(--font-display); font-weight:800; font-size:16px;">{{ roundText }}</span>
+          <span style="color:#5A3A1F; font-size:14px;">{{ goalShort }}</span>
+          <span style="padding:3px 12px; border-radius:999px; background:#F3B952; font-size:13px; font-weight:700;">{{ phaseLabel }}</span>
+        </div>
+        <nav style="justify-self:end; display:flex; align-items:center; gap:4px;">
+          <button onClick="{{ copyLink }}" title="Copy invite link" style="font-family:var(--font-display); font-weight:800; letter-spacing:.15em; font-size:13px; padding:6px 10px; border:1.5px solid #5A3A1F; border-radius:8px; background:transparent; cursor:pointer; color:#130D01; margin-right:8px;">{{ code }}</button>
+          <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
+            <button onClick="{{ n.open }}" style="font:inherit; font-size:15px; font-weight:700; padding:6px 12px; border:0; border-radius:8px; background:{{ n.bg }}; cursor:pointer; color:#130D01;" style-hover="background:#F3B952;">{{ n.label }}</button>
+          </sc-for>
+        </nav>
+      </header>
+
+      <main style="flex:1; width:100%; max-width:1240px; margin:0 auto; padding:32px 32px 0; display:flex; flex-direction:column; gap:28px; box-sizing:border-box;">
+        <div style="display:grid; grid-template-columns:repeat({{ seatCols }}, minmax(0,1fr)); gap:16px;">
+          <sc-for list="{{ seats }}" as="p" hint-placeholder-count="4">
+            <div style="min-width:0; display:flex; flex-direction:column; gap:12px; padding:16px; border:2px solid {{ p.border }}; border-radius:12px; background:{{ p.bg }}; box-shadow:{{ p.shadow }}; transition:box-shadow .2s ease;">
+              <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                <span style="width:12px; height:12px; flex:none; border-radius:50%; background:{{ p.hex }};"></span>
+                <span style="flex:1; min-width:0; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.name }}</span>
+                <span style="font-family:var(--font-display); font-weight:800; font-size:22px; line-height:1;">{{ p.score }}</span>
+              </div>
+              <div style="height:24px; display:flex; align-items:center;">
+                <sc-if value="{{ p.hasTag }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:13px; font-weight:700; padding:2px 10px; border-radius:999px; background:{{ p.tagBg }}; color:{{ p.tagFg }};">{{ p.tag }}</span>
+                </sc-if>
+              </div>
+              <div style="display:flex; gap:14px; justify-content:center; align-items:flex-start; min-height:{{ areaH }}px;">
+                <div onClick="{{ p.onStack }}" title="{{ p.stackTitle }}" style="position:relative; width:64px; height:{{ p.stackH }}px; border-radius:6px; cursor:{{ p.stackCursor }}; box-shadow:{{ p.stackRing }}; transition:box-shadow .15s ease;">
+                  <sc-if value="{{ p.stackEmpty }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute; inset:0; border:2px dashed rgba(90,58,31,.4); border-radius:6px;"></div>
+                  </sc-if>
+                  <sc-for list="{{ p.stack }}" as="c" hint-placeholder-count="0">
+                    <div style="position:absolute; left:0; top:{{ c.top }}px;">
+                      <dc-import name="PuriCard" face="{{ c.face }}" back="puri" color="{{ c.color }}" w="64" state="{{ c.state }}" badge="{{ c.badge }}" peek="{{ c.peek }}" hint-size="64px,89px"></dc-import>
+                    </div>
+                  </sc-for>
+                </div>
+                <div onClick="{{ p.onPower }}" title="{{ p.powerTitle }}" style="border-radius:5px; cursor:{{ p.powerCursor }}; box-shadow:{{ p.powerRing }};">
+                  <sc-if value="{{ p.hasPower }}" hint-placeholder-val="{{ false }}">
+                    <dc-import name="PuriCard" face="{{ p.powerFace }}" back="power" color="{{ p.color }}" w="46" state="{{ p.powerState }}" peek="{{ p.powerPeek }}" hint-size="46px,64px"></dc-import>
+                  </sc-if>
+                  <sc-if value="{{ p.noPower }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:46px; height:64px; border:2px dashed rgba(90,58,31,.3); border-radius:5px; box-sizing:border-box;"></div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ showHud }}" hint-placeholder-val="{{ false }}">
+          <section style="display:grid; grid-template-columns:auto minmax(0,1fr); gap:32px; align-items:center; padding:20px 24px; border:2px solid #130D01; border-radius:12px; background:#FDF8F0; box-shadow:6px 6px 0 0 #F16147;">
+            <div style="display:flex; flex-direction:column; gap:6px; min-width:200px;">
+              <span style="font-weight:700;">{{ hud.who }}</span>
+              <div style="display:flex; align-items:baseline; gap:6px;">
+                <span style="font-family:var(--font-display); font-weight:800; font-size:44px; line-height:1;">{{ hud.eaten }}</span>
+                <span style="font-family:var(--font-display); font-weight:700; font-size:24px; color:#5A3A1F;">/ {{ hud.target }}</span>
+              </div>
+              <div style="height:8px; border-radius:999px; background:rgba(90,58,31,.18); overflow:hidden;"><div style="height:100%; width:{{ hud.pct }}%; background:#F16147; transition:width .3s ease;"></div></div>
+              <span style="font-size:14px; color:#5A3A1F;">{{ hud.flips }}</span>
+              <sc-for list="{{ hud.notes }}" as="nt" hint-placeholder-count="0">
+                <span style="align-self:flex-start; font-size:13px; font-weight:700; padding:2px 10px; border-radius:999px; background:#F3B952;">{{ nt.text }}</span>
+              </sc-for>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; min-width:0;">
+              <span style="font-family:var(--font-hand); font-size:20px; color:#5A3A1F;">the plate</span>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; min-height:70px; align-items:center;">
+                <sc-for list="{{ hud.plate }}" as="c" hint-placeholder-count="0">
+                  <dc-import name="PuriCard" face="{{ c.face }}" back="{{ c.back }}" color="{{ c.color }}" w="50" state="{{ c.state }}" badge="{{ c.badge }}" hint-size="50px,70px"></dc-import>
+                </sc-for>
+                <sc-if value="{{ hud.plateEmpty }}" hint-placeholder-val="{{ true }}">
+                  <span style="color:#5A3A1F; font-size:14px;">Nothing eaten yet.</span>
+                </sc-if>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ showTicker }}" hint-placeholder-val="{{ true }}">
+          <p style="margin:0; text-align:center; font-family:var(--font-hand); font-size:22px; color:#5A3A1F; min-height:33px;">{{ lastLine }}</p>
+        </sc-if>
+      </main>
+
+      <!-- Dock: everything you can do right now -->
+      <section style="position:sticky; bottom:0; margin-top:24px; border-top:2px solid #5A3A1F; background:#FAF1E4;">
+        <div style="max-width:1240px; margin:0 auto; padding:24px 32px 28px; display:flex; gap:40px; align-items:center; box-sizing:border-box; min-height:180px;">
+
+          <sc-if value="{{ dk.setupEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1; display:grid; grid-template-columns:minmax(0,1.3fr) auto auto minmax(220px,auto); gap:36px; align-items:end;">
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <span style="font-family:var(--font-display); font-weight:800; font-size:20px;">Round {{ round }} · set up</span>
+                <span style="font-size:14px; color:#5A3A1F;">1 · Tap cards from your hand</span>
+                <div style="display:flex; gap:6px; min-height:84px;">
+                  <sc-for list="{{ setupHand }}" as="c" hint-placeholder-count="6">
+                    <div onClick="{{ c.click }}" style="cursor:pointer;">
+                      <dc-import name="PuriCard" face="{{ c.face }}" back="puri" color="{{ myColor }}" w="60" state="selectable" hint-size="60px,84px"></dc-import>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <span style="font-size:14px; color:#5A3A1F;">2 · Your stack</span>
+                <div style="display:flex; gap:10px;">
+                  <sc-for list="{{ slots }}" as="sl" hint-placeholder-count="2">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                      <sc-if value="{{ sl.filled }}" hint-placeholder-val="{{ false }}">
+                        <div onClick="{{ sl.clear }}" title="Tap to take it back" style="cursor:pointer;">
+                          <dc-import name="PuriCard" face="{{ sl.face }}" back="puri" color="{{ myColor }}" w="60" hint-size="60px,84px"></dc-import>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ sl.empty }}" hint-placeholder-val="{{ true }}">
+                        <div style="width:60px; height:84px; border:2px dashed #5A3A1F; border-radius:5px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:800; color:#5A3A1F;">{{ sl.n }}</div>
+                      </sc-if>
+                      <span style="font-size:12px; color:#5A3A1F;">{{ sl.cap }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <span style="font-size:14px; color:#5A3A1F;">3 · Pick one power</span>
+                <div style="display:flex; gap:8px;">
+                  <sc-for list="{{ powerPicks }}" as="pw" hint-placeholder-count="4">
+                    <div onClick="{{ pw.click }}" title="{{ pw.tip }}" style="display:flex; flex-direction:column; align-items:center; gap:4px; cursor:{{ pw.cursor }};">
+                      <dc-import name="PuriCard" face="{{ pw.face }}" back="power" color="{{ myColor }}" w="60" state="{{ pw.state }}" hint-size="60px,84px"></dc-import>
+                      <span style="font-size:12px; color:#5A3A1F; white-space:nowrap;">{{ pw.cap }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px; align-items:flex-start;">
+                <span style="font-size:14px; color:#5A3A1F; min-height:21px;">{{ setupTodo }}</span>
+                <button class="btn-cta red" onClick="{{ lockIn }}" disabled="{{ lockDisabled }}" style="font-size:17px; padding:14px 36px; opacity:{{ lockOp }};">{{ lockLabel }}</button>
+                <span style="font-size:13px; color:#5A3A1F;">{{ waitingSetup }}</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ dk.setupDone }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1; display:flex; align-items:center; gap:32px;">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <sc-for list="{{ lockedCards }}" as="c" hint-placeholder-count="3">
+                  <dc-import name="PuriCard" face="{{ c.face }}" back="{{ c.back }}" color="{{ myColor }}" w="52" hint-size="52px,73px"></dc-import>
+                </sc-for>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                <span style="font-family:var(--font-display); font-weight:800; font-size:22px;">Locked in</span>
+                <span style="color:#5A3A1F;">{{ waitingSetup }} You can change it until the last player locks in.</span>
+              </div>
+              <button onClick="{{ editSetup }}" style="font:inherit; font-weight:700; padding:10px 20px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">Change setup</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ dk.showHand }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:10px; flex:none;">
+              <span style="font-size:14px; color:#5A3A1F;">Your hand · {{ handCount }}</span>
+              <div style="display:flex; gap:6px; min-height:84px; align-items:flex-end;">
+                <sc-for list="{{ hand }}" as="c" hint-placeholder-count="4">
+                  <div onClick="{{ c.click }}" style="cursor:{{ c.cursor }};">
+                    <dc-import name="PuriCard" face="{{ c.face }}" back="puri" color="{{ myColor }}" w="60" state="{{ c.state }}" hint-size="60px,84px"></dc-import>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ handEmpty }}" hint-placeholder-val="{{ false }}">
+                  <span style="color:#5A3A1F; font-size:14px; padding-bottom:30px;">Empty</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ dk.showPrompt }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1; display:flex; align-items:center; gap:32px; min-width:0;">
+              <div style="flex:1; display:flex; flex-direction:column; gap:6px; min-width:0;">
+                <span style="font-family:var(--font-display); font-weight:800; font-size:26px; line-height:1.2;">{{ dk.title }}<sc-if value="{{ dk.waiting }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex; gap:3px; margin-left:8px;"><span style="animation:akDots 1.2s infinite;">•</span><span style="animation:akDots 1.2s .2s infinite;">•</span><span style="animation:akDots 1.2s .4s infinite;">•</span></span></sc-if></span>
+                <span style="color:#5A3A1F; text-wrap:pretty;">{{ dk.text }}</span>
+                <sc-if value="{{ dk.hasCancel }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ clearSel }}" style="align-self:flex-start; background:none; border:0; padding:0; font:inherit; font-weight:700; color:#130D01; cursor:pointer; text-decoration:underline; text-underline-offset:4px;">Cancel</button>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ dk.bid }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+                  <div style="display:flex; align-items:center; gap:16px;">
+                    <div style="display:flex; align-items:center; border:2px solid #130D01; border-radius:12px; background:#FDF8F0;">
+                      <button onClick="{{ bidDec }}" style="width:48px; height:52px; border:0; background:transparent; font-size:22px; font-weight:700; cursor:pointer; color:#130D01;">−</button>
+                      <span style="width:56px; text-align:center; font-family:var(--font-display); font-weight:800; font-size:28px;">{{ bidVal }}</span>
+                      <button onClick="{{ bidInc }}" style="width:48px; height:52px; border:0; background:transparent; font-size:22px; font-weight:700; cursor:pointer; color:#130D01;">+</button>
+                    </div>
+                    <button class="btn-cta red" onClick="{{ doBid }}" style="font-size:17px; padding:14px 32px; white-space:nowrap;">{{ bidLabel }}</button>
+                    <sc-if value="{{ dk.canPass }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ doPass }}" style="font:inherit; font-size:17px; font-weight:700; padding:13px 28px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">Pass</button>
+                    </sc-if>
+                  </div>
+                  <span style="font-size:13px; color:{{ bidHintColor }}; min-height:20px;">{{ bidHint }}</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ dk.giveUp }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ acceptBust }}" style="font:inherit; font-weight:700; padding:12px 24px; border:2px solid #F16147; border-radius:12px; background:transparent; color:#B8331C; cursor:pointer;" style-hover="background:#F16147; color:#FFFFFF;">{{ giveUpLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ dk.unpeek }}" hint-placeholder-val="{{ false }}">
+                <button class="btn-cta yellow" onClick="{{ unpeek }}" style="font-size:16px; padding:14px 32px;">{{ dk.unpeekLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ dk.takeBack }}" hint-placeholder-val="{{ false }}">
+                <button class="btn-cta red" onClick="{{ takeSeatBack }}" style="font-size:16px; padding:14px 32px;">Take my seat back</button>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <!-- ============ RULES ============ -->
+  <sc-if value="{{ isRules }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Rules" style="max-width:1000px; margin:0 auto; padding:32px 48px 80px; display:flex; flex-direction:column; gap:48px;">
+      <header style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-family:var(--font-display); font-weight:800; font-size:18px;">Akabare Panipuri</span>
+        <button onClick="{{ rulesBack }}" style="font:inherit; font-weight:700; padding:8px 18px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">← {{ rulesBackLabel }}</button>
+      </header>
+      <section style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-family:var(--font-hand); font-size:22px; color:#F16147;">rules v0.6 · 3–6 players · ~20 minutes</span>
+        <h1 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:56px; line-height:1.05; letter-spacing:-.02em;">How to play, in three bites</h1>
+      </section>
+      <ol style="list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:32px;">
+        <sc-for list="{{ steps }}" as="st" hint-placeholder-count="3">
+          <li style="display:flex; flex-direction:column; gap:10px;">
+            <span style="width:44px; height:44px; border-radius:12px; background:#F16147; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:800; font-size:22px; transform:rotate(-3deg); box-shadow:4px 4px 0 0 #F3B952;">{{ st.n }}</span>
+            <h3 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:24px;">{{ st.title }}</h3>
+            <p style="margin:0; text-wrap:pretty;">{{ st.text }}</p>
+          </li>
+        </sc-for>
+      </ol>
+      <section style="display:flex; flex-direction:column; gap:20px;">
+        <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:32px;">The cards</h2>
+        <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:32px 24px; justify-items:center;">
+          <sc-for list="{{ gallery }}" as="g" hint-placeholder-count="6">
+            <div style="display:flex; flex-direction:column; gap:10px; align-items:center;">
+              <dc-import name="PuriCard" face="{{ g.face }}" back="{{ g.back }}" color="{{ g.color }}" w="190" hint-size="190px,265px"></dc-import>
+              <span style="font-size:14px; color:#5A3A1F; text-align:center; max-width:220px; text-wrap:pretty;">{{ g.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section style="display:flex; flex-direction:column; gap:16px;">
+        <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:32px;">The details</h2>
+        <dl style="margin:0; display:grid; grid-template-columns:160px minmax(0,1fr); gap:14px 24px;">
+          <sc-for list="{{ details }}" as="d" hint-placeholder-count="6">
+            <dt style="font-weight:700;">{{ d.k }}</dt>
+            <dd style="margin:0; text-wrap:pretty;">{{ d.v }}</dd>
+          </sc-for>
+        </dl>
+      </section>
+    </div>
+  </sc-if>
+
+  <!-- ============ OVERLAYS ============ -->
+  <sc-if value="{{ biteOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:50; background:rgba(19,13,1,.92); display:flex; align-items:center; justify-content:center; padding:32px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center; max-width:760px;">
+        <div style="display:flex; gap:24px; align-items:center;">
+          <dc-import name="PuriCard" face="akabare" back="puri" color="{{ bite.color }}" w="170" state="{{ bite.cardState }}" hint-size="170px,237px"></dc-import>
+          <sc-if value="{{ bite.hasPower }}" hint-placeholder-val="{{ false }}">
+            <dc-import name="PuriCard" face="{{ bite.powerFace }}" back="power" color="{{ bite.powerColor }}" w="130" hint-size="130px,182px"></dc-import>
+          </sc-if>
+        </div>
+        <h2 style="margin:8px 0 0; font-family:var(--font-display); font-weight:800; font-size:44px; line-height:1.1; color:#FAF1E4;">{{ bite.title }}</h2>
+        <p style="margin:0; font-size:18px; color:#F3B952;">{{ bite.sub }}</p>
+        <sc-if value="{{ bite.hasChoices }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-wrap:wrap; gap:12px; justify-content:center; padding-top:8px;">
+            <sc-for list="{{ bite.choices }}" as="ch" hint-placeholder-count="2">
+              <button onClick="{{ ch.click }}" style="display:flex; align-items:center; gap:12px; padding:10px 18px 10px 10px; border:2px solid {{ ch.border }}; border-radius:12px; background:rgba(250,241,228,.06); color:#FAF1E4; font:inherit; cursor:pointer; text-align:left;" style-hover="background:rgba(243,185,82,.18);">
+                <dc-import name="PuriCard" back="power" color="{{ ch.color }}" w="46" peek="{{ ch.peek }}" hint-size="46px,64px"></dc-import>
+                <span style="display:flex; flex-direction:column;"><strong>{{ ch.who }}</strong><span style="font-size:14px; color:#F3B952;">{{ ch.what }}</span></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div style="display:flex; gap:24px; align-items:center; padding-top:8px;">
+          <sc-if value="{{ bite.canAccept }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ acceptBust }}" style="font:inherit; font-weight:700; padding:12px 24px; border:2px solid #FAF1E4; border-radius:12px; background:transparent; color:#FAF1E4; cursor:pointer;">{{ bite.acceptLabel }}</button>
+          </sc-if>
+          <sc-if value="{{ bite.isSaved }}" hint-placeholder-val="{{ false }}">
+            <button class="btn-cta yellow" onClick="{{ dismissFlash }}" style="font-size:18px; padding:14px 40px;">{{ bite.okLabel }}</button>
+          </sc-if>
+          <sc-if value="{{ bite.watching }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ peekTable }}" style="background:none; border:0; padding:0; font:inherit; font-weight:700; color:#FAF1E4; cursor:pointer; text-decoration:underline; text-underline-offset:4px;">Look at the table</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ resultOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:50; background:rgba(19,13,1,.45); display:flex; align-items:center; justify-content:center; padding:32px;">
+      <div style="width:100%; max-width:520px; display:flex; flex-direction:column; gap:18px; padding:32px; border:2px solid #130D01; border-radius:16px; background:#FAF1E4; box-shadow:{{ res.shadow }};">
+        <span style="font-family:var(--font-hand); font-size:20px; color:#5A3A1F;">{{ res.kicker }}</span>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px;">
+          <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:36px; line-height:1.1;">{{ res.title }}</h2>
+          <span style="font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1; color:{{ res.bigColor }};">{{ res.big }}</span>
+        </div>
+        <p style="margin:0; color:#5A3A1F;">{{ res.facts }}</p>
+        <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; border-top:2px solid rgba(90,58,31,.25);">
+          <sc-for list="{{ res.rows }}" as="r" hint-placeholder-count="4">
+            <li style="display:grid; grid-template-columns:14px minmax(0,1fr) auto 48px 48px; gap:12px; align-items:center; padding:10px 0; border-bottom:2px solid rgba(90,58,31,.12);">
+              <span style="width:12px; height:12px; border-radius:50%; background:{{ r.hex }};"></span>
+              <span style="font-weight:700;">{{ r.name }}</span>
+              <span style="font-size:13px; color:#5A3A1F;">{{ r.why }}</span>
+              <span style="text-align:right; font-weight:700; color:{{ r.dColor }};">{{ r.d }}</span>
+              <span style="text-align:right; font-family:var(--font-display); font-weight:800; font-size:18px;">{{ r.score }}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="display:flex; align-items:center; gap:20px; padding-top:6px;">
+          <sc-if value="{{ res.canReady }}" hint-placeholder-val="{{ true }}">
+            <button class="btn-cta red" onClick="{{ doReady }}" style="font-size:17px; padding:14px 36px;">{{ res.readyLabel }}</button>
+          </sc-if>
+          <sc-if value="{{ res.isReady }}" hint-placeholder-val="{{ false }}">
+            <span style="font-weight:700;">You’re ready.</span>
+          </sc-if>
+          <button onClick="{{ peekTable }}" style="background:none; border:0; padding:0; font:inherit; font-weight:700; color:#5A3A1F; cursor:pointer; text-decoration:underline; text-underline-offset:4px;">Look at the table</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ overOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:50; background:rgba(19,13,1,.45); display:flex; align-items:center; justify-content:center; padding:32px;">
+      <div style="width:100%; max-width:520px; display:flex; flex-direction:column; gap:18px; padding:32px; border:2px solid #130D01; border-radius:16px; background:#FAF1E4; box-shadow:8px 8px 0 0 #F3B952;">
+        <span style="font-family:var(--font-hand); font-size:20px; color:#F16147;">game over · round {{ round }}</span>
+        <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:44px; line-height:1.05;">{{ over.title }}</h2>
+        <sc-if value="{{ over.hasTie }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:0; color:#5A3A1F;">{{ over.tie }}</p>
+        </sc-if>
+        <ol style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column;">
+          <sc-for list="{{ over.rows }}" as="r" hint-placeholder-count="4">
+            <li style="display:grid; grid-template-columns:28px 14px minmax(0,1fr) auto 48px; gap:12px; align-items:center; padding:10px 12px; border-radius:10px; background:{{ r.bg }};">
+              <span style="font-family:var(--font-display); font-weight:800; color:#5A3A1F;">{{ r.rank }}</span>
+              <span style="width:12px; height:12px; border-radius:50%; background:{{ r.hex }};"></span>
+              <span style="font-weight:700;">{{ r.name }}</span>
+              <span style="font-size:13px; color:#5A3A1F;">{{ r.busts }}</span>
+              <span style="text-align:right; font-family:var(--font-display); font-weight:800; font-size:20px;">{{ r.score }}</span>
+            </li>
+          </sc-for>
+        </ol>
+        <div style="display:flex; align-items:center; gap:20px; padding-top:6px;">
+          <button class="btn-cta red" onClick="{{ rematch }}" style="font-size:17px; padding:14px 40px;">Rematch</button>
+          <button onClick="{{ goHome }}" style="font:inherit; font-weight:700; padding:12px 20px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">Back home</button>
+          <button onClick="{{ peekTable }}" style="background:none; border:0; padding:0; font:inherit; font-weight:700; color:#5A3A1F; cursor:pointer; text-decoration:underline; text-underline-offset:4px;">Look at the table</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Drawer -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrawer }}" style="position:fixed; inset:0; z-index:40; background:rgba(19,13,1,.25);"></div>
+    <aside style="position:fixed; top:0; right:0; bottom:0; z-index:41; width:420px; max-width:100%; background:#FAF1E4; border-left:2px solid #130D01; box-shadow:-8px 0 0 0 #F3B952; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:2px solid rgba(90,58,31,.25);">
+        <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:24px;">{{ drawerTitle }}</h2>
+        <button onClick="{{ closeDrawer }}" style="width:36px; height:36px; border:2px solid #130D01; border-radius:10px; background:transparent; cursor:pointer; font-size:18px; color:#130D01;" style-hover="background:#F3B952;">×</button>
+      </div>
+      <div style="flex:1; overflow:auto; padding:20px 24px 32px; display:flex; flex-direction:column; gap:24px;">
+        <sc-if value="{{ drawerScores }}" hint-placeholder-val="{{ false }}">
+          <ol style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column;">
+            <sc-for list="{{ standings }}" as="r" hint-placeholder-count="4">
+              <li style="display:grid; grid-template-columns:14px minmax(0,1fr) auto 44px; gap:12px; align-items:center; padding:10px 0; border-bottom:2px solid rgba(90,58,31,.12);">
+                <span style="width:12px; height:12px; border-radius:50%; background:{{ r.hex }};"></span>
+                <span style="font-weight:700;">{{ r.name }}</span>
+                <span style="font-size:13px; color:#5A3A1F;">{{ r.busts }}</span>
+                <span style="text-align:right; font-family:var(--font-display); font-weight:800; font-size:20px;">{{ r.score }}</span>
+              </li>
+            </sc-for>
+          </ol>
+          <p style="margin:0; font-size:14px; color:#5A3A1F;">{{ goalText }}. Ties go to fewer busts; still tied, you share the win.</p>
+          <sc-if value="{{ hasHistory }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <h3 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:18px;">Rounds</h3>
+              <sc-for list="{{ history }}" as="h" hint-placeholder-count="2">
+                <div style="display:grid; grid-template-columns:32px minmax(0,1fr) auto; gap:10px; font-size:14px;">
+                  <span style="font-weight:700; color:#5A3A1F;">R{{ h.r }}</span>
+                  <span>{{ h.what }}</span>
+                  <span style="font-weight:700; color:{{ h.color }};">{{ h.d }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex; flex-direction:column; gap:10px; padding-top:8px; border-top:2px solid rgba(90,58,31,.25);">
+            <button onClick="{{ toggleMyBot }}" style="align-self:flex-start; font:inherit; font-weight:700; padding:10px 18px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">{{ myBotLabel }}</button>
+            <button onClick="{{ askLeave }}" style="align-self:flex-start; font:inherit; font-weight:700; padding:10px 18px; border:2px solid #F16147; border-radius:12px; background:transparent; color:#B8331C; cursor:pointer;">Leave game</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ drawerLog }}" hint-placeholder-val="{{ false }}">
+          <ol style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
+            <sc-for list="{{ logRows }}" as="l" hint-placeholder-count="6">
+              <li style="display:flex; gap:10px; font-size:14px; line-height:1.4; color:{{ l.color }}; font-weight:{{ l.weight }};">
+                <span style="flex:none; width:28px; font-weight:700; color:#5A3A1F;">{{ l.r }}</span>
+                <span>{{ l.text }}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </sc-if>
+        <sc-if value="{{ drawerRules }}" hint-placeholder-val="{{ false }}">
+          <dl style="margin:0; display:flex; flex-direction:column; gap:14px;">
+            <sc-for list="{{ details }}" as="d" hint-placeholder-count="6">
+              <div><dt style="font-weight:700;">{{ d.k }}</dt><dd style="margin:2px 0 0; font-size:15px; text-wrap:pretty;">{{ d.v }}</dd></div>
+            </sc-for>
+          </dl>
+          <button onClick="{{ goRules }}" style="align-self:flex-start; font:inherit; font-weight:700; padding:10px 18px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">See all the cards</button>
+        </sc-if>
+      </div>
+    </aside>
+  </sc-if>
+
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:60; background:rgba(19,13,1,.45); display:flex; align-items:center; justify-content:center;">
+      <div style="width:400px; display:flex; flex-direction:column; gap:16px; padding:28px; border:2px solid #130D01; border-radius:16px; background:#FAF1E4; box-shadow:8px 8px 0 0 #F16147;">
+        <h2 style="margin:0; font-family:var(--font-display); font-weight:800; font-size:26px;">Leave the table?</h2>
+        <p style="margin:0; color:#5A3A1F;">{{ leaveText }}</p>
+        <div style="display:flex; gap:12px; justify-content:flex-end;">
+          <button onClick="{{ cancelLeave }}" style="font:inherit; font-weight:700; padding:10px 20px; border:2px solid #130D01; border-radius:12px; background:transparent; color:#130D01; cursor:pointer;" style-hover="background:#F3B952;">Stay</button>
+          <button onClick="{{ leave }}" style="font:inherit; font-weight:700; padding:10px 20px; border:2px solid #F16147; border-radius:12px; background:#F16147; color:#FFFFFF; cursor:pointer;">Leave</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; left:50%; bottom:32px; transform:translateX(-50%) rotate(-0.88deg); z-index:70; padding:12px 24px; border-radius:12px; background:#130D01; color:#FAF1E4; font-weight:700; box-shadow:4px 4px 0 0 #F3B952;">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PAL = { red: '#B84A3A', blue: '#2D6281', yellow: '#D29B2E', green: '#47704D', purple: '#71506F', orange: '#C66D38' };
+const CNAME = { red: 'Red', blue: 'Blue', yellow: 'Yellow', green: 'Green', purple: 'Purple', orange: 'Orange' };
+const COLORS = Object.keys(PAL);
+const BOT_NAMES = ['Sita', 'Bikash', 'Asmita', 'Rojan', 'Pema', 'Kiran', 'Nabin', 'Srijana'];
+const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const LABEL = { panipuri: 'Panipuri', akabare: 'Akabare', vinegar: 'Vinegar', dahi: 'Dahi', nayaplate: 'Naya Plate', chaat: 'Chaat' };
+const SHORT = { vinegar: 'Cancels the next card you eat.', dahi: 'Saves you from a bitten Akabare.', nayaplate: 'Flip any stack first, your own included.', chaat: 'Counts as 2 eaten.' };
+const POWERS = ['vinegar', 'dahi', 'nayaplate', 'chaat'];
+const DEF = { targetScore: 30, maxRounds: 5, trapReward: 2, startingStack: 2, panipuriPerPlayer: 5, powerFlipsMax: 2, powerResetRound: 4, minBid: 1, revealOnRoundEnd: false };
+const PRESETS = [
+  { id: 'classic', label: 'Classic', sub: '30 points or 5 rounds', config: { targetScore: 30, maxRounds: 5, trapReward: 2 } },
+  { id: 'quick', label: 'Quick', sub: 'First to 15, no round limit', config: { targetScore: 15, maxRounds: null, trapReward: 2 } },
+  { id: 'marathon', label: 'Marathon', sub: '30 points, no round limit', config: { targetScore: 30, maxRounds: null, trapReward: 2 } },
+];
+const PHASE = { setup: 'Setting up', serving: 'Serving', bidding: 'Bidding', eating: 'Eating', roundEnd: 'Round over', gameOver: 'Game over' };
+const STEPS = [
+  { n: '1', title: 'Stack', text: 'Hide 2 puri face down on your own stack and put one power beside it. Then take turns slipping cards onto anyone’s stack. One of yours is the Akabare chili.' },
+  { n: '2', title: 'Bid', text: 'Say how many Panipuri you’ll eat. Raise or pass. Only the last one standing eats.' },
+  { n: '3', title: 'Eat', text: 'Flip your own stack first, then dig into others’. Bite an Akabare without Dahi and you bust.' },
+];
+const GALLERY = [
+  { face: 'panipuri', back: 'puri', color: 'yellow', note: 'Counts as 1 eaten. 5 per player.' },
+  { face: 'akabare', back: 'puri', color: 'red', note: 'The chili trap: bite it unprotected and you bust.' },
+  { face: 'chaat', back: 'power', color: 'green', note: 'Any time. Counts as 2 eaten.' },
+  { face: 'vinegar', back: 'power', color: 'orange', note: 'Before a puri. Cancels the next card you eat.' },
+  { face: 'dahi', back: 'power', color: 'blue', note: 'Right after a bite. Saves you from the Akabare.' },
+  { face: 'nayaplate', back: 'power', color: 'purple', note: 'Any time. Flip any stack first, your own included.' },
+];
+const DETAILS = [
+  { k: 'Setup', v: 'Each round everyone gets 5 Panipuri and 1 Akabare. Hide 2 face down on your own stack (bottom → top) and put one power face down beside it.' },
+  { k: 'Serving', v: 'On your turn, slip one puri from your hand onto any stack, yours included. Or stop serving and open the bid.' },
+  { k: 'Bidding', v: 'Raise or pass, clockwise. Passing takes you out for the round. The last one standing eats their bid.' },
+  { k: 'Eating', v: 'Flip your own stack first, then any other stack, top card first. Each Panipuri counts 1. You may flip up to 2 powers, anyone’s, at any time.' },
+  { k: 'The chili', v: 'Bite an Akabare and only Dahi can save you, flipped right away. Otherwise you bust. If it was someone else’s Akabare, they get +2.' },
+  { k: 'Scoring', v: 'Eat your bid: + the bid. Bust: − the bid. Each power you pick is used up until round 4, when all four come back.' },
+];
+const ls = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '±0');
+const num = (n) => (n < 0 ? `−${Math.abs(n)}` : String(n));
+const joinNames = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
+const goalText = (c) => (c.targetScore !== null && c.maxRounds !== null ? `First to ${c.targetScore}, or best after ${c.maxRounds} rounds`
+  : c.targetScore !== null ? `First to ${c.targetScore} points, no round limit` : `Best score after ${c.maxRounds} rounds`);
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    let saved = null;
+    try { saved = JSON.parse(ls('akp.session') || 'null'); } catch (e) {}
+    let recent = [];
+    try { recent = JSON.parse(ls('akp.recent') || '[]'); } catch (e) {}
+    this.state = {
+      screen: saved && saved.screen ? saved.screen : 'home', lobby: saved ? saved.lobby : null, g: saved ? saved.g : null,
+      name: ls('akp.name') || '', color: ls('akp.color') || 'red', joinCode: '', recent,
+      sel: null, slots: [null, null], power: null, editing: true, bid: 1, confirmOver: false,
+      drawer: null, peek: false, flashSeen: saved && saved.g && saved.g.flash ? saved.g.flash.n : -1,
+      toast: null, custom: false, confirm: false, rulesFrom: 'home', engine: !!window.AkEngine,
+    };
+  }
+  componentDidMount() {
+    if (!window.AkEngine) this.poll = setInterval(() => { if (window.AkEngine) { clearInterval(this.poll); this.setState({ engine: true }); } }, 50);
+    this.schedule();
+  }
+  componentDidUpdate() { this.schedule(); }
+  componentWillUnmount() { clearInterval(this.poll); clearTimeout(this.timer); clearTimeout(this.toastT); clearTimeout(this.hostT); }
+
+  persist(patch) {
+    const s = Object.assign({}, this.state, patch);
+    lsSet('akp.session', JSON.stringify({ screen: s.screen === 'rules' ? s.rulesFrom : s.screen, lobby: s.lobby, g: s.g }));
+  }
+  go(patch) { this.persist(patch); this.setState(patch); }
+  say(t) { clearTimeout(this.toastT); this.setState({ toast: t }); this.toastT = setTimeout(() => this.setState({ toast: null }), 2600); }
+
+  setG(g) {
+    const old = this.state.g;
+    const patch = { g };
+    if (!old || old.round !== g.round || (old.phase !== 'setup' && g.phase === 'setup')) {
+      patch.slots = Array(g.config.startingStack).fill(null); patch.power = null; patch.editing = true; patch.sel = null;
+    }
+    if (!old || old.phase !== g.phase) { patch.peek = false; patch.confirmOver = false; patch.sel = null; }
+    if (old && old.eating && g.eating && !!old.eating.pendingAkabare !== !!g.eating.pendingAkabare) patch.peek = false;
+    this.go(patch);
+  }
+  P(id) { return this.state.g.players.find((p) => p.id === id); }
+  savedOpen() { const g = this.state.g; return !!(g && g.flash && g.flash.n > this.state.flashSeen && g.phase === 'eating'); }
+
+  schedule() {
+    const g = this.state.g, E = window.AkEngine;
+    if (!g || !E || this.timer || this.state.screen !== 'table') return;
+    if (g.phase === 'gameOver' || g.phase === 'roundEnd' || this.savedOpen()) return;
+    const bots = E.pending(g).filter((id) => this.P(id).isBot);
+    if (!bots.length) return;
+    const id = bots[0];
+    const d = g.phase === 'setup' ? 450 : g.eating && g.eating.pendingAkabare ? 2400 : g.phase === 'eating' ? 1000 : 850;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      const s = this.state.g; if (!s) return;
+      const a = E.botAction(s, id); if (!a) return;
+      const r = E.apply(s, id, a);
+      if (r.ok) this.setG(r.state); else this.forceUpdate();
+    }, d);
+  }
+  act(a) {
+    const r = window.AkEngine.apply(this.state.g, 'me', a);
+    if (!r.ok) { this.say(r.error); return false; }
+    this.setG(r.state); return true;
+  }
+
+  newCode() { let c = ''; for (let i = 0; i < 5; i++) c += ALPHA[Math.floor(Math.random() * ALPHA.length)]; return c; }
+  remember(code, name) {
+    const recent = [{ code, name }, ...this.state.recent.filter((r) => r.code !== code)].slice(0, 4);
+    lsSet('akp.recent', JSON.stringify(recent)); return recent;
+  }
+  freeColor(players) { return COLORS.find((c) => !players.some((p) => p.color === c)); }
+  freeName(players) { return BOT_NAMES.find((n) => !players.some((p) => p.name === n)) || 'Bot'; }
+  openLobby(code, joining) {
+    const name = this.state.name.trim() || 'You';
+    lsSet('akp.name', name); lsSet('akp.color', this.state.color);
+    let players = [{ id: 'me', name, color: this.state.color, isBot: false }];
+    let hostId = 'me';
+    if (joining) {
+      const others = [];
+      for (let i = 0; i < 2; i++) { const all = players.concat(others); others.push({ id: `h${i}`, name: this.freeName(all), color: this.freeColor(all), isBot: true }); }
+      players = others.concat(players); hostId = 'h0';
+    }
+    const lobby = { code, hostId, players, config: Object.assign({}, DEF) };
+    this.go({ screen: 'lobby', lobby, g: null, recent: this.remember(code, name), joinCode: '' });
+    clearTimeout(this.hostT);
+    if (joining) this.hostT = setTimeout(() => { if (this.state.screen === 'lobby' && this.state.lobby && this.state.lobby.hostId !== 'me') this.startGame(); }, 5000);
+  }
+  startGame() {
+    const lb = this.state.lobby;
+    const g = window.AkEngine.create(lb.players, lb.config);
+    this.state.g = null;
+    this.setG(g); this.go({ screen: 'table', drawer: null, flashSeen: -1 });
+  }
+  setConfig(patch) { const lb = this.state.lobby; this.go({ lobby: Object.assign({}, lb, { config: Object.assign({}, lb.config, patch) }) }); }
+  copy() {
+    const code = (this.state.lobby || {}).code || '';
+    const url = `${location.origin}${location.pathname}#/g/${code}`;
+    try { navigator.clipboard.writeText(url); } catch (e) {}
+    this.say('Invite link copied.');
+  }
+  leave() { clearTimeout(this.timer); this.timer = null; clearTimeout(this.hostT); this.go({ screen: 'home', lobby: null, g: null, confirm: false, drawer: null }); }
+
+  renderVals() {
+    const s = this.state;
+    const v = {
+      isHome: s.screen === 'home', isLobby: s.screen === 'lobby', isTable: s.screen === 'table' && !!s.g, isRules: s.screen === 'rules',
+      name: s.name, toast: s.toast, hasToast: !!s.toast,
+      goRules: () => this.setState({ screen: 'rules', rulesFrom: s.screen === 'rules' ? s.rulesFrom : s.screen, drawer: null }),
+      rulesBack: () => this.setState({ screen: s.rulesFrom }), rulesBackLabel: s.rulesFrom === 'table' ? 'Back to the table' : s.rulesFrom === 'lobby' ? 'Back to the lobby' : 'Home',
+      goHome: () => this.leave(), steps: STEPS, gallery: GALLERY, details: DETAILS,
+      copyLink: () => this.copy(),
+      askLeave: () => this.setState({ confirm: true, drawer: null }), cancelLeave: () => this.setState({ confirm: false }), leave: () => this.leave(),
+      confirmOpen: s.confirm,
+      leaveText: s.screen === 'table' ? 'A bot takes over your seat so the others can keep playing.' : 'You can join again with the code while the table is in the lobby.',
+    };
+
+    // Home
+    const trimmed = s.name.trim();
+    const code = s.joinCode;
+    Object.assign(v, {
+      onName: (e) => this.setState({ name: e.target.value }),
+      colorDots: COLORS.map((c) => ({ hex: PAL[c], label: CNAME[c], ring: c === s.color ? `0 0 0 2px #130D01` : 'none', pick: () => { lsSet('akp.color', c); this.setState({ color: c }); } })),
+      create: () => { if (trimmed) this.openLobby(this.newCode(), false); else this.say('Enter your name first.'); },
+      createDisabled: !trimmed, createOp: trimmed ? 1 : 0.45,
+      joinCode: code, onJoinCode: (e) => this.setState({ joinCode: e.target.value.toUpperCase().split('').filter((ch) => ALPHA.includes(ch)).join('').slice(0, 5) }),
+      joinDisabled: code.length !== 5, joinOp: code.length === 5 ? 1 : 0.4,
+      join: () => { if (!trimmed) { this.say('Enter your name first.'); return; } if (code.length === 5) this.openLobby(code, true); },
+      hasRecent: s.recent.length > 0,
+      recent: s.recent.map((r) => ({ code: r.code, name: r.name, rejoin: () => { this.setState({ name: r.name }); this.state.name = r.name; this.openLobby(r.code, false); },
+        forget: () => { const recent = s.recent.filter((x) => x.code !== r.code); lsSet('akp.recent', JSON.stringify(recent)); this.setState({ recent }); } })),
+    });
+
+    // Lobby
+    const lb = s.lobby;
+    if (lb) {
+      const c = lb.config;
+      const isHost = lb.hostId === 'me';
+      const n = lb.players.length;
+      const active = PRESETS.find((p) => p.config.targetScore === c.targetScore && p.config.maxRounds === c.maxRounds && p.config.trapReward === c.trapReward);
+      const step = (key, d, min, max) => () => { const cur = c[key] === null ? (key === 'targetScore' ? 30 : 5) : c[key]; this.setConfig({ [key]: Math.min(max, Math.max(min, cur + d)) }); };
+      Object.assign(v, {
+        code: lb.code, codeLetters: lb.code.split(''), isHost, notHost: !isHost, playerCount: n,
+        hostName: (lb.players.find((p) => p.id === lb.hostId) || {}).name,
+        canAddBot: isHost && n < 6,
+        addBot: () => { const ps = lb.players; this.go({ lobby: Object.assign({}, lb, { players: ps.concat([{ id: `b${Date.now()}`, name: this.freeName(ps), color: this.freeColor(ps), isBot: true }]) }) }); },
+        lobbyPlayers: lb.players.map((p, i) => ({
+          seat: i + 1, name: p.name, hex: PAL[p.color], initial: (p.name[0] || '?').toUpperCase(), border: p.id === 'me' ? '#130D01' : 'rgba(90,58,31,.35)',
+          tags: [p.id === 'me' ? { text: 'you', bg: '#F3B952' } : null, p.id === lb.hostId ? { text: 'host', bg: '#FAF1E4' } : null, p.isBot && p.id !== lb.hostId && !p.id.startsWith('h') ? { text: 'bot', bg: 'rgba(90,58,31,.15)' } : null].filter(Boolean),
+          canRemove: isHost && p.id !== 'me',
+          remove: () => this.go({ lobby: Object.assign({}, lb, { players: lb.players.filter((q) => q.id !== p.id) }) }),
+        })),
+        emptySeats: Array.from({ length: Math.max(0, 3 - n) }, (_, i) => ({ seat: n + i + 1 })),
+        onLobbyName: (e) => { const name = e.target.value.slice(0, 16); lsSet('akp.name', name); this.go({ name, lobby: Object.assign({}, lb, { players: lb.players.map((p) => (p.id === 'me' ? Object.assign({}, p, { name: name || 'You' }) : p)) }) }); },
+        lobbyColors: COLORS.map((col) => {
+          const me = lb.players.find((p) => p.id === 'me');
+          const taken = lb.players.some((p) => p.id !== 'me' && p.color === col);
+          return { hex: PAL[col], label: CNAME[col], taken, op: taken ? 0.25 : 1, ring: me.color === col ? '0 0 0 2px #130D01' : 'none',
+            pick: () => { if (taken) return; lsSet('akp.color', col); this.go({ color: col, lobby: Object.assign({}, lb, { players: lb.players.map((p) => (p.id === 'me' ? Object.assign({}, p, { color: col }) : p)) }) }); } };
+        }),
+        presets: PRESETS.map((p) => { const on = active && active.id === p.id; return { label: p.label, sub: p.sub, border: on ? '#130D01' : 'rgba(90,58,31,.35)', bg: on ? '#F3B952' : '#FDF8F0', shadow: on ? '4px 4px 0 0 #130D01' : 'none', choose: () => this.setConfig(p.config) }; }),
+        custom: s.custom, customLabel: s.custom ? 'Hide custom rules' : 'Custom rules…', toggleCustom: () => this.setState({ custom: !s.custom }),
+        customRows: [
+          { label: 'Target score', value: c.targetScore === null ? '—' : c.targetScore, dec: step('targetScore', -5, 5, 1000), inc: step('targetScore', 5, 5, 1000), hasOff: true, offLabel: c.targetScore === null ? 'off' : 'on', offBg: c.targetScore === null ? 'transparent' : '#F3B952',
+            toggle: () => { if (c.targetScore === null) this.setConfig({ targetScore: 30 }); else if (c.maxRounds !== null) this.setConfig({ targetScore: null }); else this.say('The game needs a target or a round limit.'); } },
+          { label: 'Rounds', value: c.maxRounds === null ? '—' : c.maxRounds, dec: step('maxRounds', -1, 1, 100), inc: step('maxRounds', 1, 1, 100), hasOff: true, offLabel: c.maxRounds === null ? 'off' : 'on', offBg: c.maxRounds === null ? 'transparent' : '#F3B952',
+            toggle: () => { if (c.maxRounds === null) this.setConfig({ maxRounds: 5 }); else if (c.targetScore !== null) this.setConfig({ maxRounds: null }); else this.say('The game needs a target or a round limit.'); } },
+          { label: 'Trap reward', value: c.trapReward, dec: step('trapReward', -1, 0, 100), inc: step('trapReward', 1, 0, 100), hasOff: false },
+        ],
+        revealOn: c.revealOnRoundEnd, toggleReveal: () => this.setConfig({ revealOnRoundEnd: !c.revealOnRoundEnd }),
+        goalText: goalText(c), trapText: c.trapReward > 0 ? `+${c.trapReward} to the owner of the Akabare that busts the eater` : 'None',
+        leftoverText: c.revealOnRoundEnd ? 'Revealed at the end of each round' : 'Stay secret until the game ends',
+        startDisabled: n < 3, startOp: n < 3 ? 0.45 : 1,
+        startReason: n < 3 ? `Need at least 3 players (${n} so far). Add a bot or wait for friends.` : 'Everyone’s here? Let’s eat.',
+        startGame: () => { if (n >= 3) this.startGame(); },
+      });
+    }
+
+    if (!(s.screen === 'table' && s.g && window.AkEngine)) return v;
+
+    // Table
+    const E = window.AkEngine, g = s.g, cfg = g.config;
+    const me = this.P('me');
+    const L = E.legal(g, 'me');
+    const pend = E.pending(g);
+    const myBot = me.isBot;
+    const nameOf = (id) => (id === 'me' ? 'You' : this.P(id).name);
+    const whose = (id) => (id === 'me' ? 'your' : `${this.P(id).name}’s`);
+    const Whose = (id) => (id === 'me' ? 'Your' : `${this.P(id).name}’s`);
+    const firsts = g.players.map((p) => (p.name[0] || '?').toUpperCase());
+    const initial = (id) => { const i = g.players.findIndex((p) => p.id === id); const p = g.players[i]; return firsts.filter((f) => f === firsts[i]).length > 1 ? p.name.slice(0, 2) : firsts[i]; };
+    const revealed = g.phase === 'gameOver' || (g.phase === 'roundEnd' && cfg.revealOnRoundEnd);
+    const e = g.eating;
+    const myTurnServe = !!L.startBid && !myBot;
+    const eatingMine = g.phase === 'eating' && e && e.eaterId === 'me' && !myBot;
+
+    let maxStack = 1;
+    const seats = g.players.map((p) => {
+      maxStack = Math.max(maxStack, p.stack.length);
+      const isActive = g.phase !== 'setup' && g.phase !== 'roundEnd' && g.phase !== 'gameOver' && pend.includes(p.id);
+      let tag = '', tagBg = 'rgba(90,58,31,.12)', tagFg = '#130D01';
+      if (g.phase === 'setup') tag = p.setupDone ? 'set ✓' : 'setting up…';
+      else if (g.phase === 'serving' && isActive) { tag = 'serving'; tagBg = '#F3B952'; }
+      else if (g.phase === 'bidding') {
+        const b = g.bidding;
+        if (b.passed.includes(p.id)) tag = 'passed';
+        else if (b.highBidderId === p.id) { tag = `high bid ${b.highBid}`; tagBg = '#F16147'; tagFg = '#FFFFFF'; }
+        else if (isActive) { tag = 'deciding…'; tagBg = '#F3B952'; }
+      } else if (g.phase === 'eating' && e.eaterId === p.id) { tag = `eating ${e.eaten}/${e.target}`; tagBg = '#F16147'; tagFg = '#FFFFFF'; }
+      if (p.isBot && p.id === 'me') tag = tag ? `${tag} · bot` : 'bot playing';
+      const canPlace = myTurnServe && !!s.sel;
+      const canEat = eatingMine && L.flipPuri.includes(p.id);
+      const canPow = eatingMine && L.flipPower.includes(p.id);
+      const pw = p.power;
+      return {
+        name: p.id === 'me' ? `${p.name} (you)` : p.name, hex: PAL[p.color], color: p.color, score: num(p.score),
+        border: isActive ? '#130D01' : p.id === 'me' ? '#5A3A1F' : 'rgba(90,58,31,.3)',
+        bg: p.id === 'me' ? '#FDF8F0' : '#FAF1E4', shadow: isActive ? '6px 6px 0 0 #F3B952' : 'none',
+        hasTag: !!tag, tag, tagBg, tagFg,
+        stackEmpty: p.stack.length === 0,
+        stackH: 89 + Math.max(0, p.stack.length - 1) * 20,
+        stack: p.stack.map((c, i) => ({ top: i * 20, color: this.P(c.owner).color, badge: initial(c.owner), face: revealed ? c.kind : '', peek: !revealed && c.owner === 'me' ? c.kind : '', state: 'idle' })),
+        onStack: () => {
+          if (canEat) this.act({ type: 'FLIP_PURI', targetPlayerId: p.id });
+          else if (canPlace) { if (this.act({ type: 'PLACE_PURI', kind: s.sel, targetPlayerId: p.id })) this.setState({ sel: null }); }
+          else if (myTurnServe && L.place) this.say('Pick a card from your hand first.');
+        },
+        stackCursor: canEat || canPlace ? 'pointer' : 'default',
+        stackRing: canEat || canPlace ? '0 0 0 4px #FAF1E4, 0 0 0 7px #F3B952' : 'none',
+        stackTitle: canEat ? 'Eat the top card' : canPlace ? 'Place your card here' : '',
+        hasPower: !!pw, noPower: !pw,
+        powerFace: pw && (pw.revealed || revealed) ? pw.kind : '',
+        powerPeek: pw && !pw.revealed && !revealed && p.id === 'me' ? pw.kind : '',
+        powerState: pw && pw.revealed && g.phase === 'eating' ? 'idle' : 'idle',
+        onPower: () => { if (canPow) this.act({ type: 'FLIP_POWER', targetPlayerId: p.id }); },
+        powerCursor: canPow ? 'pointer' : 'default', powerRing: canPow ? '0 0 0 4px #FAF1E4, 0 0 0 7px #F3B952' : 'none',
+        powerTitle: canPow ? 'Flip this power' : '',
+      };
+    });
+    const lastLog = g.log[g.log.length - 1];
+    Object.assign(v, {
+      code: (lb || {}).code || '—', round: g.round, seats, seatCols: g.players.length, areaH: 89 + (maxStack - 1) * 20,
+      roundText: cfg.maxRounds === null ? `Round ${g.round}` : `Round ${g.round} of ${cfg.maxRounds}`,
+      goalShort: cfg.targetScore !== null ? `first to ${cfg.targetScore}` : 'no target', phaseLabel: PHASE[g.phase],
+      myColor: me.color, lastLine: lastLog ? lastLog.text : '', showTicker: g.phase !== 'eating',
+      navItems: [['scores', 'Scores'], ['log', 'Log'], ['rules', 'Rules']].map(([k, l]) => ({ label: l, bg: s.drawer === k ? '#F3B952' : 'transparent', open: () => this.setState({ drawer: s.drawer === k ? null : k }) })),
+    });
+
+    // HUD
+    if (e) {
+      const left = Math.max(0, cfg.powerFlipsMax - e.powersFlipped);
+      const plate = e.plate.map((c) => ({ face: c.kind, back: 'puri', color: this.P(c.owner).color, badge: initial(c.owner), state: c.cancelled ? 'faded' : 'idle' }))
+        .concat(e.powers.map((pw) => ({ face: pw.kind, back: 'power', color: this.P(pw.owner).color, badge: initial(pw.owner), state: pw.effect === 'wasted' || pw.effect === 'failedSave' ? 'faded' : 'idle' })));
+      v.showHud = g.phase === 'eating' || g.phase === 'roundEnd' || g.phase === 'gameOver';
+      v.showTicker = !v.showHud;
+      v.hud = {
+        who: e.eaterId === 'me' ? 'You are eating' : `${nameOf(e.eaterId)} is eating`, eaten: e.eaten, target: e.target,
+        pct: Math.min(100, Math.round((e.eaten / Math.max(1, e.target)) * 100)),
+        flips: `${left} of ${cfg.powerFlipsMax} power flips left`,
+        notes: [e.skipNext ? { text: 'Numb: the next puri is cancelled' } : null, e.freePlate ? { text: 'Naya Plate: any stack, any order' } : null].filter(Boolean),
+        plate, plateEmpty: plate.length === 0,
+      };
+    } else { v.showHud = false; v.hud = { plate: [], notes: [] }; }
+
+    // Hand
+    const handCards = me.hand.slice().sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'akabare' ? 1 : -1));
+    let selMarked = false;
+    v.hand = handCards.map((c) => {
+      const on = s.sel === c.kind && !selMarked; if (on) selMarked = true;
+      const can = myTurnServe && !!L.place;
+      return { face: c.kind, state: on ? 'selected' : can ? 'selectable' : 'idle', cursor: can ? 'pointer' : 'default', click: () => { if (can) this.setState({ sel: s.sel === c.kind ? null : c.kind }); } };
+    });
+    v.handCount = me.hand.length; v.handEmpty = me.hand.length === 0;
+    v.clearSel = () => this.setState({ sel: null });
+
+    // Setup
+    const size = cfg.startingStack;
+    const slots = s.slots.length === size ? s.slots : Array(size).fill(null);
+    const used = { panipuri: slots.filter((x) => x === 'panipuri').length, akabare: slots.filter((x) => x === 'akabare').length };
+    const remaining = [];
+    for (let i = 0; i < cfg.panipuriPerPlayer - used.panipuri; i++) remaining.push('panipuri');
+    if (used.akabare === 0) remaining.push('akabare');
+    const avail = E.avail(g, 'me');
+    v.setupHand = remaining.map((k) => ({ face: k, click: () => { const i = slots.findIndex((x) => x === null); if (i < 0) { this.say('Your stack is full. Tap a slot to take a card back.'); return; } const ns = slots.slice(); ns[i] = k; this.setState({ slots: ns }); } }));
+    v.slots = slots.map((k, i) => ({ filled: !!k, empty: !k, face: k || '', n: i + 1, cap: size === 1 ? 'Your card' : i === 0 ? 'Bottom' : i === size - 1 ? 'Top' : `Card ${i + 1}`, clear: () => { const ns = slots.slice(); ns[i] = null; this.setState({ slots: ns }); } }));
+    v.powerPicks = POWERS.map((k) => {
+      const ok = avail.includes(k);
+      let r = null; for (let i = me.powerPicks.length - 1; i >= 0; i--) if (me.powerPicks[i] === k) { r = i + 1; break; }
+      return { face: k, state: s.power === k ? 'selected' : ok ? 'idle' : 'dim', cursor: ok ? 'pointer' : 'not-allowed', cap: ok ? LABEL[k] : r ? `used R${r}` : 'used', tip: ok ? SHORT[k] : `${LABEL[k]} is used up until the powers reset.`, click: () => { if (ok) this.setState({ power: k }); } };
+    });
+    const empties = slots.filter((x) => x === null).length;
+    const power = s.power && avail.includes(s.power) ? s.power : null;
+    const complete = empties === 0 && !!power;
+    const todo = [empties > 0 ? `fill ${empties} more slot${empties === 1 ? '' : 's'}` : '', !power ? 'pick a power' : ''].filter(Boolean).join(' and ');
+    v.setupTodo = todo ? todo[0].toUpperCase() + todo.slice(1) + '.' : 'Ready when you are.';
+    v.lockDisabled = !complete; v.lockOp = complete ? 1 : 0.45; v.lockLabel = me.setupDone ? 'Update setup' : 'Lock in';
+    v.lockIn = () => { if (complete && this.act({ type: 'SUBMIT_SETUP', stack: slots, power })) this.setState({ editing: false }); };
+    const notSet = g.players.filter((p) => !p.setupDone && p.id !== 'me').map((p) => p.name);
+    v.waitingSetup = notSet.length ? `Waiting for ${joinNames(notSet)}.` : 'Everyone else is set.';
+    v.editSetup = () => this.setState({ editing: true, slots: me.setup ? me.setup.stack.slice() : slots, power: me.setup ? me.setup.power : null });
+    v.lockedCards = me.setup ? me.setup.stack.map((k) => ({ face: k, back: 'puri' })).concat([{ face: me.setup.power, back: 'power' }]) : [];
+
+    // Bid
+    const bidMin = L.startBid ? L.startBid.min : L.raise ? L.raise.min : 1;
+    const bidVal = Math.max(s.bid, bidMin);
+    const tmax = E.tableMax(g);
+    const over = bidVal > tmax;
+    v.bidVal = bidVal;
+    v.bidDec = () => this.setState({ bid: Math.max(bidMin, bidVal - 1), confirmOver: false });
+    v.bidInc = () => this.setState({ bid: bidVal + 1, confirmOver: false });
+    v.bidLabel = s.confirmOver ? `Yes, bid ${bidVal}` : L.startBid ? `Open the bid at ${bidVal}` : `Raise to ${bidVal}`;
+    v.bidHint = over ? (s.confirmOver ? `That’s more than anyone could eat (at most ${tmax}). Sure?` : `Heads up: at most ${tmax} can be eaten right now.`) : `At most ${tmax} can be eaten right now.`;
+    v.bidHintColor = over ? '#B8331C' : '#5A3A1F';
+    v.doBid = () => {
+      if (over && !s.confirmOver) { this.setState({ confirmOver: true }); return; }
+      this.act(L.startBid ? { type: 'START_BID', amount: bidVal } : { type: 'RAISE', amount: bidVal });
+      this.setState({ confirmOver: false });
+    };
+    v.doPass = () => this.act({ type: 'PASS' });
+    v.acceptBust = () => this.act({ type: 'ACCEPT_BUST' });
+    v.giveUpLabel = e ? `Give up (bust ${signed(-e.target)})` : '';
+
+    // Dock
+    const dk = { setupEdit: false, setupDone: false, showHand: false, showPrompt: true, title: '', text: '', waiting: false, bid: false, canPass: false, giveUp: false, unpeek: false, takeBack: false, hasCancel: false, unpeekLabel: '' };
+    if (myBot && g.phase !== 'gameOver') { dk.title = 'A bot is playing your seat'; dk.text = 'Take it back any time.'; dk.takeBack = true; }
+    else if (g.phase === 'setup') {
+      if (!me.setupDone || s.editing) { dk.setupEdit = true; dk.showPrompt = false; } else { dk.setupDone = true; dk.showPrompt = false; }
+    } else if (g.phase === 'serving') {
+      dk.showHand = true;
+      if (L.startBid) {
+        dk.title = 'Your turn to serve';
+        dk.text = !L.place ? 'Your hand is empty, so you must open the bid.' : s.sel ? `Now tap any stack (yours too) to slip your ${LABEL[s.sel]} on top.` : 'Pick a card from your hand, then tap a stack. Or stop serving and open the bid.';
+        dk.hasCancel = !!s.sel; dk.bid = true;
+      } else { dk.title = `${nameOf(g.serving.turnId)} is serving`; dk.waiting = true; dk.text = 'On your turn: place a card on any stack, or open the bid.'; }
+    } else if (g.phase === 'bidding') {
+      dk.showHand = true;
+      const b = g.bidding;
+      if (L.pass) { dk.title = 'Raise or pass?'; dk.text = `High bid ${b.highBid} by ${nameOf(b.highBidderId)}. The last one standing eats.`; dk.bid = true; dk.canPass = true; }
+      else {
+        dk.title = b.passed.includes('me') ? 'You passed' : b.highBidderId === 'me' ? `You hold the high bid (${b.highBid})` : `High bid ${b.highBid} by ${nameOf(b.highBidderId)}`;
+        dk.text = `Waiting for ${nameOf(b.turnId)} to raise or pass.`; dk.waiting = true;
+      }
+    } else if (g.phase === 'eating') {
+      dk.showHand = true;
+      if (eatingMine) {
+        const tableEmpty = L.flipPuri.length === 0 && !e.pendingAkabare;
+        dk.title = `Eat ${e.target - e.eaten} more`;
+        const mine = me.power;
+        dk.text = tableEmpty ? 'The table’s empty. Flip a power and hope for Chaat, or give up.'
+          : e.freePlate ? 'Naya Plate: tap any glowing stack, yours included.'
+          : me.stack.length ? `Finish your own stack first: tap it to eat${mine && !mine.revealed && mine.kind === 'nayaplate' ? ', or flip your Naya Plate to eat from any stack' : ''}.`
+          : 'Tap any glowing stack to eat its top card.';
+        if (L.flipPower.length) dk.text += ` Or flip a glowing power (${cfg.powerFlipsMax - e.powersFlipped} left)${mine && !mine.revealed ? `. Yours is ${LABEL[mine.kind]}; the rest are blind gambles.` : '.'}`;
+        dk.giveUp = L.acceptBust && !e.pendingAkabare;
+      } else {
+        const trapSet = cfg.trapReward > 0 && g.players.some((p) => p.stack.some((c) => c.owner === 'me' && c.kind === 'akabare'));
+        dk.title = `${nameOf(e.eaterId)} ${e.eaterId === 'me' ? 'are' : 'is'} eating ${e.target}`; dk.waiting = true;
+        dk.text = trapSet ? `Watch the plate. If they bite your Akabare, you get +${cfg.trapReward}.` : 'Watch the plate.';
+      }
+      if (s.peek && e.pendingAkabare) { dk.unpeek = true; dk.unpeekLabel = 'Back to the bite'; }
+    } else if (g.phase === 'roundEnd' || g.phase === 'gameOver') {
+      dk.title = g.phase === 'gameOver' ? 'Game over' : `Round ${g.round} is over`;
+      dk.text = revealed ? 'Leftover cards are face up on the table.' : 'Leftover cards stay secret.';
+      dk.unpeek = true; dk.unpeekLabel = g.phase === 'gameOver' ? 'Back to the results' : 'Back to the result';
+    }
+    v.dk = dk;
+    v.unpeek = () => this.setState({ peek: false });
+    v.peekTable = () => this.setState({ peek: true });
+    v.takeSeatBack = () => this.setG(E.setBot(g, 'me', false));
+
+    // Bite / saved overlay
+    const savedOpen = this.savedOpen();
+    v.biteOpen = (!!(e && e.pendingAkabare && g.phase === 'eating') || savedOpen) && !s.peek;
+    v.dismissFlash = () => this.setState({ flashSeen: g.flash.n });
+    if (e && e.pendingAkabare) {
+      const ak = e.pendingAkabare.card;
+      const youDecide = e.eaterId === 'me' && !myBot;
+      const ownerText = ak.owner === e.eaterId ? (e.eaterId === 'me' ? 'your own' : 'their own') : whose(ak.owner);
+      const choices = youDecide ? L.flipPower.map((id) => {
+        const p = this.P(id); const known = id === 'me' && p.power ? p.power.kind : '';
+        return { color: p.color, peek: known, who: known ? `Your ${LABEL[known]}` : `${p.name}’s power`, what: known ? (known === 'dahi' ? 'safe!' : 'won’t save you') : 'blind gamble', border: known === 'dahi' ? '#F3B952' : 'rgba(250,241,228,.4)', click: () => this.act({ type: 'FLIP_POWER', targetPlayerId: id }) };
+      }) : [];
+      v.bite = {
+        color: this.P(ak.owner).color, cardState: 'danger', hasPower: false,
+        title: e.eaterId === 'me' ? `You bit ${ownerText} Akabare!` : `${nameOf(e.eaterId)} bit ${ownerText} Akabare…`,
+        sub: youDecide ? (choices.length ? 'Only Dahi can save you now. Flip a power and pray.' : 'No power flips left to save you…') : 'Will they find Dahi?',
+        hasChoices: choices.length > 0, choices, canAccept: youDecide && L.acceptBust, acceptLabel: `Accept the bust (${signed(-e.target)})`,
+        isSaved: false, watching: !youDecide,
+      };
+    } else if (savedOpen) {
+      const f = g.flash;
+      v.bite = {
+        color: this.P(f.owner).color, cardState: 'idle', hasPower: true, powerFace: 'dahi', powerColor: this.P(f.powerOwner).color,
+        title: 'Saved by Dahi!',
+        sub: f.eaterId === 'me' ? 'Cool yoghurt, calm tongue. Keep eating.' : f.owner === 'me' ? `Your chili is wasted: ${nameOf(f.eaterId)} keeps eating.` : `${nameOf(f.eaterId)} is safe and keeps eating.`,
+        hasChoices: false, choices: [], canAccept: false, isSaved: true, okLabel: f.eaterId === 'me' ? 'Keep eating' : 'Carry on', watching: false,
+      };
+    } else v.bite = { choices: [] };
+
+    // Round result
+    const r = g.results[g.results.length - 1];
+    v.resultOpen = g.phase === 'roundEnd' && !s.peek && !!r;
+    if (r) {
+      const ok = r.outcome === 'success';
+      const eater = r.eaterId;
+      const willEnd = (cfg.targetScore !== null && g.players.some((p) => p.score >= cfg.targetScore)) || (cfg.maxRounds !== null && g.round >= cfg.maxRounds);
+      const reason = !ok ? (r.bustReason === 'emptyTable' ? 'The table ran out before the bid was eaten.' : r.akabareOwnerId === eater ? `Bit ${eater === 'me' ? 'your' : 'their'} own Akabare: no trap reward.` : `Bit ${whose(r.akabareOwnerId)} Akabare.${r.trapRewardTo ? ` ${nameOf(r.trapRewardTo)} ${r.trapRewardTo === 'me' ? 'get' : 'gets'} +${cfg.trapReward} for the trap.` : ''}`)
+        : r.eaten > r.target ? `Overshot to ${r.eaten}, but the score is the bid.` : '';
+      v.res = {
+        kicker: `round ${r.round} result`, shadow: ok ? '8px 8px 0 0 #F3B952' : '8px 8px 0 0 #F16147',
+        title: ok ? `${nameOf(eater)} ate ${r.target}!` : `${nameOf(eater)} ${eater === 'me' ? 'bust' : 'busts'}!`,
+        big: signed(ok ? r.target : -r.target), bigColor: ok ? '#130D01' : '#F16147',
+        facts: `Bid ${r.bid} · ate ${r.eaten}. ${reason}`,
+        rows: g.players.slice().sort((a, b) => (r.scoresAfter[b.id] || 0) - (r.scoresAfter[a.id] || 0)).map((p) => {
+          const d = r.scoreDeltas[p.id] || 0;
+          return { hex: PAL[p.color], name: p.id === 'me' ? 'You' : p.name, why: p.id === eater ? (ok ? 'ate the bid' : 'bust') : p.id === r.trapRewardTo ? 'trap reward' : '', d: d === 0 ? '·' : signed(d), dColor: d > 0 ? '#3E7A2E' : d < 0 ? '#B8331C' : '#5A3A1F', score: num(r.scoresAfter[p.id]) };
+        }),
+        canReady: L.ready, isReady: !L.ready, readyLabel: willEnd ? 'See the final scores' : `Ready for round ${g.round + 1}`,
+      };
+    } else v.res = { rows: [] };
+    v.doReady = () => this.act({ type: 'READY' });
+
+    // Standings / game over
+    const standings = g.players.slice().sort((a, b) => b.score - a.score || a.busts - b.busts || a.seat - b.seat);
+    v.standings = standings.map((p) => ({ hex: PAL[p.color], name: p.id === 'me' ? 'You' : p.name, busts: `${p.busts} bust${p.busts === 1 ? '' : 's'}`, score: num(p.score) }));
+    v.overOpen = g.phase === 'gameOver' && !s.peek;
+    if (g.phase === 'gameOver') {
+      const w = (g.winners || []).slice().sort((a, b) => Number(b === 'me') - Number(a === 'me'));
+      const top = standings[0].score;
+      const leaders = standings.filter((p) => p.score === top);
+      let tie = '';
+      if (leaders.length > 1 && w.length < leaders.length) tie = `Tied on ${top} points: ${joinNames(w.map(nameOf))} ${w.length === 1 && w[0] !== 'me' ? 'wins' : 'win'} on fewer busts.`;
+      else if (w.length > 1) tie = `Tied on ${top} points and busts: a shared win.`;
+      let rank = 0, prev = null;
+      v.over = {
+        title: w.length === 1 ? (w[0] === 'me' ? 'You win!' : `${nameOf(w[0])} wins!`) : `Shared win: ${joinNames(w.map(nameOf))}!`,
+        hasTie: !!tie, tie,
+        rows: standings.map((p, i) => { const k = `${p.score}:${p.busts}`; if (k !== prev) rank = i + 1; prev = k; return { rank, hex: PAL[p.color], name: p.id === 'me' ? 'You' : p.name, busts: `${p.busts} bust${p.busts === 1 ? '' : 's'}`, score: num(p.score), bg: w.includes(p.id) ? '#F3B952' : 'transparent' }; }),
+      };
+    } else v.over = { rows: [] };
+    v.rematch = () => { const ng = E.create(g.players.map((p) => ({ id: p.id, name: p.name, color: p.color, isBot: p.isBot })), cfg); this.state.g = null; this.setG(ng); this.setState({ flashSeen: -1 }); };
+
+    // Drawer
+    v.drawerOpen = !!s.drawer; v.closeDrawer = () => this.setState({ drawer: null });
+    v.drawerTitle = s.drawer === 'scores' ? 'Scores' : s.drawer === 'log' ? 'Game log' : 'Rules';
+    v.drawerScores = s.drawer === 'scores'; v.drawerLog = s.drawer === 'log'; v.drawerRules = s.drawer === 'rules';
+    v.goalText = goalText(cfg);
+    v.hasHistory = g.results.length > 0;
+    v.history = g.results.slice().reverse().map((x) => ({
+      r: x.round,
+      what: `${nameOf(x.eaterId)} ${x.outcome === 'success' ? `ate ${x.target}` : x.bustReason === 'emptyTable' ? `ran out (${x.eaten}/${x.target})` : `bit ${x.akabareOwnerId === x.eaterId ? (x.eaterId === 'me' ? 'your own' : 'their own') : whose(x.akabareOwnerId)} Akabare`}${x.trapRewardTo ? ` · ${nameOf(x.trapRewardTo)} +${cfg.trapReward}` : ''}`,
+      d: signed(x.outcome === 'success' ? x.target : -x.target), color: x.outcome === 'success' ? '#3E7A2E' : '#B8331C',
+    }));
+    v.myBotLabel = myBot ? 'Take my seat back' : 'Let a bot play for me';
+    v.toggleMyBot = () => this.setG(E.setBot(g, 'me', !myBot));
+    const toneColor = { bad: '#B8331C', good: '#3E7A2E', spicy: '#130D01', info: '#130D01', quiet: '#5A3A1F' };
+    v.logRows = g.log.slice().reverse().map((l) => ({ r: `R${l.round}`, text: l.text, color: toneColor[l.tone] || '#130D01', weight: l.tone === 'spicy' ? 700 : 400 }));
+    return v;
+  }
+}
+</script>
+</body>
+</html>

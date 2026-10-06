@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:relative; flex:none; width:{{w}}px; height:{{h}}px; border-radius:{{r}}px; transform:{{tf}}; box-shadow:{{sh}}; opacity:{{op}}; filter:{{fl}}; transition:transform .18s ease, box-shadow .18s ease, opacity .2s ease;">
+  <sc-if value="{{up}}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; border-radius:inherit; background:{{bg}}; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:{{justify}}; padding:{{pad}}px; gap:{{gap}}px;">
+      <div style="position:absolute; inset:{{inset}}px; border:{{bw}}px solid #F5E8CA; border-radius:{{ri}}px; pointer-events:none;"></div>
+      <sc-if value="{{showTitle}}" hint-placeholder-val="{{ false }}">
+        <div style="font-family:'Manrope', sans-serif; font-weight:800; font-size:{{tfs}}px; line-height:1; letter-spacing:.06em; color:#F9EFD3; white-space:nowrap; margin-top:{{tm}}px;">{{title}}</div>
+      </sc-if>
+      <img src="{{art}}" alt="" draggable="false" style="width:{{aw}}px; height:{{aw}}px; object-fit:cover; border-radius:{{ar}}px; border:{{abw}}px solid #EEE1C9; display:block; flex:none;">
+      <sc-if value="{{showDeva}}" hint-placeholder-val="{{ false }}">
+        <div lang="ne" style="font-family:'Baloo 2', sans-serif; font-weight:700; font-size:{{dfs}}px; line-height:1.1; color:#F9EFD3;">{{deva}}</div>
+      </sc-if>
+      <sc-if value="{{showRule}}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center; color:#F9EFD3; padding:0 10px; display:flex; flex-direction:column; gap:2px;">
+          <div style="font-family:'Patrick Hand', cursive; font-size:15px; line-height:1.1; opacity:.9;">{{label}}</div>
+          <div style="font-size:12px; line-height:1.3; text-wrap:pretty;">{{body}}</div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{down}}" hint-placeholder-val="{{ true }}">
+    <img src="{{backSrc}}" alt="" draggable="false" style="position:absolute; inset:0; width:100%; height:100%; border-radius:inherit; object-fit:cover; display:block; background:#5A3A1F;">
+  </sc-if>
+  <sc-if value="{{hasBadge}}" hint-placeholder-val="{{ false }}">
+    <span style="position:absolute; left:4px; top:4px; min-width:{{bs}}px; height:{{bs}}px; padding:0 4px; border-radius:999px; background:#FAF1E4; color:#130D01; border:1.5px solid {{bg}}; font-weight:700; font-size:{{bfs}}px; line-height:1; display:flex; align-items:center; justify-content:center;">{{badge}}</span>
+  </sc-if>
+  <sc-if value="{{hasPeek}}" hint-placeholder-val="{{ false }}">
+    <span style="position:absolute; right:4px; top:4px; height:{{bs}}px; padding:0 6px; border-radius:999px; background:{{peekBg}}; color:#FAF1E4; font-weight:700; font-size:{{bfs}}px; line-height:1; display:flex; align-items:center; justify-content:center; border:1.5px solid #FAF1E4;">{{peekLetter}}</span>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:200,&quot;height&quot;:280},&quot;face&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;panipuri&quot;,&quot;akabare&quot;,&quot;vinegar&quot;,&quot;dahi&quot;,&quot;nayaplate&quot;,&quot;chaat&quot;],&quot;default&quot;:&quot;akabare&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;back&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;puri&quot;,&quot;power&quot;],&quot;default&quot;:&quot;puri&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;color&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;red&quot;,&quot;blue&quot;,&quot;yellow&quot;,&quot;green&quot;,&quot;purple&quot;,&quot;orange&quot;],&quot;default&quot;:&quot;red&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:160,&quot;tsType&quot;:&quot;number&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;selectable&quot;,&quot;selected&quot;,&quot;danger&quot;,&quot;dim&quot;,&quot;faded&quot;,&quot;hard&quot;],&quot;default&quot;:&quot;idle&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;badge&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;peek&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const PAL = { red: '#B84A3A', blue: '#2D6281', yellow: '#D29B2E', green: '#47704D', purple: '#71506F', orange: '#C66D38' };
+const INFO = {
+  panipuri: ['PANIPURI', 'पानीपुरी', 'Puri · safe to eat', 'Counts as 1 eaten.'],
+  akabare: ['AKABARE', 'अकबरे', 'Puri · the chili trap', 'Bite it without Vinegar or Dahi and you bust. If it busts someone else, its owner gets +2.'],
+  vinegar: ['VINEGAR', 'सिर्का', 'Flip before a puri', 'The next card you eat is cancelled: an Akabare can’t hurt you, a Panipuri doesn’t count.'],
+  dahi: ['DAHI', 'दही', 'Flip right after an Akabare bite', 'You’re saved and keep eating. Any other time it does nothing.'],
+  nayaplate: ['NAYA PLATE', 'नयाँ प्लेट', 'Flip any time', 'From now on you may flip any stack first, your own included, in any order.'],
+  chaat: ['CHAAT', 'चाट', 'Flip any time', 'Counts as 2 Panipuri eaten.'],
+};
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const w = Number(p.w) || 64;
+    const h = Math.round(w * 88 / 63);
+    const face = p.face || '';
+    const color = p.color || 'red';
+    const bg = PAL[color] || PAL.red;
+    const st = p.state || 'idle';
+    const info = INFO[face] || INFO.panipuri;
+    const small = w < 76;
+    const big = w >= 240;
+    const lift = st === 'selected' ? 'translateY(-10px) rotate(-1.5deg)' : 'none';
+    const shadow = st === 'selectable' ? '0 0 0 3px #F3B952, 4px 4px 0 3px #130D01'
+      : st === 'selected' ? '0 0 0 3px #F16147, 6px 6px 0 3px #130D01'
+      : st === 'danger' ? '0 0 0 4px #F16147, 0 0 40px 6px rgba(241,97,71,.55)'
+      : st === 'hard' ? '6px 6px 0 0 #F3B952' : 'none';
+    const pad = Math.round(w * (small ? 0.09 : 0.075));
+    const aw = Math.round(w * (big ? 0.66 : small ? 0.8 : 0.72));
+    return {
+      w, h, r: Math.max(4, Math.round(w * 0.07)), tf: lift, sh: shadow,
+      op: st === 'dim' ? 0.38 : st === 'faded' ? 0.55 : 1,
+      fl: st === 'dim' ? 'grayscale(.7)' : 'none',
+      up: !!face, down: !face, bg,
+      justify: small ? 'center' : 'flex-start',
+      pad, gap: Math.round(w * (big ? 0.035 : 0.05)), inset: Math.max(2, Math.round(w * 0.035)), bw: w < 60 ? 1.5 : 2.5, ri: Math.max(3, Math.round(w * 0.05)),
+      showTitle: !small, title: info[0], tfs: Math.max(8, Math.round(w * (face === 'nayaplate' ? 0.085 : 0.1))), tm: Math.round(w * 0.04),
+      art: `public/art/${face || 'panipuri'}.webp`, aw, ar: Math.max(2, Math.round(w * 0.03)), abw: w < 60 ? 1 : 2,
+      showDeva: w >= 90, deva: info[1], dfs: Math.round(w * 0.085),
+      showRule: big, label: info[2], body: info[3],
+      backSrc: `public/backs/${p.back === 'power' ? 'power' : 'puri'}-${color}.webp`,
+      hasBadge: !!p.badge, badge: p.badge, bs: Math.max(14, Math.round(w * 0.24)), bfs: Math.max(9, Math.round(w * 0.14)),
+      hasPeek: !!p.peek, peekLetter: p.peek ? INFO[p.peek][0][0] : '', peekBg: p.peek === 'akabare' ? '#F16147' : '#130D01',
+    };
+  }
+}
+</script>
+</body>
+</html>
