@@ -77,7 +77,7 @@ export const EFFECT_TEXT: Record<PowerEffect, string> = {
   saved: 'saved by Dahi!',
   failedSave: 'no Dahi',
   wasted: 'no effect',
-  targetUp: 'the bid goes up by 1',
+  freePlate: 'any stack is fair game now',
   plusTwo: 'counts as 2 eaten',
 };
 
@@ -132,9 +132,8 @@ export function describeEvent(e: GameEvent, b: NameBook, trapReward = 2): EventL
       return { text: `${b.who(e.eaterId)} bit ${e.owner === e.eaterId ? (e.eaterId === b.you ? 'your own' : 'their own') : b.whose(e.owner)} Akabare!`, tone: 'bad', actor: e.eaterId };
     case 'flipPower': {
       const whose = e.owner === e.eaterId ? (e.eaterId === b.you ? 'your own' : 'their own') : b.whose(e.owner);
-      const extra =
-        e.effect === 'targetUp' ? ` Now ${e.eaterId === b.you ? 'you need' : 'they need'} ${e.target}.` : e.effect === 'plusTwo' ? ` (${e.eaten}/${e.target})` : '';
-      const tone: Tone = e.effect === 'saved' || e.effect === 'plusTwo' || e.effect === 'numb' ? 'good' : e.effect === 'failedSave' || e.effect === 'targetUp' ? 'bad' : 'quiet';
+      const extra = e.effect === 'plusTwo' ? ` (${e.eaten}/${e.target})` : '';
+      const tone: Tone = e.effect === 'saved' || e.effect === 'plusTwo' || e.effect === 'numb' || e.effect === 'freePlate' ? 'good' : e.effect === 'failedSave' ? 'bad' : 'quiet';
       const fx = EFFECT_TEXT[e.effect];
       return { text: `${b.who(e.eaterId)} flipped ${whose} ${powerName(e.kind)}: ${fx}${/[.!?]$/.test(fx) ? '' : '.'}${extra}`, tone, actor: e.eaterId };
     }

@@ -41,6 +41,12 @@ Tests use Vitest. Run `npx vitest run <your dir>`.
 
 These resolve ambiguities and bugs in the PDF pseudocode.
 
+**Powers** (4 kinds: `vinegar`, `dahi`, `nayaplate`, `chaat`; the PDF's Khali Puri was replaced by Naya Plate):
+- **Vinegar:** the next puri flip is cancelled (`numb`).
+- **Dahi:** saves you from a pending Akabare (`saved`); otherwise `wasted`.
+- **Naya Plate:** frees the plate (`freePlate`): any non-empty stack, your own included, in any order, for the rest of the round. It never changes `target`. A second flip is `wasted`. Flipped while an Akabare is pending, it is a failed save.
+- **Chaat:** adds 2 to `eaten` (`plusTwo`).
+
 1. **Setup**
    - Each player submits `startingStack` (2) puri kinds for their own stack, listed bottom → top, plus 1 power.
    - They can't use more Akabare than they hold, which is 1.
@@ -48,7 +54,7 @@ These resolve ambiguities and bugs in the PDF pseudocode.
    - The remaining puri cards stay in hand (4 by default).
 2. **Power availability**
    - The used set is cleared at the start of round r when `(r-1) % (powerResetRound-1) === 0`. That means rounds 1, 4, 7, …
-   - Available powers are all 4 minus the used set.
+   - Available powers are all 4 (Vinegar, Dahi, Naya Plate, Chaat) minus the used set. So round 1 offers 4, round 2 offers 3, round 3 offers 2, round 4 resets to 4, round 5 offers 3.
    - Placing a power marks it used, whether or not it is flipped.
    - This gives the PDF table: R1 all, R2 = 3, R3 = 2, R4 all 4, R5 = the 3 not picked in R4.
 3. **First player**
@@ -68,8 +74,9 @@ These resolve ambiguities and bugs in the PDF pseudocode.
    - When only one player hasn't passed, that player is the **eater** at the high bid.
    - There's no max bid. If everyone else passes straight away, the starter eats at their opening bid.
 6. **Eating**
-   - The eater must flip their own stack from the top until it's empty.
+   - By default the eater must flip their own stack from the top until it's empty.
    - After that, each flip picks any *other* non-empty stack.
+   - **Naya Plate exception:** once a Naya Plate has been flipped (`EatingState.freePlate`), the own-stack-first rule is off for the rest of the round. The eater may flip the top card of ANY non-empty stack, their own included, in any order. `legal.flipPuri` then lists every non-empty stack.
    - At any time the eater may flip up to `powerFlipsMax` (2) face-down powers, beside any stack, including their own.
 7. **FLIP_PURI** resolution:
    - Pop the top card and put it on the plate.
@@ -83,11 +90,11 @@ These resolve ambiguities and bugs in the PDF pseudocode.
    - Add 1 to `powersFlipped` and reveal the power.
    - If an Akabare is pending:
      - Dahi saves you (effect `saved`, plate card marked `saved`). Then run `checkEnd`.
-     - Any other power busts you on the pending Akabare (effect `failedSave`). Khali and Chaat effects do NOT apply.
+     - Any other power busts you on the pending Akabare (effect `failedSave`). Chaat and Naya Plate effects do NOT apply, so flipping Naya Plate here is a failed save and a bust like any other non-Dahi.
    - Otherwise:
      - Vinegar sets `skipNext` (effect `numb`). If it's already set, the effect is `wasted`. Two Vinegars don't stack.
      - Dahi does nothing (`wasted`).
-     - Khali adds 1 to `target` (`targetUp`).
+     - Naya Plate sets `freePlate` (effect `freePlate`). If it's already set, the effect is `wasted`. It costs one of the power flips like any power. `target` is not changed: it always equals the bid.
      - Chaat adds 2 to `eaten` (`plusTwo`).
    - Then run `checkEnd`.
 9. **checkEnd**
@@ -130,6 +137,7 @@ These resolve ambiguities and bugs in the PDF pseudocode.
     - bid near a sensible estimate
     - use known-own Vinegar before a known-own Akabare
     - flip Chaat when it's useful
+    - flip a known-own Naya Plate to walk around a dangerous top card on their own stack (e.g. a planted Akabare)
     - try Dahi when they've bitten an Akabare
     - prefer stacks whose top card they own when they know it's a Panipuri
 
@@ -254,7 +262,7 @@ What each operation does:
 **Source art:**
 - The 6 unique illustrations are identical across player colors and across panipuri 1–5.
 - The source files are the 750×1050 PNGs in `source_assets/print_sheets`. The art square is at about x 65–685, y 145–765.
-- Extract them to `public/art/{panipuri,akabare,vinegar,dahi,khali,chaat}.webp`, keeping them crisp at a retina card size.
+- Extract them to `public/art/{panipuri,akabare,vinegar,dahi,nayaplate,chaat}.webp`, keeping them crisp at a retina card size.
 - Sample the exact frame colors per player into `src/cards/palette.ts`.
 
 **Fronts** are rebuilt in HTML/CSS:
@@ -264,7 +272,7 @@ What each operation does:
   - पानीपुरी
   - सिर्का (Vinegar)
   - दही
-  - खाली पुरी
+  - नयाँ प्लेट (Naya Plate)
   - चाट
 - the art square
 - **rule text in the empty lower third** (the PDF power table wording, shortened)

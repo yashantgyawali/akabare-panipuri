@@ -158,6 +158,86 @@ describe('displayAt across a round change (forwardView)', () => {
   });
 });
 
+/** Seeds whose games contain a Naya Plate flip (found by scanning, so the test follows the bots). */
+function nayaGames(viewer: string): PlayerView[][] {
+  const out: PlayerView[][] = [];
+  for (let seed = 1; seed <= 80 && out.length < 6; seed++) {
+    const views = playGame(seed, viewer);
+    const log = views[views.length - 1].log;
+    if (log.some((e) => e.type === 'flipPower' && e.effect === 'freePlate')) out.push(views);
+  }
+  return out;
+}
+
+describe('Naya Plate (freePlate) playback', () => {
+  it('rewinds before and after the flip, with flips from any stack including the own one', () => {
+    const games = nayaGames('p0');
+    expect(games.length).toBeGreaterThan(0);
+    let before = 0;
+    let after = 0;
+    let ownAfter = 0;
+    for (const views of games) {
+      const final = views.filter((v) => v.eating).slice(-1)[0];
+      for (const last of views.filter((v) => v.phase === 'eating' || v.phase === 'roundEnd')) {
+        const naya = last.log.find((e) => e.type === 'flipPower' && e.effect === 'freePlate' && e.round === last.round);
+        if (!naya) continue;
+        for (const earlier of views) {
+          if (earlier.round !== last.round || earlier.lastSeq >= last.lastSeq || !earlier.eating) continue;
+          const r = rewindView(last, earlier.lastSeq);
+          if (!r) continue;
+          expect(shape(r)).toEqual(shape(earlier));
+          expect(r.eating!.freePlate).toBe(earlier.lastSeq >= naya.seq);
+          if (earlier.lastSeq >= naya.seq) after++;
+          else before++;
+        }
+        // flips taken from the eater's own stack after the Naya flip
+        const own = last.log.filter((e) => e.type === 'flipPuri' && e.seq > naya.seq && e.fromStackOf === e.eaterId);
+        ownAfter += own.length;
+      }
+      expect(final).toBeDefined();
+    }
+    expect(before).toBeGreaterThan(0);
+    expect(after).toBeGreaterThan(0);
+    expect(ownAfter).toBeGreaterThanOrEqual(0);
+  });
+
+  it('un-applies the flip: freePlate is off and the power card goes back face down', () => {
+    for (const views of nayaGames('p1')) {
+      const v = views.find((x) => x.eating?.freePlate)!;
+      const naya = v.log.find((e) => e.type === 'flipPower' && e.effect === 'freePlate' && e.round === v.round)!;
+      const r = rewindView(v, naya.seq - 1)!;
+      expect(r.eating?.freePlate).toBe(false);
+      expect(r.eating?.powers.some((p) => p.effect === 'freePlate')).toBe(false);
+      const owner = r.players.find((p) => p.id === (naya as Extract<typeof naya, { type: 'flipPower' }>).fromStackOf)!;
+      expect(owner.power?.revealed).toBe(false);
+    }
+  });
+
+  it('plays a Naya Plate forward across a round boundary', () => {
+    let checked = 0;
+    for (const viewer of ['p0', 'p3']) {
+      for (const views of nayaGames(viewer)) {
+        const from = views.find((v) => v.phase === 'eating' && v.eating && !v.eating.freePlate && v.log.length > 0);
+        if (!from) continue;
+        const next = views.find((v) => v.round === from.round + 1);
+        if (!next) continue;
+        const nayaEv = next.log.find((e) => e.type === 'flipPower' && e.effect === 'freePlate' && e.round === from.round);
+        if (!nayaEv || nayaEv.seq <= from.lastSeq || next.log[0].seq > from.lastSeq + 1) continue;
+        const roundEnd = next.log.find((e) => e.type === 'roundEnd' && e.round === from.round)!;
+        for (let c = from.lastSeq + 1; c <= roundEnd.seq; c++) {
+          const d = displayAt([from, next], c)!;
+          expect(d.round).toBe(from.round);
+          expect(d.eating?.freePlate).toBe(c >= nayaEv.seq);
+          const real = views.find((x) => x.lastSeq === c);
+          if (real && real.round === from.round) expect(shape(d)).toEqual(shape(real));
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+});
+
 describe('displayAt', () => {
   it('never offers the legal actions of a superseded view', () => {
     const views = playGame(11, 'p0');

@@ -137,7 +137,7 @@ function table(opts: TableOpts = {}): Table {
 }
 
 type SetupSpec = Partial<Record<Id, { stack?: PuriKind[]; power?: PowerKind }>>;
-const DEFAULT_POWER_ORDER: PowerKind[] = ['khali', 'dahi', 'chaat', 'vinegar'];
+const DEFAULT_POWER_ORDER: PowerKind[] = ['nayaplate', 'dahi', 'chaat', 'vinegar'];
 
 /** Everyone submits setup: all-Panipuri stacks and a default available power unless specified. */
 function setupAll(t: Table, spec: SetupSpec = {}): void {
@@ -278,8 +278,8 @@ describe('decision 1: setup', () => {
     expect(t.p('sita').power!.kind).toBe('chaat');
     expect(t.state.phase).toBe('setup');
     expect(pendingActors(t.state)).toEqual(['anil', 'priya']);
-    t.setup('anil', [P, P], 'khali');
-    const last = t.setup('priya', [P, P], 'khali');
+    t.setup('anil', [P, P], 'nayaplate');
+    const last = t.setup('priya', [P, P], 'nayaplate');
     expect(last.map((e) => e.type)).toEqual(['setupDone', 'servingStart']);
     expect(t.state.phase).toBe('serving');
     expect(t.state.serving).toEqual({ turnId: 'ramesh' });
@@ -309,15 +309,15 @@ describe('decision 1: setup', () => {
 describe('decision 2: power availability', () => {
   test('PDF table over rounds 1-5, then the cycle continues in rounds 6-7', () => {
     const t = table({ config: { targetScore: null, maxRounds: 10 } });
-    const picks: PowerKind[] = ['vinegar', 'chaat', 'khali', 'vinegar', 'dahi', 'khali'];
+    const picks: PowerKind[] = ['vinegar', 'chaat', 'nayaplate', 'vinegar', 'dahi', 'nayaplate'];
     const expected: PowerKind[][] = [
-      ['vinegar', 'dahi', 'khali', 'chaat'],
-      ['dahi', 'khali', 'chaat'],
-      ['dahi', 'khali'],
-      ['vinegar', 'dahi', 'khali', 'chaat'],
-      ['dahi', 'khali', 'chaat'],
-      ['khali', 'chaat'],
-      ['vinegar', 'dahi', 'khali', 'chaat'],
+      ['vinegar', 'dahi', 'nayaplate', 'chaat'],
+      ['dahi', 'nayaplate', 'chaat'],
+      ['dahi', 'nayaplate'],
+      ['vinegar', 'dahi', 'nayaplate', 'chaat'],
+      ['dahi', 'nayaplate', 'chaat'],
+      ['nayaplate', 'chaat'],
+      ['vinegar', 'dahi', 'nayaplate', 'chaat'],
     ];
     for (let r = 1; r <= 7; r++) {
       expect(t.state.round).toBe(r);
@@ -541,8 +541,9 @@ describe('decision 6: eating order', () => {
     expect(t.eating.eaten).toBe(2);
     expect(t.legal('sita').flipPower).toEqual(['ramesh', 'anil', 'priya']);
     expect(t.fail('sita', { type: 'FLIP_POWER', targetPlayerId: 'sita' })).toMatch(/already face up/);
-    t.power('sita', 'ramesh'); // khali: target 4
-    expect(t.eating.target).toBe(4);
+    t.power('sita', 'ramesh'); // nayaplate: free plate, target unchanged
+    expect(t.eating.target).toBe(3);
+    expect(t.eating.freePlate).toBe(true);
     expect(t.legal('sita').flipPower).toEqual([]);
     expect(t.fail('sita', { type: 'FLIP_POWER', targetPlayerId: 'anil' })).toMatch(/already flipped 2 powers/);
     expect(t.fail('ramesh', { type: 'FLIP_POWER', targetPlayerId: 'anil' })).toMatch(/Only the eater/);
@@ -617,17 +618,17 @@ describe('decision 7: FLIP_PURI', () => {
   });
 
   test('a bite with flips left but no face-down power anywhere is an immediate bust', () => {
-    const t = plantedOnSita(3, { sita: { power: 'dahi' }, ramesh: { power: 'khali' }, anil: { power: 'dahi' } }, {
+    const t = plantedOnSita(3, { sita: { power: 'dahi' }, ramesh: { power: 'nayaplate' }, anil: { power: 'dahi' } }, {
       players: 3,
       config: { powerFlipsMax: 4 },
     });
     t.power('sita', 'sita');
     t.power('sita', 'ramesh');
     t.power('sita', 'anil');
-    expect(t.eating).toMatchObject({ powersFlipped: 3, target: 4 });
+    expect(t.eating).toMatchObject({ powersFlipped: 3, target: 3 });
     t.flip('sita', 'sita');
     expect(t.state.phase).toBe('roundEnd');
-    expect(t.state.results[0]).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 4, trapRewardTo: 'ramesh' });
+    expect(t.state.results[0]).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 3, trapRewardTo: 'ramesh' });
   });
 
   test('a cancelled Akabare does not bite (and Vinegar is used up)', () => {
@@ -661,7 +662,7 @@ describe('decision 8: FLIP_POWER', () => {
     expect(t.score('ramesh')).toBe(0);
   });
 
-  test.each(['vinegar', 'khali', 'chaat'] as PowerKind[])(
+  test.each(['vinegar', 'nayaplate', 'chaat'] as PowerKind[])(
     'any other power (%s) after a bite fails the save; its own effect does not apply',
     (kind) => {
       const t = plantedOnSita(3, { anil: { power: kind } });
@@ -690,12 +691,12 @@ describe('decision 8: FLIP_POWER', () => {
     expect(t.eating.eaten).toBe(1);
   });
 
-  test('Dahi without a pending Akabare does nothing; Khali raises the target; Chaat adds 2', () => {
+  test('Dahi without a pending Akabare does nothing; Naya Plate opens the table; Chaat adds 2', () => {
     const t = table({ first: 'sita' });
-    setupAll(t, { ramesh: { power: 'dahi' }, anil: { power: 'khali' }, priya: { power: 'chaat' } });
+    setupAll(t, { ramesh: { power: 'dahi' }, anil: { power: 'nayaplate' }, priya: { power: 'chaat' } });
     auction(t, 'sita', 5);
     expect(t.power('sita', 'ramesh')[0]).toMatchObject({ effect: 'wasted', eaten: 0, target: 5 });
-    expect(t.power('sita', 'anil')[0]).toMatchObject({ effect: 'targetUp', eaten: 0, target: 6 });
+    expect(t.power('sita', 'anil')[0]).toMatchObject({ effect: 'freePlate', eaten: 0, target: 5 });
     const u = table({ first: 'sita' });
     setupAll(u, { priya: { power: 'chaat' } });
     auction(u, 'sita', 5);
@@ -704,13 +705,13 @@ describe('decision 8: FLIP_POWER', () => {
 
   test('power flips are public: kind, owner and effect are in the log and every view', () => {
     const t = table({ first: 'sita' });
-    setupAll(t, { anil: { power: 'khali' } });
+    setupAll(t, { anil: { power: 'nayaplate' } });
     auction(t, 'sita', 3);
     t.power('sita', 'anil');
     for (const viewer of ['sita', 'ramesh', 'anil', null] as (Id | null)[]) {
       const v = t.view(viewer);
-      expect(v.players[2].power).toEqual({ owner: 'anil', revealed: true, kind: 'khali' });
-      expect(v.eating!.powers).toEqual([{ kind: 'khali', owner: 'anil', fromStackOf: 'anil', effect: 'targetUp' }]);
+      expect(v.players[2].power).toEqual({ owner: 'anil', revealed: true, kind: 'nayaplate' });
+      expect(v.eating!.powers).toEqual([{ kind: 'nayaplate', owner: 'anil', fromStackOf: 'anil', effect: 'freePlate' }]);
     }
   });
 });
@@ -735,18 +736,18 @@ describe('decision 9: checkEnd', () => {
 
   test('empty table, short, flips left: waits for FLIP_POWER or ACCEPT_BUST', () => {
     const t = table({ players: 3, first: 'sita' });
-    setupAll(t, { ramesh: { power: 'khali' }, anil: { power: 'dahi' } });
+    setupAll(t, { ramesh: { power: 'nayaplate' }, anil: { power: 'dahi' } });
     auction(t, 'sita', 7);
     for (const id of ['sita', 'sita', 'ramesh', 'ramesh', 'anil', 'anil'] as Id[]) t.flip('sita', id);
     expect(t.state.phase).toBe('eating');
     expect(t.eating.eaten).toBe(6);
     expect(t.legal('sita')).toMatchObject({ flipPuri: [], flipPower: ['sita', 'ramesh', 'anil'], acceptBust: true });
-    t.power('sita', 'ramesh'); // khali: needs 8 now
+    t.power('sita', 'ramesh'); // nayaplate: still 7
     expect(t.state.phase).toBe('eating');
     const events = t.power('sita', 'anil'); // dahi wasted, flips exhausted
     expect(events.map((e) => e.type)).toEqual(['flipPower', 'bust', 'roundEnd']);
-    expect(t.state.results[0]).toMatchObject({ bustReason: 'emptyTable', target: 8, akabareOwnerId: null, trapRewardTo: null });
-    expect(t.score('sita')).toBe(-8);
+    expect(t.state.results[0]).toMatchObject({ bustReason: 'emptyTable', target: 7, akabareOwnerId: null, trapRewardTo: null });
+    expect(t.score('sita')).toBe(-7);
   });
 
   test('empty table, short, no flips left: immediate emptyTable bust', () => {
@@ -876,14 +877,14 @@ describe('decision 11: trap reward', () => {
 
   test('a saved Akabare pays nothing; a later unsaved one pays only its own owner', () => {
     const t = table({ first: 'ramesh' });
-    setupAll(t, { sita: { power: 'dahi' }, priya: { power: 'khali' } });
+    setupAll(t, { sita: { power: 'dahi' }, priya: { power: 'nayaplate' } });
     t.place('ramesh', A, 'sita');
     t.place('anil', A, 'sita');
     auction(t, 'sita', 4);
     t.flip('sita', 'sita'); // anil's akabare
     t.power('sita', 'sita'); // dahi saves
     t.flip('sita', 'sita'); // ramesh's akabare
-    t.power('sita', 'priya'); // khali: failed save
+    t.power('sita', 'priya'); // nayaplate: failed save
     expect(t.state.results[0]).toMatchObject({ akabareOwnerId: 'ramesh', trapRewardTo: 'ramesh', target: 4 });
     expect(t.state.results[0].scoreDeltas).toEqual({ sita: -4, ramesh: 2, anil: 0, priya: 0 });
   });
@@ -906,29 +907,27 @@ describe('decision 11: trap reward', () => {
 // ---------------------------------------------------------------------------
 
 describe('decision 12: round end and game over', () => {
-  test('success scores +target including Khali; roundEnd carries the result', () => {
+  test('success scores +target with Naya Plate used; roundEnd carries the result', () => {
     const t = table({ first: 'sita' });
-    setupAll(t, { ramesh: { power: 'khali' } });
+    setupAll(t, { ramesh: { power: 'nayaplate' } });
     auction(t, 'sita', 2);
     t.power('sita', 'ramesh');
-    t.flip('sita', 'sita');
-    t.flip('sita', 'sita');
-    expect(t.state.phase).toBe('eating'); // 2 eaten, but Khali raised the target to 3
-    const events = t.flip('sita', 'anil');
+    t.flip('sita', 'anil'); // Naya Plate: any stack, any order
+    const events = t.flip('sita', 'ramesh');
     expect(events.map((e) => e.type)).toEqual(['flipPuri', 'success', 'roundEnd']);
     const ev = t.last('roundEnd');
     expect(ev.result).toEqual({
       round: 1,
       eaterId: 'sita',
       bid: 2,
-      target: 3,
-      eaten: 3,
+      target: 2,
+      eaten: 2,
       outcome: 'success',
       bustReason: null,
       akabareOwnerId: null,
       trapRewardTo: null,
-      scoreDeltas: { sita: 3, ramesh: 0, anil: 0, priya: 0 },
-      scoresAfter: { sita: 3, ramesh: 0, anil: 0, priya: 0 },
+      scoreDeltas: { sita: 2, ramesh: 0, anil: 0, priya: 0 },
+      scoresAfter: { sita: 2, ramesh: 0, anil: 0, priya: 0 },
     });
   });
 
@@ -1084,7 +1083,7 @@ describe('decision 13: secrecy', () => {
   }
 
   test('face-down puri show only their owner; the owner also sees the kind (anywhere on the table)', () => {
-    const t = secretsTable({ stack: [A, P], power: 'khali' });
+    const t = secretsTable({ stack: [A, P], power: 'nayaplate' });
     const v = t.view('sita');
     expect(v.youId).toBe('sita');
     expect(v.players[0].stack).toEqual([
@@ -1107,22 +1106,22 @@ describe('decision 13: secrecy', () => {
   });
 
   test('powers show their kind only to their owner until flipped', () => {
-    const t = secretsTable({ stack: [P, P], power: 'khali' });
+    const t = secretsTable({ stack: [P, P], power: 'nayaplate' });
     expect(t.view('sita').players[0].power).toEqual({ owner: 'sita', revealed: false, kind: 'vinegar' });
     expect(t.view('sita').players[1].power).toEqual({ owner: 'ramesh', revealed: false, kind: null });
     expect(t.view(null).players[0].power!.kind).toBeNull();
   });
 
   test('hand contents and used-power history are private; hand counts are public', () => {
-    const t = secretsTable({ stack: [P, P], power: 'khali' });
+    const t = secretsTable({ stack: [P, P], power: 'nayaplate' });
     const v = t.view('anil');
     expect(v.players.map((p) => p.handCount)).toEqual([3, 3, 4, 4]);
     expect(v.me).toEqual({
       hand: { panipuri: 3, akabare: 1 },
       availablePowers: ['vinegar', 'dahi', 'chaat'],
-      usedPowers: ['khali'],
-      powerPicks: ['khali'],
-      setup: { stack: [P, P], power: 'khali' },
+      usedPowers: ['nayaplate'],
+      powerPicks: ['nayaplate'],
+      setup: { stack: [P, P], power: 'nayaplate' },
     });
     expect(t.view('sita').me!.hand).toEqual({ panipuri: 3, akabare: 0 });
     const json = JSON.stringify(v);
@@ -1130,7 +1129,7 @@ describe('decision 13: secrecy', () => {
   });
 
   test('spectators get no private view and no legal actions', () => {
-    const t = secretsTable({ stack: [P, P], power: 'khali' });
+    const t = secretsTable({ stack: [P, P], power: 'nayaplate' });
     for (const v of [t.view(null), projectView(t.state, 'stranger')]) {
       expect(v.youId).toBeNull();
       expect(v.me).toBeNull();
@@ -1141,7 +1140,7 @@ describe('decision 13: secrecy', () => {
   });
 
   test('views never contain card ids, and do not depend on hidden information', () => {
-    const a = secretsTable({ stack: [A, P], power: 'khali' });
+    const a = secretsTable({ stack: [A, P], power: 'nayaplate' });
     const b = secretsTable({ stack: [P, P], power: 'chaat' });
     for (const viewer of ['sita', 'anil', 'priya', null] as (Id | null)[]) {
       const va = a.view(viewer);
@@ -1165,7 +1164,7 @@ describe('decision 13: secrecy', () => {
     t.flip('sita', 'sita'); // own Akabare
     t.acceptBust('sita');
     expect(t.view('sita').me!.setup).toEqual({ stack: [A, P], power: 'dahi' });
-    expect(t.view('ramesh').me!.setup).toEqual({ stack: [P, P], power: 'khali' });
+    expect(t.view('ramesh').me!.setup).toEqual({ stack: [P, P], power: 'nayaplate' });
     t.forceContinue('sita');
     expect(t.view('sita').me!.setup).toBeNull();
   });
@@ -1244,7 +1243,7 @@ describe('PDF examples', () => {
   test('Vinegar saves you', () => {
     // Sita suspects Ramesh planted his Akabare on top of his own stack.
     const t = table({ first: 'sita' });
-    setupAll(t, { sita: { power: 'vinegar' }, ramesh: { stack: [P, A], power: 'khali' } });
+    setupAll(t, { sita: { power: 'vinegar' }, ramesh: { stack: [P, A], power: 'nayaplate' } });
     auction(t, 'sita', 3);
     t.flip('sita', 'sita');
     t.flip('sita', 'sita');
@@ -1306,21 +1305,23 @@ describe('PDF examples', () => {
     expect(t.score('ramesh')).toBe(4);
   });
 
-  test('Khali Puri backfires', () => {
+  test('Naya Plate dodges the planted chili', () => {
     const t = table({ first: 'sita' });
-    setupAll(t, { ramesh: { power: 'khali' }, anil: { power: 'dahi' } });
-    t.place('sita', A, 'priya');
-    t.place('ramesh', P, 'ramesh');
-    t.place('anil', P, 'anil');
-    // Priya bids 5 and gambles on the power beside Ramesh's stack. It's Khali Puri. Now she needs 6.
-    auction(t, 'priya', 5);
-    const [ev] = t.power('priya', 'ramesh');
-    expect(ev).toMatchObject({ kind: 'khali', effect: 'targetUp', target: 6 });
-    // ...and if she busts, she loses 6.
-    t.flip('priya', 'priya');
-    t.acceptBust('priya');
-    expect(t.state.results[0]).toMatchObject({ bid: 5, target: 6, outcome: 'bust' });
-    expect(t.score('priya')).toBe(-6);
+    setupAll(t, { ramesh: { power: 'nayaplate' }, anil: { power: 'dahi' } });
+    t.place('sita', A, 'ramesh'); // Sita plants her Akabare on Ramesh's stack
+    t.place('ramesh', P, 'anil');
+    t.place('anil', P, 'priya');
+    auction(t, 'ramesh', 3);
+    expect(t.legal('ramesh').flipPuri).toEqual(['ramesh']); // own stack first: the planted Akabare is on top
+    // Ramesh flips the Naya Plate beside his own stack and eats from Anil's and Priya's stacks instead.
+    const [ev] = t.power('ramesh', 'ramesh');
+    expect(ev).toMatchObject({ kind: 'nayaplate', effect: 'freePlate', target: 3 });
+    t.flip('ramesh', 'anil');
+    t.flip('ramesh', 'priya');
+    t.flip('ramesh', 'anil');
+    expect(t.state.results[0]).toMatchObject({ outcome: 'success', bid: 3, target: 3, eaten: 3 });
+    expect(t.score('ramesh')).toBe(3);
+    expect(t.score('sita')).toBe(0);
   });
 
   test('Chaat on an empty table', () => {
@@ -1341,7 +1342,7 @@ describe('PDF examples', () => {
 
   test('The planted chili', () => {
     const t = table({ first: 'sita' });
-    setupAll(t, { priya: { power: 'khali' } });
+    setupAll(t, { priya: { power: 'nayaplate' } });
     // Sita slips her Akabare onto Anil's stack.
     t.place('sita', A, 'anil');
     // Ramesh wins the bid, clears his own stack, then flips Anil's top card. Akabare.
@@ -1350,12 +1351,236 @@ describe('PDF examples', () => {
     t.flip('ramesh', 'ramesh');
     t.flip('ramesh', 'anil');
     expect(t.last('bite')).toMatchObject({ eaterId: 'ramesh', fromStackOf: 'anil', owner: 'sita' });
-    // He flips a power hoping for Dahi. It's Khali Puri. Ramesh busts, and Sita gets +2.
+    // He flips a power hoping for Dahi. It's Naya Plate. Ramesh busts, and Sita gets +2.
     const [ev] = t.power('ramesh', 'priya');
-    expect(ev).toMatchObject({ kind: 'khali', effect: 'failedSave', target: 3 });
+    expect(ev).toMatchObject({ kind: 'nayaplate', effect: 'failedSave', target: 3 });
     expect(t.state.results[0]).toMatchObject({ outcome: 'bust', akabareOwnerId: 'sita', trapRewardTo: 'sita', target: 3 });
     expect(t.score('ramesh')).toBe(-3);
     expect(t.score('sita')).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Naya Plate: flip it and the eater may take any non-empty stack, in any order
+// ---------------------------------------------------------------------------
+
+describe('Naya Plate', () => {
+  const POWERS: SetupSpec = {
+    sita: { power: 'nayaplate' },
+    ramesh: { power: 'dahi' },
+    anil: { power: 'chaat' },
+    priya: { power: 'vinegar' },
+  };
+  const ALL4: Id[] = ['sita', 'ramesh', 'anil', 'priya'];
+
+  /** Sita eats at `bid`; Anil's stack has 3 cards, the others 2. */
+  function eating(bid: number, powers: SetupSpec = POWERS) {
+    const t = table({ first: 'anil' });
+    setupAll(t, powers);
+    t.place('anil', P, 'anil');
+    auction(t, 'sita', bid);
+    return t;
+  }
+
+  test('before the flip the own-stack-first rule applies; after it every non-empty stack is legal, own included', () => {
+    const t = eating(9);
+    expect(t.eating.freePlate).toBe(false);
+    expect(t.legal('sita').flipPuri).toEqual(['sita']);
+    expect(t.fail('sita', { type: 'FLIP_PURI', targetPlayerId: 'anil' })).toMatch(/own stack first/);
+    const [ev] = t.power('sita', 'sita');
+    expect(ev).toMatchObject({ type: 'flipPower', kind: 'nayaplate', owner: 'sita', effect: 'freePlate', eaten: 0, target: 9 });
+    expect(t.eating).toMatchObject({ freePlate: true, powersFlipped: 1, target: 9, bid: 9 });
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+    // Any order: another stack first, then own, then back and forth.
+    t.flip('sita', 'anil');
+    t.flip('sita', 'priya');
+    t.flip('sita', 'sita');
+    t.flip('sita', 'anil');
+    expect(t.eating.plate.map((x) => x.fromStackOf)).toEqual(['anil', 'priya', 'sita', 'anil']);
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+    t.flip('sita', 'sita'); // own stack now empty
+    expect(t.legal('sita').flipPuri).toEqual(['ramesh', 'anil', 'priya']);
+    expect(t.fail('sita', { type: 'FLIP_PURI', targetPlayerId: 'sita' })).toMatch(/empty/);
+    expect(t.eating.eaten).toBe(5);
+  });
+
+  test('a second Naya Plate is wasted; both count toward the two power flips', () => {
+    const t = eating(9, { sita: { power: 'nayaplate' }, ramesh: { power: 'nayaplate' } });
+    expect(t.power('sita', 'sita')[0]).toMatchObject({ effect: 'freePlate' });
+    const [ev] = t.power('sita', 'ramesh');
+    expect(ev).toMatchObject({ kind: 'nayaplate', owner: 'ramesh', effect: 'wasted', target: 9, eaten: 0 });
+    expect(t.eating).toMatchObject({ freePlate: true, powersFlipped: 2 });
+    expect(t.legal('sita').flipPower).toEqual([]);
+    expect(t.fail('sita', { type: 'FLIP_POWER', targetPlayerId: 'anil' })).toMatch(/already flipped 2 powers/);
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+  });
+
+  test('it uses up one of the power flips like any power (powerFlipsMax 1)', () => {
+    const t = table({ first: 'sita', config: { powerFlipsMax: 1 } });
+    setupAll(t, { sita: { power: 'nayaplate' }, ramesh: { power: 'chaat' } });
+    auction(t, 'sita', 6);
+    t.power('sita', 'sita');
+    expect(t.fail('sita', { type: 'FLIP_POWER', targetPlayerId: 'ramesh' })).toMatch(/already flipped 1 power this round/);
+    expect(t.legal('sita').flipPower).toEqual([]);
+  });
+
+  test("flipped blind beside another player's stack it works the same, and stays face up", () => {
+    const t = eating(9, { ramesh: { power: 'nayaplate' }, sita: { power: 'dahi' }, anil: { power: 'chaat' }, priya: { power: 'vinegar' } });
+    const [ev] = t.power('sita', 'ramesh');
+    expect(ev).toMatchObject({ kind: 'nayaplate', owner: 'ramesh', fromStackOf: 'ramesh', effect: 'freePlate' });
+    expect(t.eating.freePlate).toBe(true);
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+    expect(t.fail('sita', { type: 'FLIP_POWER', targetPlayerId: 'ramesh' })).toMatch(/already face up/);
+    t.flip('sita', 'priya');
+    expect(t.eating.eaten).toBe(1);
+  });
+
+  test('flipped while an Akabare is pending it is a failed save: bust, trap reward as usual', () => {
+    const t = plantedOnSita(5, { sita: { power: 'nayaplate' }, ramesh: { power: 'dahi' } });
+    t.flip('sita', 'sita'); // Ramesh's planted Akabare bites
+    expect(t.eating.pendingAkabare).not.toBeNull();
+    expect(t.legal('sita').flipPuri).toEqual([]);
+    const events = t.power('sita', 'sita');
+    expect(events.map((e) => e.type)).toEqual(['flipPower', 'bust', 'roundEnd']);
+    expect(events[0]).toMatchObject({ kind: 'nayaplate', effect: 'failedSave', target: 5 });
+    expect(t.state.results[0]).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 5, akabareOwnerId: 'ramesh', trapRewardTo: 'ramesh' });
+    expect(t.score('sita')).toBe(-5);
+    expect(t.score('ramesh')).toBe(2);
+    expect(t.state.phase).toBe('roundEnd');
+  });
+
+  test('a Naya Plate flipped before the bite does not rescue the pending Akabare; Dahi still does', () => {
+    const t = plantedOnSita(6, { sita: { power: 'dahi' }, ramesh: { power: 'nayaplate' } });
+    t.power('sita', 'ramesh'); // Naya Plate first
+    t.flip('sita', 'sita'); // ... but she bites her own pile anyway
+    expect(t.eating.pendingAkabare).not.toBeNull();
+    t.power('sita', 'sita'); // Dahi saves
+    expect(t.eating).toMatchObject({ pendingAkabare: null, freePlate: true, powersFlipped: 2 });
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+  });
+
+  test("the planted pile: the top of the leader's own stack is a rival Akabare, Naya Plate walks around it", () => {
+    const t = plantedOnSita(3, { sita: { power: 'nayaplate' } });
+    expect(t.p('sita').stack.at(-1)).toMatchObject({ kind: A, owner: 'ramesh' });
+    expect(t.legal('sita').flipPuri).toEqual(['sita']);
+    t.power('sita', 'sita');
+    t.flip('sita', 'ramesh');
+    t.flip('sita', 'anil');
+    t.flip('sita', 'priya');
+    expect(t.all('bite')).toHaveLength(0);
+    expect(t.state.results[0]).toMatchObject({ outcome: 'success', eaten: 3, target: 3, trapRewardTo: null });
+    expect(t.score('sita')).toBe(3);
+    expect(t.p('sita').stack.at(-1)).toMatchObject({ kind: A }); // the chili is still planted
+  });
+
+  test('the free plate lasts the rest of the round only', () => {
+    const t = table({ first: 'sita', config: { targetScore: null } });
+    setupAll(t, { sita: { power: 'nayaplate' } });
+    auction(t, 'sita', 1);
+    t.power('sita', 'sita');
+    t.flip('sita', 'ramesh');
+    expect(t.state.phase).toBe('roundEnd');
+    t.forceContinue('sita');
+    setupAll(t);
+    const first = t.state.serving!.turnId as Id;
+    auction(t, first, 2);
+    expect(t.eating.freePlate).toBe(false);
+    expect(t.legal(first).flipPuri).toEqual([first]);
+  });
+
+  test('empty table: Naya Plate changes nothing, the eater waits for another power or ACCEPT_BUST', () => {
+    const t = table({ players: 3, first: 'sita' });
+    setupAll(t, { sita: { power: 'vinegar' }, ramesh: { power: 'nayaplate' }, anil: { power: 'dahi' } });
+    auction(t, 'sita', 7);
+    for (const id of ['sita', 'sita', 'ramesh', 'ramesh', 'anil', 'anil'] as Id[]) t.flip('sita', id);
+    expect(t.legal('sita')).toMatchObject({ flipPuri: [], acceptBust: true });
+    t.power('sita', 'ramesh');
+    expect(t.eating).toMatchObject({ freePlate: true, powersFlipped: 1, eaten: 6, target: 7 });
+    expect(t.state.phase).toBe('eating');
+    expect(t.legal('sita')).toMatchObject({ flipPuri: [], flipPower: ['sita', 'anil'], acceptBust: true });
+    t.acceptBust('sita');
+    expect(t.state.results[0]).toMatchObject({ bustReason: 'emptyTable', target: 7 });
+  });
+
+  test('as the last available flip on an empty table it busts at once', () => {
+    const t = table({ players: 3, first: 'sita', config: { powerFlipsMax: 1 } });
+    setupAll(t, { ramesh: { power: 'nayaplate' } });
+    auction(t, 'sita', 7);
+    for (const id of ['sita', 'sita', 'ramesh', 'ramesh', 'anil', 'anil'] as Id[]) t.flip('sita', id);
+    const events = t.power('sita', 'ramesh');
+    expect(events.map((e) => e.type)).toEqual(['flipPower', 'bust', 'roundEnd']);
+    expect(t.state.results[0]).toMatchObject({ bustReason: 'emptyTable', target: 7, eaten: 6 });
+  });
+
+  test('with one card per stack the free plate lets the eater finish in any order', () => {
+    const t = table({ players: 3, first: 'sita', config: { startingStack: 1 } });
+    setupAll(t, { sita: { power: 'nayaplate' } });
+    auction(t, 'sita', 3);
+    t.power('sita', 'sita');
+    t.flip('sita', 'anil');
+    t.flip('sita', 'ramesh');
+    expect(t.legal('sita').flipPuri).toEqual(['sita']);
+    t.flip('sita', 'sita');
+    expect(t.state.results[0]).toMatchObject({ outcome: 'success', eaten: 3, target: 3 });
+  });
+
+  test("every viewer sees freePlate; the eater's legal flips list every non-empty stack; the log has the effect", () => {
+    const t = eating(9);
+    const viewers: (Id | null)[] = [null, ...ALL4];
+    for (const v of viewers) expect(t.view(v).eating!.freePlate).toBe(false);
+    t.power('sita', 'sita');
+    for (const v of viewers) {
+      const view = t.view(v);
+      expect(view.eating!.freePlate).toBe(true);
+      expect(view.eating!.powers).toEqual([{ kind: 'nayaplate', owner: 'sita', fromStackOf: 'sita', effect: 'freePlate' }]);
+    }
+    expect(t.view('sita').legal.flipPuri).toEqual(ALL4);
+    expect(t.view('ramesh').legal.flipPuri).toEqual([]);
+    expect(t.view(null).legal.flipPuri).toEqual([]);
+    expect(t.last('flipPower')).toMatchObject({ kind: 'nayaplate', effect: 'freePlate' });
+  });
+
+  test('secrecy: an unrevealed Naya Plate stays hidden from everyone else until flipped', () => {
+    const t = eating(9);
+    expect(t.view('sita').players[0].power).toEqual({ owner: 'sita', revealed: false, kind: 'nayaplate' });
+    for (const v of ['ramesh', 'anil', 'priya', null] as (Id | null)[]) {
+      expect(t.view(v).players[0].power).toEqual({ owner: 'sita', revealed: false, kind: null });
+      expect(JSON.stringify(t.view(v).eating)).not.toContain('nayaplate');
+    }
+    t.power('sita', 'sita');
+    for (const v of ['ramesh', null] as (Id | null)[]) {
+      expect(t.view(v).players[0].power).toEqual({ owner: 'sita', revealed: true, kind: 'nayaplate' });
+    }
+  });
+
+  test('state survives a JSON round trip mid-round and plays on identically; actions never mutate their input', () => {
+    const t = eating(9);
+    t.power('sita', 'sita'); // act() deep-freezes the input state and checks it is untouched
+    t.flip('sita', 'anil');
+    const copy = JSON.parse(JSON.stringify(t.state)) as GameState;
+    expect(copy).toEqual(t.state);
+    expect(copy.eating!.freePlate).toBe(true);
+    const a = applyAction(deepFreeze(copy), 'sita', { type: 'FLIP_PURI', targetPlayerId: 'priya' });
+    const b = applyAction(t.state, 'sita', { type: 'FLIP_PURI', targetPlayerId: 'priya' });
+    expect(a.ok && b.ok).toBe(true);
+    if (a.ok && b.ok) expect(JSON.stringify(a.state)).toBe(JSON.stringify(b.state));
+  });
+
+  test('availability with the new kind: R1 all 4, R2 3, R3 2, R4 reset to 4, R5 3', () => {
+    const t = table({ config: { targetScore: null, maxRounds: 10 } });
+    const picks: PowerKind[] = ['nayaplate', 'chaat', 'vinegar', 'nayaplate'];
+    const lists: PowerKind[][] = [];
+    for (let r = 1; r <= 5; r++) {
+      lists.push(availablePowers(t.state, 'sita'));
+      if (r <= 4) quickRound(t, { sita: picks[r - 1] });
+    }
+    expect(lists.map((l) => l.length)).toEqual([4, 3, 2, 4, 3]);
+    expect(lists[0]).toContain('nayaplate');
+    expect(lists[1]).not.toContain('nayaplate'); // used in round 1
+    expect(lists[2]).not.toContain('nayaplate');
+    expect(lists[3]).toContain('nayaplate'); // reset in round 4
+    expect(lists[4]).not.toContain('nayaplate'); // used again in round 4
+    expect(t.fail('sita', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'nayaplate' })).toMatch(/Naya Plate isn't available/);
   });
 });
 
@@ -1486,7 +1711,7 @@ describe('decision 15: bots decide from their own view only', () => {
       const a = table({ first: 'ramesh', bots: ['sita'] });
       const b = table({ first: 'ramesh', bots: ['sita'] });
       setupAll(a, { ramesh: { stack: [A, P], power: 'dahi' }, anil: { power: 'vinegar' } });
-      setupAll(b, { ramesh: { stack: [P, P], power: 'chaat' }, anil: { power: 'khali' } });
+      setupAll(b, { ramesh: { stack: [P, P], power: 'chaat' }, anil: { power: 'nayaplate' } });
       for (const t of [a, b]) {
         t.place('ramesh', P, 'sita');
         t.place('anil', t === a && seed % 2 ? A : P, 'sita');
@@ -1548,7 +1773,7 @@ describe('decision 15: bots decide from their own view only', () => {
     const t = plantedOnSita(3, { sita: { power: 'dahi' } }, { bots: ['sita'] });
     t.flip('sita', 'sita');
     expect(chooseBotAction(t.state, 'sita', rand(1))).toEqual({ type: 'FLIP_POWER', targetPlayerId: 'sita' });
-    const u = plantedOnSita(3, { sita: { power: 'khali' } }, { bots: ['sita'] });
+    const u = plantedOnSita(3, { sita: { power: 'nayaplate' } }, { bots: ['sita'] });
     u.flip('sita', 'sita');
     for (let seed = 0; seed < 10; seed++) {
       const action = chooseBotAction(u.state, 'sita', rand(seed))!;
@@ -1567,7 +1792,7 @@ describe('decision 15: bots decide from their own view only', () => {
 
   test('prefers a stack whose top card it knows is its own Panipuri', () => {
     const t = table({ first: 'sita', bots: ['sita'] });
-    setupAll(t, { sita: { power: 'khali' } });
+    setupAll(t, { sita: { power: 'nayaplate' } });
     t.place('sita', P, 'anil');
     auction(t, 'sita', 6);
     t.flip('sita', 'sita');
@@ -1577,9 +1802,9 @@ describe('decision 15: bots decide from their own view only', () => {
     }
   });
 
-  test('never flips its own known Khali on an empty table; accepts the bust when no Chaat can save it', () => {
+  test('never flips its own known Naya Plate on an empty table; accepts the bust when no Chaat can save it', () => {
     const t = table({ players: 3, first: 'sita', bots: ['sita'] });
-    setupAll(t, { sita: { power: 'khali' } });
+    setupAll(t, { sita: { power: 'nayaplate' } });
     auction(t, 'sita', 12);
     for (const id of ['sita', 'sita', 'ramesh', 'ramesh', 'anil', 'anil'] as Id[]) t.flip('sita', id);
     expect(chooseBotAction(t.state, 'sita', rand(0))).toEqual({ type: 'ACCEPT_BUST' });

@@ -175,7 +175,7 @@ function candidateActions(s: GameState): Action[] {
     for (const power of POWER_KINDS) out.push({ type: 'SUBMIT_SETUP', stack, power });
   }
   for (const size of [c.startingStack - 1, c.startingStack + 1]) {
-    out.push({ type: 'SUBMIT_SETUP', stack: Array.from({ length: size }, () => P), power: 'khali' });
+    out.push({ type: 'SUBMIT_SETUP', stack: Array.from({ length: size }, () => P), power: 'nayaplate' });
   }
   for (const kind of PURI_KINDS) for (const t of ids) out.push({ type: 'PLACE_PURI', kind, targetPlayerId: t });
   const high = s.bidding?.highBid ?? c.minBid;
@@ -333,7 +333,7 @@ const PLAYER_KEYS = [
 ];
 const ME_KEYS = ['hand', 'availablePowers', 'usedPowers', 'powerPicks', 'setup'];
 const EATING_KEYS = [
-  'eaterId', 'bid', 'target', 'eaten', 'powersFlipped', 'skipNext', 'pendingAkabare', 'plate', 'powers', 'ownStackEmpty',
+  'eaterId', 'bid', 'target', 'eaten', 'powersFlipped', 'skipNext', 'freePlate', 'pendingAkabare', 'plate', 'powers', 'ownStackEmpty',
 ];
 const RESULT_KEYS = [
   'round', 'eaterId', 'bid', 'target', 'eaten', 'outcome', 'bustReason', 'akabareOwnerId', 'trapRewardTo',
@@ -481,7 +481,7 @@ function checkView(s: GameState, viewerId: PlayerId | null, setups: ReadonlyMap<
     must(json(ve.pendingAkabare) === json(pending), `${where}: pendingAkabare`);
     must(
       ve.eaterId === e.eaterId && ve.bid === e.bid && ve.target === e.target && ve.eaten === e.eaten &&
-        ve.powersFlipped === e.powersFlipped && ve.skipNext === e.skipNext,
+        ve.powersFlipped === e.powersFlipped && ve.skipNext === e.skipNext && ve.freePlate === e.freePlate,
       `${where}: eating numbers`,
     );
   }
@@ -576,7 +576,7 @@ function scriptedRareStates(): Snap[] {
     for (const scene of ['bite', 'empty'] as const) {
       const setups = new Map<PlayerId, Setup>([
         ['sita', { stack: scene === 'bite' ? [P, A] : [P, P], power: 'vinegar' }],
-        ['ramesh', { stack: [P, P], power: 'khali' }],
+        ['ramesh', { stack: [P, P], power: 'nayaplate' }],
         ['anil', { stack: [P, P], power: 'dahi' }],
       ]);
       let s = trio('ramesh', { revealOnRoundEnd: reveal, maxRounds: scene === 'bite' ? 2 : 1 }, []);
@@ -608,7 +608,7 @@ function scriptedRareStates(): Snap[] {
         for (const t of ['sita', 'sita', 'anil', 'anil', 'anil', 'ramesh', 'ramesh']) flip(t);
         expect(tagOf(s)).toBe('eating:emptyTable');
         snap();
-        power('ramesh'); // Khali: target 13, one flip left
+        power('ramesh'); // Naya Plate: one flip left
         expect(tagOf(s)).toBe('eating:emptyTable');
         snap();
         s = ok(s, 'sita', { type: 'ACCEPT_BUST' });
@@ -743,7 +743,7 @@ describe('props 1b: targeted secrecy scenarios', () => {
     const a = setupAll(base, {
       sita: { stack: [P, P], power: 'vinegar' },
       ramesh: { stack: [P, P], power: 'dahi' },
-      anil: { stack: [P, P], power: 'khali' },
+      anil: { stack: [P, P], power: 'nayaplate' },
     });
     const b = setupAll(base, {
       sita: { stack: [P, P], power: 'vinegar' },
@@ -791,7 +791,7 @@ describe('props 1b: targeted secrecy scenarios', () => {
       s = setupAll(s, {
         sita: { stack: [P, P], power: 'chaat' },
         ramesh: { stack: [A, P], power: 'dahi' },
-        anil: { stack: [P, P], power: 'khali' },
+        anil: { stack: [P, P], power: 'nayaplate' },
       });
       s = ok(s, 'sita', { type: 'START_BID', amount: 2 });
       s = ok(s, 'ramesh', { type: 'PASS' });
@@ -803,7 +803,7 @@ describe('props 1b: targeted secrecy scenarios', () => {
       expect(v.revealed).toBe(reveal);
       expect(v.players[1].stack.map((c) => c.kind)).toEqual(reveal ? [A, P] : [null, null]);
       expect(v.players[1].power!.kind).toBe(reveal ? 'dahi' : null);
-      expect(projectView(s, null).players[2].power!.kind).toBe(reveal ? 'khali' : null);
+      expect(projectView(s, null).players[2].power!.kind).toBe(reveal ? 'nayaplate' : null);
       // Hands and power history are never revealed.
       expect(json(v)).not.toContain('"usedPowers":["dahi"]');
       // The next round starts secret again.
@@ -898,7 +898,7 @@ describe('props 2: bots decide only from their own view', () => {
     const b = ok(ok(base, 'ramesh', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'vinegar' }), 'anil', {
       type: 'SUBMIT_SETUP',
       stack: [P, A],
-      power: 'khali',
+      power: 'nayaplate',
     });
     expect(sameDecision(a, b, 'sita')!.type).toBe('SUBMIT_SETUP');
   });
@@ -906,11 +906,11 @@ describe('props 2: bots decide only from their own view', () => {
   test('serving, bidding and every eating step: an Akabare on top of a rival stack vs. in a hand', () => {
     const base = trio('ramesh');
     const setup = (s: GameState, ramesh: Setup, anil: Setup) =>
-      setupAll(s, { sita: { stack: [P, P], power: 'khali' }, ramesh, anil });
+      setupAll(s, { sita: { stack: [P, P], power: 'nayaplate' }, ramesh, anil });
     // World a: Anil's Akabare on top of Ramesh's stack, a Dahi beside Anil.
-    // World b: Anil's Akabare still in his hand, Ramesh's own Akabare at the bottom of his stack, a Khali beside Anil.
+    // World b: Anil's Akabare still in his hand, Ramesh's own Akabare at the bottom of his stack, a Naya Plate beside Anil.
     let a = setup(base, { stack: [P, P], power: 'vinegar' }, { stack: [P, P], power: 'dahi' });
-    let b = setup(base, { stack: [A, P], power: 'chaat' }, { stack: [P, P], power: 'khali' });
+    let b = setup(base, { stack: [A, P], power: 'chaat' }, { stack: [P, P], power: 'nayaplate' });
     a = ok(ok(a, 'ramesh', { type: 'PLACE_PURI', kind: P, targetPlayerId: 'anil' }), 'anil', {
       type: 'PLACE_PURI',
       kind: A,
@@ -1021,7 +1021,7 @@ describe('props 3b: a battery of illegal actions', () => {
   function toEating(): GameState {
     let s = trio('sita', {}, []);
     s = setupAll(s, {
-      sita: { stack: [P, P], power: 'khali' },
+      sita: { stack: [P, P], power: 'nayaplate' },
       ramesh: { stack: [P, P], power: 'dahi' },
       anil: { stack: [P, P], power: 'vinegar' },
     });
@@ -1047,10 +1047,10 @@ describe('props 3b: a battery of illegal actions', () => {
     s = ok(s, 'anil', { type: 'PLACE_PURI', kind: P, targetPlayerId: 'anil' });
     expect(no(s, 'sita', { type: 'PLACE_PURI', kind: A, targetPlayerId: 'anil' })).toMatch(/Akabare/);
     // Illegal in bidding.
-    s = ok(s, 'sita', { type: 'START_BID', amount: 4 });
-    no(s, 'sita', { type: 'RAISE', amount: 5 }); // turn passed to Ramesh
+    s = ok(s, 'sita', { type: 'START_BID', amount: 5 });
+    no(s, 'sita', { type: 'RAISE', amount: 6 }); // turn passed to Ramesh
     no(s, 'anil', { type: 'PASS' });
-    no(s, 'ramesh', { type: 'RAISE', amount: 4 }); // must beat the high bid
+    no(s, 'ramesh', { type: 'RAISE', amount: 5 }); // must beat the high bid
     no(s, 'ramesh', { type: 'RAISE', amount: 2 });
     no(s, 'ramesh', { type: 'START_BID', amount: 9 });
     no(s, 'ramesh', { type: 'PLACE_PURI', kind: P, targetPlayerId: 'ramesh' });
@@ -1084,7 +1084,7 @@ describe('props 3b: a battery of illegal actions', () => {
     s = ok(s, 'sita', { type: 'FLIP_POWER', targetPlayerId: 'ramesh' }); // Dahi: saved
     expect(s.eating!.pendingAkabare).toBeNull();
     no(s, 'sita', { type: 'FLIP_POWER', targetPlayerId: 'ramesh' }); // already face up
-    s = ok(s, 'sita', { type: 'FLIP_POWER', targetPlayerId: 'sita' }); // Khali: target 5
+    s = ok(s, 'sita', { type: 'FLIP_POWER', targetPlayerId: 'sita' }); // Naya Plate: the table opens, target stays 5
     expect(s.eating!.powersFlipped).toBe(2);
     expect(no(s, 'sita', { type: 'FLIP_POWER', targetPlayerId: 'anil' })).toMatch(/2 powers/); // a 3rd flip
     expect(legalActions(s, 'sita').flipPower).toEqual([]);
@@ -1114,7 +1114,7 @@ describe('props 3b: a battery of illegal actions', () => {
   test('bids have a technical ceiling; at the ceiling nobody can raise, and bots pass', () => {
     let s = trio('sita', {}, ['ramesh', 'anil']);
     s = setupAll(s, {
-      sita: { stack: [P, P], power: 'khali' },
+      sita: { stack: [P, P], power: 'nayaplate' },
       ramesh: { stack: [P, P], power: 'dahi' },
       anil: { stack: [P, P], power: 'vinegar' },
     });

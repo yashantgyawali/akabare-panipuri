@@ -204,7 +204,7 @@ export function CardGallery() {
               <Card back="puri" color="green" peek="akabare" badge="A" width={s} />
             </Cell>
           ))}
-          {(['vinegar', 'dahi', 'khali', 'chaat'] as const).map((k, i) => (
+          {(['vinegar', 'dahi', 'nayaplate', 'chaat'] as const).map((k, i) => (
             <Cell key={k} caption={`56 · ${cardName(k)}`}>
               <Card back="power" color={COLORS[i + 1]} peek={k} badge={initial(COLORS[i + 1])} width={56} />
             </Cell>

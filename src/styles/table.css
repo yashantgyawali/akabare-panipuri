@@ -877,7 +877,8 @@
   background: transparent;
   box-shadow: inset 0 0 0 1.5px rgb(255 240 210 / 0.3);
 }
-.ak-hud__numb {
+.ak-hud__numb,
+.ak-hud__free {
   grid-area: numb;
   margin: 4px 0 0;
   padding: 3px 12px 2px;
@@ -888,6 +889,10 @@
   font-weight: 700;
   font-size: 14px;
   animation: ak-num-pop 300ms var(--ak-ease);
+}
+.ak-hud__free {
+  background: rgb(120 180 90 / 0.22);
+  color: #cfe6b4;
 }
 .ak-hud__powers {
   grid-area: powers;
@@ -915,12 +920,12 @@
   color: var(--ak-text);
 }
 .ak-pchip--plusTwo strong,
+.ak-pchip--freePlate strong,
 .ak-pchip--saved strong,
 .ak-pchip--numb strong {
   color: #cfe6b4;
 }
-.ak-pchip--failedSave strong,
-.ak-pchip--targetUp strong {
+.ak-pchip--failedSave strong {
   color: #ffb4a0;
 }
 

@@ -55,7 +55,7 @@ const FRONTS = [
   ['blue', 'akabare', 'puri'],
   ['yellow', 'vinegar', 'power'],
   ['green', 'dahi', 'power'],
-  ['purple', 'khali', 'power'],
+  ['purple', 'panipuri_2', 'puri'], // (nayaplate has no print-sheet front)
   ['orange', 'chaat', 'power'],
 ];
 
@@ -126,7 +126,7 @@ async function main() {
   const rowTitle = (text) => { svgOverlay += label(M, y + 2, text, 18, 'start', 'bold'); y += 18; };
   // Row 1 + 2
   for (const kind of ['puri', 'power']) {
-    rowTitle(kind === 'puri' ? 'Puri backs (Panipuri + Akabare — the bluff surface)' : 'Power backs (Vinegar · Dahi · Khali Puri · Chaat)');
+    rowTitle(kind === 'puri' ? 'Puri backs (Panipuri + Akabare — the bluff surface)' : 'Power backs (Vinegar · Dahi · Naya Plate · Chaat)');
     for (const [i, color] of colors.entries()) {
       const x = M + i * (THUMB + GAP);
       comps.push({ input: await thumb(pngs[kind][color], THUMB), left: x, top: y });

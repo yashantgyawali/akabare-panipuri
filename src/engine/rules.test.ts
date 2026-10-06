@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { DEFAULT_CONFIG, type GameConfig } from './types.ts';
+import { DEFAULT_CONFIG, POWER_KINDS, type GameConfig } from './types.ts';
 import {
   fullSet,
   isPowerResetRound,
   mulberry32,
+  POWER_LABELS,
   randomInt,
   randStream,
   resolveConfig,
@@ -152,4 +153,13 @@ test('fullSet deals N Panipuri + 1 Akabare with stable ids', () => {
     'sita:a',
   ]);
   expect(fullSet('x', cfg({ panipuriPerPlayer: 2 })).map((c) => c.kind)).toEqual(['panipuri', 'panipuri', 'akabare']);
+});
+
+describe('power kinds', () => {
+  test('the four powers are Vinegar, Dahi, Naya Plate and Chaat; there is no Khali Puri', () => {
+    expect([...POWER_KINDS].sort()).toEqual(['chaat', 'dahi', 'nayaplate', 'vinegar']);
+    expect(POWER_LABELS.nayaplate).toBe('Naya Plate');
+    expect(Object.values(POWER_LABELS).sort()).toEqual(['Chaat', 'Dahi', 'Naya Plate', 'Vinegar']);
+    expect(Object.keys(POWER_LABELS).sort()).toEqual([...POWER_KINDS].sort());
+  });
 });

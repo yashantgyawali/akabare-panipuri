@@ -24,7 +24,7 @@ rationale) in a new section at the end of this file.
 | `wordmarks.ts` | HarfBuzz-shaped, outlined Rozha One paths for every string on the cards (`'AKABARE PANIPURI'`, `'अकबरे पानीपुरी'`, `'POWER'`, `'शक्ति'`, the six titles and their Devanagari). `wordmarkSvg(id, { x, y, height, anchor, valign, tracking, maxWidth, fill, stroke, strokeWidth, attrs })` returns one `<path/>`, where `height` is the cap height in output units. `wordmarkMetrics()` is for layout. Tracking spaces Latin letters, and only whole words for Devanagari, so the headline never breaks. |
 | `content.ts` | `CARD_INFO`, `BACK_COPY` (`puri: AKABARE PANIPURI / अकबरे पानीपुरी`, `power: POWER / शक्ति`). |
 
-Art: `public/art/{panipuri,akabare,vinegar,dahi,khali,chaat}.webp` (620×620). Fonts in
+Art: `public/art/{panipuri,akabare,vinegar,dahi,chaat}.webp` + `nayaplate.webp` (620×620). Fonts in
 `assets/fonts/` (OFL): Rozha One, Yatra One, Tiro Devanagari Hindi, Mukta 400–800.
 
 ## Scripts
@@ -156,7 +156,7 @@ count double, and on that weighting gouache-medallion wins clearly.
   - A deep owner-colour **masala dabba** with a stitched rim.
   - Eight brass katoris hold the four powers twice, on opposite sides: vinegar (golden
     liquid, mustard seeds, dill), dahi (cream swirl, chili specks), chaat (tamarind mix,
-    dahi drizzle, sev, pomegranate, coriander) and khali puri (an empty shell).
+    dahi drizzle, sev, pomegranate, coriander) and Naya Plate (a clean brass thali with a puri shell and a chutney dot).
   - A gold eight-point star at the centre.
 - **Legend.** POWER in large owner-dark type on the top of the halo, शक्ति on the right,
   each with a turned twin. Chili-bud-and-leaf separators sit between the words.

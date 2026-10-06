@@ -202,7 +202,7 @@ function acceptedTypes(g: G, id: Id): string[] {
 describe('audit: setup (PDF "Setup", decision 1)', () => {
   test('the stack is listed bottom → top: the first flip is the card listed last', () => {
     const g = game();
-    setupAll(g, { sita: { stack: [A, P], power: 'khali' } });
+    setupAll(g, { sita: { stack: [A, P], power: 'nayaplate' } });
     expect(g.p('sita').stack.map((c) => c.kind)).toEqual([A, P]);
     auction(g, 'sita', 1);
     g.flip('sita', 'sita');
@@ -219,8 +219,8 @@ describe('audit: setup (PDF "Setup", decision 1)', () => {
     expect(g.p('sita').stack.map((c) => c.kind)).toEqual([A, P]);
     expect(g.p('sita').power).toEqual({ kind: 'dahi', revealed: false });
     expect(g.p('sita').usedPowers).toEqual([]); // not locked in until everyone has submitted
-    g.ok('ramesh', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'khali' });
-    g.ok('anil', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'khali' });
+    g.ok('ramesh', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'nayaplate' });
+    g.ok('anil', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'nayaplate' });
     expect(g.s.phase).toBe('serving');
     expect(g.p('sita').usedPowers).toEqual(['dahi']);
     // Too late to change your mind once the last player has submitted.
@@ -270,15 +270,15 @@ describe('audit: setup (PDF "Setup", decision 1)', () => {
 describe('audit: power availability (PDF p2 table, decision 2)', () => {
   test('PDF example picks over 7 rounds: no off-by-one at the reset rounds (1, 4, 7)', () => {
     const g = game(3, { config: { targetScore: null, maxRounds: 7 } });
-    const picks: PowerKind[] = ['vinegar', 'chaat', 'khali', 'vinegar', 'dahi', 'chaat', 'khali'];
+    const picks: PowerKind[] = ['vinegar', 'chaat', 'nayaplate', 'vinegar', 'dahi', 'chaat', 'nayaplate'];
     const expected: PowerKind[][] = [
-      ['vinegar', 'dahi', 'khali', 'chaat'],
-      ['dahi', 'khali', 'chaat'],
-      ['dahi', 'khali'],
-      ['vinegar', 'dahi', 'khali', 'chaat'],
-      ['dahi', 'khali', 'chaat'],
-      ['khali', 'chaat'],
-      ['vinegar', 'dahi', 'khali', 'chaat'],
+      ['vinegar', 'dahi', 'nayaplate', 'chaat'],
+      ['dahi', 'nayaplate', 'chaat'],
+      ['dahi', 'nayaplate'],
+      ['vinegar', 'dahi', 'nayaplate', 'chaat'],
+      ['dahi', 'nayaplate', 'chaat'],
+      ['nayaplate', 'chaat'],
+      ['vinegar', 'dahi', 'nayaplate', 'chaat'],
     ];
     for (let r = 0; r < 7; r++) {
       expect(g.s.round).toBe(r + 1);
@@ -489,7 +489,7 @@ describe('audit: bidding (decision 5)', () => {
 describe('audit: eating order (decision 6)', () => {
   test('own stack first (even after power flips), then any other non-empty stack, switching freely', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'dahi' }, anil: { power: 'chaat' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'dahi' }, anil: { power: 'chaat' } });
     auction(g, 'sita', 7);
     g.no('sita', { type: 'FLIP_PURI', targetPlayerId: 'ramesh' });
     g.power('sita', 'ramesh'); // Dahi, wasted
@@ -517,7 +517,7 @@ describe('audit: eating order (decision 6)', () => {
 
   test('own power is flippable; an already revealed power is not; powersFlipped never exceeds the cap', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'dahi' }, ramesh: { power: 'dahi' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'dahi' }, ramesh: { power: 'dahi' }, anil: { power: 'nayaplate' } });
     auction(g, 'sita', 5);
     g.power('sita', 'sita');
     expect(g.e.powersFlipped).toBe(1);
@@ -546,7 +546,7 @@ describe('audit: eating order (decision 6)', () => {
 
   test('eating actions from anyone but the eater are refused, in every eating sub-state', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'dahi' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'dahi' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     serve(g, [[P, 'anil'], [P, 'anil'], [A, 'sita']]);
     auction(g, 'sita', 4);
     const probe = () => {
@@ -579,7 +579,7 @@ function plantedOnRamesh(powers: Record<'sita' | 'ramesh' | 'anil', PowerKind>, 
 
 describe('audit: resolution (decisions 7-8)', () => {
   test('a bite with flips left becomes pending: FLIP_PURI refused, only FLIP_POWER / ACCEPT_BUST', () => {
-    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'khali', anil: 'vinegar' }, 4);
+    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'nayaplate', anil: 'vinegar' }, 4);
     const events = g.flip('sita', 'ramesh');
     expect(events.map((e) => e.type)).toEqual(['flipPuri', 'bite']);
     expect(g.e.pendingAkabare).toMatchObject({ fromStackOf: 'ramesh', card: { owner: 'anil', kind: A } });
@@ -594,17 +594,17 @@ describe('audit: resolution (decisions 7-8)', () => {
     expect(projectView(g.s, 'ramesh').eating!.pendingAkabare).toEqual({ owner: 'anil', fromStackOf: 'ramesh' });
   });
 
-  test('failed save with Khali: busts at the unchanged target (Khali does not raise the loss)', () => {
-    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'khali', anil: 'vinegar' }, 4);
+  test('failed save with Naya Plate: busts at the bid (Naya Plate does not raise the loss)', () => {
+    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'nayaplate', anil: 'vinegar' }, 4);
     g.flip('sita', 'ramesh');
     g.power('sita', 'ramesh');
-    expect(g.last('flipPower')).toMatchObject({ kind: 'khali', effect: 'failedSave', target: 4, eaten: 2 });
+    expect(g.last('flipPower')).toMatchObject({ kind: 'nayaplate', effect: 'failedSave', target: 4, eaten: 2 });
     expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 4, akabareOwnerId: 'anil', trapRewardTo: 'anil' });
     expect(g.result.scoreDeltas).toEqual({ sita: -4, ramesh: 0, anil: 2 });
   });
 
   test('failed save with Chaat: busts even though +2 would have reached the target', () => {
-    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'khali', anil: 'vinegar' }, 4);
+    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'nayaplate', anil: 'vinegar' }, 4);
     g.flip('sita', 'ramesh');
     g.power('sita', 'sita');
     expect(g.last('flipPower')).toMatchObject({ kind: 'chaat', effect: 'failedSave', eaten: 2 });
@@ -614,7 +614,7 @@ describe('audit: resolution (decisions 7-8)', () => {
   });
 
   test('Vinegar after the bite cannot save you (PDF: it only works before)', () => {
-    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'khali', anil: 'vinegar' }, 4);
+    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'nayaplate', anil: 'vinegar' }, 4);
     g.flip('sita', 'ramesh');
     g.power('sita', 'anil');
     expect(g.last('flipPower')).toMatchObject({ kind: 'vinegar', effect: 'failedSave' });
@@ -636,22 +636,22 @@ describe('audit: resolution (decisions 7-8)', () => {
 
   test('a bite with flips left but every power already face up is an immediate bust', () => {
     const g = game(3, { config: { powerFlipsMax: 4 } });
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'dahi' }, anil: { power: 'dahi' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'dahi' }, anil: { power: 'dahi' } });
     serve(g, [[P, 'ramesh'], [P, 'ramesh'], [A, 'sita']]);
     auction(g, 'sita', 5);
     g.power('sita', 'sita');
     g.power('sita', 'ramesh');
     g.power('sita', 'anil');
     expect(g.e.powersFlipped).toBe(3);
-    expect(g.e.target).toBe(6);
+    expect(g.e.target).toBe(5);
     g.flip('sita', 'sita');
     expect(g.s.phase).toBe('roundEnd');
-    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 6, trapRewardTo: 'anil' });
+    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 5, trapRewardTo: 'anil' });
   });
 
   test('Vinegar cancels exactly the next card; a second Vinegar while numb is wasted (no stacking)', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'vinegar' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'vinegar' }, anil: { power: 'nayaplate' } });
     auction(g, 'sita', 3);
     g.power('sita', 'sita');
     g.power('sita', 'ramesh');
@@ -669,7 +669,7 @@ describe('audit: resolution (decisions 7-8)', () => {
 
   test('a cancelled Akabare neither bites nor pays; the flip is followed by checkEnd', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     serve(g, [[P, 'ramesh'], [P, 'ramesh'], [A, 'sita']]);
     auction(g, 'sita', 3);
     g.power('sita', 'sita');
@@ -703,18 +703,18 @@ describe('audit: resolution (decisions 7-8)', () => {
     expect(over.score('sita')).toBe(3);
   });
 
-  test('Khali raises the target by 1 and success then scores the raised target', () => {
+  test('Naya Plate leaves the target at the bid and frees the order; success scores the bid', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'nayaplate' } });
     auction(g, 'sita', 2);
+    g.no('sita', { type: 'FLIP_PURI', targetPlayerId: 'ramesh' });
     g.power('sita', 'sita');
-    expect(g.e.target).toBe(3);
-    g.flip('sita', 'sita');
-    g.flip('sita', 'sita');
-    expect(g.s.phase).toBe('eating');
+    expect(g.e.target).toBe(2);
+    expect(g.e.freePlate).toBe(true);
     g.flip('sita', 'ramesh');
-    expect(g.result).toMatchObject({ outcome: 'success', bid: 2, target: 3 });
-    expect(g.score('sita')).toBe(3);
+    g.flip('sita', 'anil');
+    expect(g.result).toMatchObject({ outcome: 'success', bid: 2, target: 2 });
+    expect(g.score('sita')).toBe(2);
   });
 });
 
@@ -741,7 +741,7 @@ function lastCardAkabare(powers: Record<'sita' | 'ramesh' | 'anil', PowerKind>):
 
 describe('audit: checkEnd / ACCEPT_BUST (decisions 9-10)', () => {
   test('pending Akabare → Dahi → table empty: waits (no hang) with FLIP_POWER / ACCEPT_BUST only', () => {
-    const g = lastCardAkabare({ sita: 'chaat', ramesh: 'dahi', anil: 'khali' });
+    const g = lastCardAkabare({ sita: 'chaat', ramesh: 'dahi', anil: 'nayaplate' });
     g.power('sita', 'ramesh');
     expect(g.s.phase).toBe('eating');
     expect(pendingActors(g.s)).toEqual(['sita']);
@@ -755,24 +755,24 @@ describe('audit: checkEnd / ACCEPT_BUST (decisions 9-10)', () => {
   });
 
   test('...or accepting the bust there is an emptyTable bust with no trap reward (the Akabare was saved)', () => {
-    const g = lastCardAkabare({ sita: 'chaat', ramesh: 'dahi', anil: 'khali' });
+    const g = lastCardAkabare({ sita: 'chaat', ramesh: 'dahi', anil: 'nayaplate' });
     g.power('sita', 'ramesh');
     g.ok('sita', { type: 'ACCEPT_BUST' });
     expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'emptyTable', akabareOwnerId: null, trapRewardTo: null });
     expect(g.result.scoreDeltas).toEqual({ sita: -3, ramesh: 0, anil: 0 });
   });
 
-  test('...or a Khali as the last flip busts automatically on the empty table at the raised target', () => {
-    const g = lastCardAkabare({ sita: 'chaat', ramesh: 'dahi', anil: 'khali' });
+  test('...or a Naya Plate as the last flip busts automatically on the empty table', () => {
+    const g = lastCardAkabare({ sita: 'chaat', ramesh: 'dahi', anil: 'nayaplate' });
     g.power('sita', 'ramesh');
     g.power('sita', 'anil');
-    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'emptyTable', target: 4, trapRewardTo: null });
-    expect(g.score('sita')).toBe(-4);
+    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'emptyTable', target: 3, trapRewardTo: null });
+    expect(g.score('sita')).toBe(-3);
   });
 
   test('Dahi saving the last card with no flips left busts at once (emptyTable)', () => {
     const g = game(3, { config: { startingStack: 1, powerFlipsMax: 1 } });
-    setupAll(g, { sita: { stack: [P], power: 'chaat' }, ramesh: { stack: [P], power: 'dahi' }, anil: { stack: [A], power: 'khali' } });
+    setupAll(g, { sita: { stack: [P], power: 'chaat' }, ramesh: { stack: [P], power: 'dahi' }, anil: { stack: [A], power: 'nayaplate' } });
     auction(g, 'sita', 3);
     g.flip('sita', 'sita');
     g.flip('sita', 'ramesh');
@@ -795,7 +795,7 @@ describe('audit: checkEnd / ACCEPT_BUST (decisions 9-10)', () => {
 
   test('an empty table with flips left but every power face up busts at once', () => {
     const g = game(3, { config: { startingStack: 1, powerFlipsMax: 4 } });
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'dahi' }, anil: { power: 'dahi' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'dahi' }, anil: { power: 'dahi' } });
     auction(g, 'sita', 5);
     g.power('sita', 'ramesh');
     g.power('sita', 'anil');
@@ -804,7 +804,7 @@ describe('audit: checkEnd / ACCEPT_BUST (decisions 9-10)', () => {
     g.flip('sita', 'ramesh');
     expect(g.s.phase).toBe('eating');
     g.flip('sita', 'anil');
-    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'emptyTable', target: 6, eaten: 3 });
+    expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'emptyTable', target: 5, eaten: 3 });
   });
 
   test('ACCEPT_BUST is refused while cards remain and nothing is pending, and for non-eaters', () => {
@@ -820,7 +820,7 @@ describe('audit: checkEnd / ACCEPT_BUST (decisions 9-10)', () => {
   });
 
   test('ACCEPT_BUST on a pending Akabare is a bust on that Akabare (its owner is paid)', () => {
-    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'khali', anil: 'vinegar' }, 5);
+    const g = plantedOnRamesh({ sita: 'chaat', ramesh: 'nayaplate', anil: 'vinegar' }, 5);
     g.flip('sita', 'ramesh');
     g.ok('sita', { type: 'ACCEPT_BUST' });
     expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', akabareOwnerId: 'anil', trapRewardTo: 'anil' });
@@ -836,7 +836,7 @@ describe('audit: checkEnd / ACCEPT_BUST (decisions 9-10)', () => {
 describe('audit: trap reward (decision 11)', () => {
   test("another player's Akabare on the eater's own stack pays that owner", () => {
     const g = game();
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     serve(g, [[P, 'ramesh'], [A, 'sita'], [P, 'anil']]);
     auction(g, 'sita', 3);
     g.flip('sita', 'sita');
@@ -847,7 +847,7 @@ describe('audit: trap reward (decision 11)', () => {
 
   test("the eater's own Akabare sitting on someone else's stack pays nobody (pending then accepted)", () => {
     const g = game();
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     serve(g, [[A, 'ramesh'], [P, 'ramesh'], [P, 'anil']]);
     auction(g, 'sita', 5);
     g.flip('sita', 'sita');
@@ -863,20 +863,20 @@ describe('audit: trap reward (decision 11)', () => {
 
   test("the eater's own Akabare on someone else's stack pays nobody (immediate bust, flips used up)", () => {
     const g = game(3, { config: { powerFlipsMax: 1 } });
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     serve(g, [[A, 'anil'], [P, 'ramesh'], [P, 'ramesh']]);
     auction(g, 'sita', 3);
     g.power('sita', 'ramesh');
     g.flip('sita', 'sita');
     g.flip('sita', 'sita');
     g.flip('sita', 'anil');
-    expect(g.result).toMatchObject({ outcome: 'bust', target: 4, akabareOwnerId: 'sita', trapRewardTo: null });
-    expect(g.result.scoreDeltas).toEqual({ sita: -4, ramesh: 0, anil: 0 });
+    expect(g.result).toMatchObject({ outcome: 'bust', target: 3, akabareOwnerId: 'sita', trapRewardTo: null });
+    expect(g.result.scoreDeltas).toEqual({ sita: -3, ramesh: 0, anil: 0 });
   });
 
   test('a saved Akabare pays nothing; a later unsaved one pays only its own owner', () => {
     const g = game();
-    setupAll(g, { sita: { power: 'khali' }, ramesh: { power: 'dahi' }, anil: { power: 'vinegar' } });
+    setupAll(g, { sita: { power: 'nayaplate' }, ramesh: { power: 'dahi' }, anil: { power: 'vinegar' } });
     serve(g, [[P, 'anil'], [A, 'anil'], [A, 'ramesh']]);
     auction(g, 'sita', 7);
     g.flip('sita', 'sita');
@@ -1061,7 +1061,7 @@ describe('audit: only the active player can act, in every phase', () => {
     const g = game();
     const ids: Id[] = ['sita', 'ramesh', 'anil'];
     for (const id of ids) expect(acceptedTypes(g, id)).toEqual(['SUBMIT_SETUP']);
-    setupAll(g, { sita: { power: 'dahi' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'dahi' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     expect(acceptedTypes(g, 'sita')).toEqual(['PLACE_PURI', 'START_BID']);
     expect(acceptedTypes(g, 'ramesh')).toEqual([]);
     expect(acceptedTypes(g, 'anil')).toEqual([]);
@@ -1116,7 +1116,7 @@ describe('audit: config edge values', () => {
   test('startingStack 1: a lone Akabare stack is legal and bites on the very first flip', () => {
     const g = game(3, { config: { startingStack: 1 } });
     g.no('sita', { type: 'SUBMIT_SETUP', stack: [P, P], power: 'dahi' });
-    setupAll(g, { sita: { stack: [A], power: 'khali' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { stack: [A], power: 'nayaplate' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     expect(g.p('sita').hand).toHaveLength(5);
     auction(g, 'sita', 1);
     g.flip('sita', 'sita');
@@ -1202,6 +1202,7 @@ interface Ref {
   eaten: number;
   flips: number;
   skip: boolean;
+  free: boolean;
   pending: RCard | null;
   results: RResult[];
   winners: PlayerId[] | null;
@@ -1232,7 +1233,7 @@ function refNewRound(r: Ref): void {
     if (reset) p.used = [];
   }
   Object.assign(r, { phase: 'setup', turn: null, high: 0, highBidder: null, passed: [], eater: null });
-  Object.assign(r, { bid: 0, target: 0, eaten: 0, flips: 0, skip: false, pending: null });
+  Object.assign(r, { bid: 0, target: 0, eaten: 0, flips: 0, skip: false, free: false, pending: null });
 }
 
 function refInit(s: GameState): Ref {
@@ -1264,6 +1265,7 @@ function refInit(s: GameState): Ref {
     eaten: 0,
     flips: 0,
     skip: false,
+    free: false,
     pending: null,
     results: [],
     winners: null,
@@ -1376,14 +1378,16 @@ function refApply(r: Ref, id: PlayerId, a: Action, dry: boolean): boolean {
       if (left.length === 1) {
         if (left[0].id !== r.highBidder) throw new Error('reference model: last bidder is not the high bidder');
         Object.assign(r, { phase: 'eating', eater: left[0].id, bid: r.high, target: r.high, turn: null });
-        Object.assign(r, { eaten: 0, flips: 0, skip: false, pending: null });
+        Object.assign(r, { eaten: 0, flips: 0, skip: false, free: false, pending: null });
       } else r.turn = nextOf(r, id, r.passed);
       return true;
     }
     case 'FLIP_PURI': {
       const t = rp(r, a.targetPlayerId);
       if (r.phase !== 'eating' || r.eater !== id || r.pending || !t) return false;
-      if (me.stack.length > 0 ? t.id !== id : t.id === id || t.stack.length === 0) return false;
+      if (r.free) {
+        if (t.stack.length === 0) return false;
+      } else if (me.stack.length > 0 ? t.id !== id : t.id === id || t.stack.length === 0) return false;
       if (dry) return true;
       const card = t.stack.pop()!;
       if (r.skip) {
@@ -1411,7 +1415,7 @@ function refApply(r: Ref, id: PlayerId, a: Action, dry: boolean): boolean {
         return true;
       }
       if (k === 'vinegar') r.skip = true;
-      if (k === 'khali') r.target += 1;
+      if (k === 'nayaplate') r.free = true;
       if (k === 'chaat') r.eaten += 2;
       refCheckEnd(r);
       return true;
@@ -1518,6 +1522,7 @@ function normEngine(s: GameState) {
           eaten: e.eaten,
           flips: e.powersFlipped,
           skip: e.skipNext,
+          free: e.freePlate,
           pending: e.pendingAkabare ? `${e.pendingAkabare.card.owner}/${e.pendingAkabare.card.kind}` : null,
         }
       : null,
@@ -1564,6 +1569,7 @@ function normRef(r: Ref) {
           eaten: r.eaten,
           flips: r.flips,
           skip: r.skip,
+          free: r.free,
           pending: r.pending ? `${r.pending.owner}/${r.pending.kind}` : null,
         }
       : null,
@@ -1706,7 +1712,7 @@ describe('audit: differential test against an independent reference model', () =
 describe('audit: PDF examples (p4-5)', () => {
   test('"Vinegar saves you": numb first, then the Akabare Ramesh planted on his own stack is cancelled', () => {
     const g = game(3);
-    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     serve(g, [[P, 'sita'], [A, 'ramesh']]);
     auction(g, 'sita', 4); // anil opens, sita raises to 4, the others pass
     for (let i = 0; i < 3; i++) g.flip('sita', 'sita');
@@ -1738,7 +1744,7 @@ describe('audit: PDF examples (p4-5)', () => {
 
   test('"The blind Dahi": Priya bites, gambles on Anil\'s power, it is Chaat, she is out (no +2)', () => {
     const g = game(4);
-    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'dahi' }, anil: { power: 'chaat' }, priya: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'dahi' }, anil: { power: 'chaat' }, priya: { power: 'nayaplate' } });
     serve(g, [[A, 'priya']]);
     auction(g, 'priya', 3); // ramesh opens, anil passes, priya raises, sita and ramesh pass
     g.flip('priya', 'priya');
@@ -1751,7 +1757,7 @@ describe('audit: PDF examples (p4-5)', () => {
 
   test('"Chaat speeds you up": bid 4, eat 1, Sita\'s Chaat makes 3, one more to go', () => {
     const g = game(3);
-    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'khali' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'nayaplate' }, anil: { power: 'nayaplate' } });
     auction(g, 'ramesh', 4);
     g.flip('ramesh', 'ramesh');
     g.power('ramesh', 'sita');
@@ -1762,18 +1768,22 @@ describe('audit: PDF examples (p4-5)', () => {
     expect(g.score('ramesh')).toBe(4);
   });
 
-  test('"Khali Puri backfires": bid 5 becomes 6, and the bust costs 6', () => {
-    const g = game(4);
-    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'khali' }, anil: { power: 'dahi' }, priya: { power: 'chaat' } });
-    serve(g, [[A, 'priya']]);
-    auction(g, 'priya', 5);
-    g.power('priya', 'ramesh');
-    expect(g.last('flipPower')).toMatchObject({ kind: 'khali', effect: 'targetUp', target: 6 });
-    expect(g.e).toMatchObject({ bid: 5, target: 6 });
-    g.flip('priya', 'priya'); // sita's Akabare
-    g.ok('priya', { type: 'ACCEPT_BUST' });
-    expect(g.result).toMatchObject({ outcome: 'bust', bid: 5, target: 6, trapRewardTo: 'sita' });
-    expect(g.result.scoreDeltas).toEqual({ sita: 2, ramesh: 0, anil: 0, priya: -6 });
+  test('"Naya Plate dodges the planted chili": Sita plants on Ramesh, Ramesh flips Naya Plate and eats from Anil instead', () => {
+    const g = game(3);
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'nayaplate' }, anil: { power: 'dahi' } });
+    serve(g, [[A, 'ramesh']]);
+    auction(g, 'ramesh', 3);
+    expect(g.s.players[1].stack.at(-1)).toMatchObject({ kind: 'akabare', owner: 'sita' });
+    expect(g.legal('ramesh').flipPuri).toEqual(['ramesh']);
+    g.power('ramesh', 'ramesh');
+    expect(g.last('flipPower')).toMatchObject({ kind: 'nayaplate', effect: 'freePlate', target: 3 });
+    expect(g.e).toMatchObject({ bid: 3, target: 3, freePlate: true });
+    expect(g.legal('ramesh').flipPuri).toEqual(['sita', 'ramesh', 'anil']);
+    g.flip('ramesh', 'anil');
+    g.flip('ramesh', 'anil');
+    g.flip('ramesh', 'sita');
+    expect(g.result).toMatchObject({ outcome: 'success', bid: 3, target: 3, eaten: 3 });
+    expect(g.result.scoreDeltas).toEqual({ sita: 0, ramesh: 3, anil: 0 });
   });
 
   test('"Chaat on an empty table": 5 eaten of 7, table empty, the last flip is Chaat: success', () => {
@@ -1793,9 +1803,9 @@ describe('audit: PDF examples (p4-5)', () => {
     expect(g.score('anil')).toBe(7);
   });
 
-  test('"The planted chili": Sita\'s Akabare on Anil\'s stack busts Ramesh through a Khali, Sita +2', () => {
+  test('"The planted chili": Sita\'s Akabare on Anil\'s stack busts Ramesh through a Naya Plate, Sita +2', () => {
     const g = game(3);
-    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'vinegar' }, anil: { power: 'khali' } });
+    setupAll(g, { sita: { power: 'vinegar' }, ramesh: { power: 'vinegar' }, anil: { power: 'nayaplate' } });
     serve(g, [[A, 'anil']]);
     auction(g, 'ramesh', 3);
     g.flip('ramesh', 'ramesh');
@@ -1803,7 +1813,7 @@ describe('audit: PDF examples (p4-5)', () => {
     g.flip('ramesh', 'anil');
     expect(g.last('bite')).toMatchObject({ eaterId: 'ramesh', fromStackOf: 'anil', owner: 'sita' });
     g.power('ramesh', 'anil');
-    expect(g.last('flipPower')).toMatchObject({ kind: 'khali', effect: 'failedSave', target: 3 });
+    expect(g.last('flipPower')).toMatchObject({ kind: 'nayaplate', effect: 'failedSave', target: 3 });
     expect(g.result).toMatchObject({ outcome: 'bust', bustReason: 'akabare', target: 3, akabareOwnerId: 'sita', trapRewardTo: 'sita' });
     expect(g.result.scoreDeltas).toEqual({ sita: 2, ramesh: -3, anil: 0 });
     expect(g.p('ramesh').busts).toBe(1);
@@ -1843,9 +1853,9 @@ describe('audit: more bidding and pending-bite corners', () => {
     expect(g.all('eater')).toHaveLength(1);
   });
 
-  test('pending: a revealed power is refused and changes nothing; a Khali from before the bite stays; own Dahi saves', () => {
-    const g = plantedOnRamesh({ sita: 'dahi', ramesh: 'khali', anil: 'vinegar' }, 5);
-    g.power('sita', 'ramesh'); // Khali before the bite: target 6
+  test('pending: a revealed power is refused and changes nothing; a Naya Plate from before the bite stays; own Dahi saves', () => {
+    const g = plantedOnRamesh({ sita: 'dahi', ramesh: 'nayaplate', anil: 'vinegar' }, 5);
+    g.power('sita', 'ramesh'); // Naya Plate before the bite: free plate, target unchanged
     g.flip('sita', 'ramesh'); // anil's Akabare: pending
     const before = JSON.stringify(g.s);
     g.no('sita', { type: 'FLIP_POWER', targetPlayerId: 'ramesh' });
@@ -1855,25 +1865,25 @@ describe('audit: more bidding and pending-bite corners', () => {
     expect(JSON.stringify(g.s)).toBe(before);
     expect(g.legal('sita').flipPower).toEqual(['sita', 'anil']);
     g.power('sita', 'sita');
-    expect(g.e).toMatchObject({ pendingAkabare: null, powersFlipped: 2, target: 6, eaten: 2 });
+    expect(g.e).toMatchObject({ pendingAkabare: null, powersFlipped: 2, target: 5, eaten: 2, freePlate: true });
     expect(g.legal('sita').flipPower).toEqual([]);
-    for (const t of ['ramesh', 'ramesh', 'anil', 'anil'] as Id[]) g.flip('sita', t);
-    expect(g.result).toMatchObject({ outcome: 'success', target: 6, eaten: 6 });
+    for (const t of ['ramesh', 'anil', 'anil'] as Id[]) g.flip('sita', t);
+    expect(g.result).toMatchObject({ outcome: 'success', target: 5, eaten: 5 });
   });
 
   test("pending with only the eater's own power left: it is still a choice, and own non-Dahi fails the save", () => {
     const g = game(3, { config: { powerFlipsMax: 3 } });
-    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'khali' }, anil: { power: 'dahi' } });
+    setupAll(g, { sita: { power: 'chaat' }, ramesh: { power: 'nayaplate' }, anil: { power: 'dahi' } });
     serve(g, [[P, 'ramesh'], [A, 'sita']]);
     auction(g, 'sita', 6);
-    g.power('sita', 'ramesh'); // Khali: 7
+    g.power('sita', 'ramesh'); // Naya Plate: free plate
     g.power('sita', 'anil'); // Dahi, nothing to save
     g.flip('sita', 'sita'); // ramesh's Akabare
     expect(g.e.pendingAkabare!.card.owner).toBe('ramesh');
     expect(g.legal('sita')).toMatchObject({ flipPuri: [], flipPower: ['sita'], acceptBust: true });
     g.power('sita', 'sita');
-    expect(g.last('flipPower')).toMatchObject({ kind: 'chaat', effect: 'failedSave', eaten: 0, target: 7 });
-    expect(g.result.scoreDeltas).toEqual({ sita: -7, ramesh: 2, anil: 0 });
+    expect(g.last('flipPower')).toMatchObject({ kind: 'chaat', effect: 'failedSave', eaten: 0, target: 6 });
+    expect(g.result.scoreDeltas).toEqual({ sita: -6, ramesh: 2, anil: 0 });
   });
 
   test('nobody outside the game gets any action accepted, in any phase', () => {

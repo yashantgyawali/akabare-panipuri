@@ -165,7 +165,7 @@ export function rewindView(v: PlayerView, cursor: number): PlayerView | null {
           eat.powersFlipped = Math.max(0, eat.powersFlipped - 1);
           eat.powers = eat.powers.slice(0, -1);
           if (e.effect === 'plusTwo') eat.eaten -= 2;
-          if (e.effect === 'targetUp') eat.target -= 1;
+          if (e.effect === 'freePlate') eat.freePlate = false;
           if (e.effect === 'numb') eat.skipNext = false;
           if (e.effect === 'saved' && eat.plate.length > 0) {
             const last = eat.plate[eat.plate.length - 1];
@@ -349,6 +349,7 @@ export function forwardView(v: PlayerView, events: readonly GameEvent[], cursor:
           eaten: 0,
           powersFlipped: 0,
           skipNext: false,
+          freePlate: false,
           pendingAkabare: null,
           plate: [],
           powers: [],
@@ -380,6 +381,7 @@ export function forwardView(v: PlayerView, events: readonly GameEvent[], cursor:
           eat.eaten = e.eaten;
           eat.target = e.target;
           if (e.effect === 'numb') eat.skipNext = true;
+          if (e.effect === 'freePlate') eat.freePlate = true;
           if (e.effect === 'saved' && eat.plate.length > 0) {
             const last = eat.plate[eat.plate.length - 1];
             eat.plate = [...eat.plate.slice(0, -1), { ...last, saved: true }];

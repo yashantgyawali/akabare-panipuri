@@ -382,6 +382,7 @@ function startEating(ctx: Ctx, eaterId: PlayerId): void {
     eaten: 0,
     powersFlipped: 0,
     skipNext: false,
+    freePlate: false,
     pendingAkabare: null,
     plate: [],
     powers: [],
@@ -405,6 +406,7 @@ export function flipPuriTargets(state: GameState): PlayerId[] {
   const e = state.eating;
   if (state.phase !== 'eating' || !e || e.pendingAkabare) return [];
   const eater = findPlayer(state, e.eaterId)!;
+  if (e.freePlate) return state.players.filter((p) => p.stack.length > 0).map((p) => p.id);
   if (eater.stack.length > 0) return [eater.id];
   return state.players.filter((p) => p.id !== eater.id && p.stack.length > 0).map((p) => p.id);
 }
@@ -490,7 +492,7 @@ function flipPower(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'FLIP_PO
       record('saved');
       checkEnd(ctx);
     } else {
-      // Only Dahi helps after the bite; Khali/Chaat effects do not apply.
+      // Only Dahi helps after the bite; Chaat/Naya Plate effects do not apply.
       record('failedSave');
       bust(ctx, 'akabare', pending.card);
     }
@@ -506,9 +508,9 @@ function flipPower(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'FLIP_PO
     case 'dahi':
       effect = 'wasted';
       break;
-    case 'khali':
-      e.target += 1;
-      effect = 'targetUp';
+    case 'nayaplate':
+      effect = e.freePlate ? 'wasted' : 'freePlate';
+      e.freePlate = true;
       break;
     case 'chaat':
       e.eaten += 2;

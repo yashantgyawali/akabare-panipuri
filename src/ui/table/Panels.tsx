@@ -257,8 +257,18 @@ export function ActionPanel(props: PanelProps) {
             <p className="ak-panel__text">
               <strong>Table’s empty.</strong> Flip a power and hope for Chaat, or give up.
             </p>
+          ) : e.freePlate ? (
+            <p className="ak-panel__text">
+              <strong>Naya Plate:</strong> pick any stack, yours included. Tap a glowing stack to eat its top card.
+            </p>
           ) : ownFirst ? (
-            <p className="ak-panel__text">Finish your own stack first: tap it to eat.</p>
+            <p className="ak-panel__text">
+              Finish your own stack first: tap it to eat
+              {(() => {
+                const mine = view.players.find((p) => p.id === you)?.power;
+                return mine && !mine.revealed && mine.kind === 'nayaplate' ? ', or flip your Naya Plate to eat from any stack.' : '.';
+              })()}
+            </p>
           ) : (
             <p className="ak-panel__text">Tap any glowing stack to eat its top card.</p>
           )}

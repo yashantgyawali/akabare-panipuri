@@ -6,12 +6,12 @@ import { Wordmark } from '../common/Brand.tsx';
 import { Icon } from '../common/Icon.tsx';
 import { cx, usePhone } from '../common/hooks.ts';
 import { HOME } from '../router.ts';
-import { goalText } from '../text.ts';
+import { goalText, powerName } from '../text.ts';
 
 const POWER_ROWS: Record<PowerKind, { when: string; effect: string }> = {
   vinegar: { when: 'Before a puri', effect: 'Numbs your tongue: the next card you eat is cancelled. An Akabare can’t hurt you, a Panipuri doesn’t count. Only the next card.' },
   dahi: { when: 'Right after you bite an Akabare', effect: 'The lifesaver: you’re safe and keep eating. Flipped at any other time it does nothing.' },
-  khali: { when: 'Any time', effect: 'An empty shell: your bid goes up by 1. Bid 5, flip Khali Puri, now you need 6 (and lose 6 if you bust).' },
+  nayaplate: { when: 'Any time, but not after a bite', effect: 'A fresh plate: for the rest of the round the eater may flip the top card of any stack, their own included, in any order. Bid 4, flip Naya Plate, then eat from Anil’s stack before touching your own.' },
   chaat: { when: 'Any time', effect: 'Counts as 2 Panipuri eaten. Bid 4, eat 1, flip Chaat: you’re at 3.' },
 };
 
@@ -20,9 +20,9 @@ const EXAMPLES: { title: string; text: string }[] = [
   { title: 'Vinegar wastes a puri', text: 'Anil flips Vinegar, but his next card is a Panipuri. It doesn’t count.' },
   { title: 'The blind Dahi', text: 'Priya bites an Akabare and flips the power beside Anil’s stack, hoping for Dahi. It’s Chaat. She’s out: Chaat doesn’t count after a bite.' },
   { title: 'Chaat speeds you up', text: 'Ramesh bids 4, eats 1 Panipuri, then flips the power beside Sita’s stack. Chaat: he’s at 3 and needs 1 more.' },
-  { title: 'Khali Puri backfires', text: 'Priya bids 5 and gambles on Ramesh’s power. Khali Puri: now she needs 6, and a bust costs her 6.' },
+  { title: 'Naya Plate dodges the planted chili', text: 'Sita plants her Akabare on Ramesh’s stack. Ramesh wins the bid and holds Naya Plate. He flips it, skips his own stack, eats from Anil’s stack and makes his bid. Sita’s chili is never touched.' },
   { title: 'Chaat on an empty table', text: 'Anil bids 7. Every stack is empty and he’s eaten 5. He spends his last flip on Sita’s power. Chaat: 7. Success.' },
-  { title: 'The planted chili', text: 'Sita slips her Akabare onto Anil’s stack. Ramesh wins the bid, clears his own stack, flips Anil’s top card: Akabare. He flips a power hoping for Dahi; it’s Khali Puri. Ramesh busts, and Sita gets +2.' },
+  { title: 'The planted chili', text: 'Sita slips her Akabare onto Anil’s stack. Ramesh wins the bid, clears his own stack, flips Anil’s top card: Akabare. He flips a power hoping for Dahi; it’s Naya Plate. Ramesh busts, and Sita gets +2.' },
 ];
 
 /** `config`: the game's house rules (the in-game drawer); defaults to the standard v0.6 rules. */
@@ -36,7 +36,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <h2>The idea</h2>
         <p>
           Everyone secretly builds a stack of puri, and anyone can add to anyone’s stack. Then comes the bidding: only the highest bidder eats. They start with their
-          own stack, then dig into the others’. They may flip up to 2 power cards from anywhere on the table, but only their own is a known card. Bite an Akabare
+          own stack, then dig into the others’ (unless Naya Plate frees the order). They may flip up to 2 power cards from anywhere on the table, but only their own is a known card. Bite an Akabare
           without the right power and you’re out.
         </p>
         <p className="ak-rules__facts">
@@ -59,7 +59,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
                 <Card key={k} back="power" color="yellow" face={k} width={cardW * 0.7} decorative />
               ))}
             </div>
-            <figcaption>Your powers: Vinegar, Dahi, Khali Puri, Chaat.</figcaption>
+            <figcaption>Your powers: Vinegar, Dahi, Naya Plate, Chaat.</figcaption>
           </figure>
         </div>
       </section>
@@ -102,7 +102,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
             <tr>
               <td>3</td>
               <td>The last 2</td>
-              <td>Khali Puri</td>
+              <td>Naya Plate</td>
             </tr>
             <tr>
               <td>4</td>
@@ -149,7 +149,8 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <h2>4 · Eating</h2>
         <ol>
           <li>
-            <strong>Your own stack first.</strong> Flip it from the top, one card at a time, until it’s empty.
+            <strong>Your own stack first.</strong> Flip it from the top, one card at a time, until it’s empty. <strong>Naya Plate lifts this rule:</strong> once you flip it,
+            you may eat from any stack, yours included, in any order.
           </li>
           <li>
             <strong>Then the others’.</strong> Each flip, pick any other stack and eat its top card. You can switch stacks between flips.
@@ -173,10 +174,10 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <ul className="ak-rules__powers">
           {POWER_KINDS.map((k) => (
             <li key={k} className="ak-rules__power">
-              <CardFront kind={k} color={k === 'vinegar' ? 'yellow' : k === 'dahi' ? 'blue' : k === 'khali' ? 'orange' : 'green'} width={compact ? 96 : phone ? 104 : 150} showRule={!compact && !phone} />
+              <CardFront kind={k} color={k === 'vinegar' ? 'yellow' : k === 'dahi' ? 'blue' : k === 'nayaplate' ? 'orange' : 'green'} width={compact ? 96 : phone ? 104 : 150} showRule={!compact && !phone} />
               <div>
                 <h3>
-                  {k === 'khali' ? 'Khali Puri' : k[0].toUpperCase() + k.slice(1)} <span className="ak-rules__when">{POWER_ROWS[k].when}</span>
+                  {powerName(k)} <span className="ak-rules__when">{POWER_ROWS[k].when}</span>
                 </h3>
                 <p>{POWER_ROWS[k].effect}</p>
               </div>
@@ -191,20 +192,20 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </h2>
         <p>
           You get one last chance. If you still have a power flip left, flip a power: <strong>Dahi saves you</strong> and you keep eating.{' '}
-          <strong>Anything else and you’re out</strong>, even Chaat or Khali Puri: their effects don’t apply after a bite. Vinegar can’t save you after the bite; it
+          <strong>Anything else and you’re out</strong>, even Chaat or Naya Plate: their effects don’t apply after a bite. Vinegar can’t save you after the bite; it
           only works before. You can also just accept the bust.
         </p>
       </section>
 
       <section className="ak-rules__sec">
         <h2>Scoring</h2>
-        <p>Only the eater scores from the bid. The final bid includes any Khali Puri increases.</p>
+        <p>Only the eater scores from the bid.</p>
         <ul>
           <li>
-            <strong>Success:</strong> + your final bid (even if you ate more).
+            <strong>Success:</strong> + your bid (even if you ate more).
           </li>
           <li>
-            <strong>Bust:</strong> − your final bid.
+            <strong>Bust:</strong> − your bid.
           </li>
           <li>
             <strong>Trap reward:</strong>{' '}
@@ -248,7 +249,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <h2>Small print</h2>
         <ul>
           <li>Vinegar cancels only the next puri you flip. Two Vinegars don’t stack.</li>
-          <li>A failed save is a bust on that Akabare, even if the power you flipped was Chaat or Khali Puri.</li>
+          <li>A failed save is a bust on that Akabare, even if the power you flipped was Chaat or Naya Plate.</li>
           <li>Face-down cards show only their owner (the back colour and initial). You can always see which of your own cards are where.</li>
           <li>Leftover cards stay secret at the end of a round unless the host turned on “reveal leftovers”. At game over everything is revealed.</li>
         </ul>

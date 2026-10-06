@@ -66,14 +66,14 @@ describe('faces, urls, labels', () => {
     const b = html(<CardBack kind="power" color="purple" width={90} />);
     expect(b).toMatch(/srcSet="[^"]+ 375w, [^"]+ 750w"/);
     expect(b).toContain('sizes="90px"');
-    const f = html(<CardFront kind="khali" color="orange" width={240} />);
-    expect(f).toContain('KHALI PURI');
-    expect(f).toContain('खाली पुरी');
+    const f = html(<CardFront kind="nayaplate" color="orange" width={240} />);
+    expect(f).toContain('NAYA PLATE');
+    expect(f).toContain('नयाँ प्लेट');
     expect(f).toContain('ak-card-front__index">9<');
     expect(f).toContain('Flip any time');
   });
   it('names and labels', () => {
-    expect(cardName('khali')).toBe('Khali Puri');
+    expect(cardName('nayaplate')).toBe('Naya Plate');
     expect(defaultCardLabel({ back: 'puri', color: 'orange', face: 'akabare', faceUp: true })).toBe('Akabare card, Orange');
   });
 });

@@ -20,7 +20,7 @@
  *              owner-colour Dhaka lattice inside an owner-colour margin, with
  *              lace-edged corner cut-outs; a deep owner-colour masala dabba
  *              whose eight katoris hold the four powers twice (vinegar, dahi,
- *              chaat, khali puri); a coin legend reading POWER · शक्ति.
+ *              chaat, naya plate); a coin legend reading POWER · शक्ति.
  *
  * No-cheat properties
  *  - puriBackSvg() is the only puri back: Panipuri and Akabare are identical.
@@ -848,7 +848,7 @@ export function puriBackSvg(color: ColorId): string {
  * The four powers as katoris (small bowls) seen from above, local coords,
  * centre 0,0, rim radius 36. Lighting is radial (from the viewer).
  */
-function katoris(id: (s: string) => string, rnd: () => number): Record<'vinegar' | 'dahi' | 'chaat' | 'khali', string> {
+function katoris(id: (s: string) => string, rnd: () => number): Record<'vinegar' | 'dahi' | 'chaat' | 'nayaplate', string> {
   const inkS = `stroke="${INK}" stroke-width="2"`;
   const wob = (r: number, amp: number, n = 18): string => wobblyCircle(0, 0, r, rnd, amp, n);
   const rim =
@@ -890,15 +890,15 @@ function katoris(id: (s: string) => string, rnd: () => number): Record<'vinegar'
     `<path d="${ser(sev)}" stroke="#F3C046" stroke-width="2" stroke-linecap="round"/>` +
     `<path d="${circles(pome, 2.3)}" fill="#B3182C" stroke="#5A0A14" stroke-width=".8"/>` +
     `<path d="${circles(cor, 2.4)}" fill="${LEAF}"/>`;
-  // khali: an empty puri shell in its katori, broken top dark and hollow
-  const blis: Pt[] = [];
-  for (let i = 0; i < 9; i++) blis.push(polar(0, 0, 13 + rnd() * 9, rnd() * 360));
-  const khali = rim + well('#8A4A1A') +
-    `<circle r="25" fill="url(#${id('puriS')})" stroke="${INK}" stroke-width="1.6"/>` +
-    `<path d="${circles(blis, (i) => 1.5 + (i % 3) * 0.5)}" fill="#FBE3A0" opacity=".85"/>` +
-    `<path d="${crPath(jaggedSym(0, 0, 13.5, rnd, 1.6, 14), true, 0.12)}" fill="#F6D690"/>` +
-    `<path d="${crPath(jaggedSym(0, 0, 10, rnd, 1.4, 14), true, 0.12)}" fill="#1E0C04" stroke="${INK}" stroke-width="1.3"/>`;
-  return { vinegar, dahi, chaat, khali };
+  // nayaplate: a fresh clean thali, rings and rim catching the light, a puri shell and a chutney dot beside the centre
+  const nayaplate = rim + well('#6E4310') +
+    `<path d="${wob(25, 0.5, 16)}" fill="#E8B84A" stroke="#5A2A0C" stroke-width="1.2"/>` +
+    `<path d="${wob(19, 0.5, 14)}" fill="#F6D27A" stroke="#B07A1E" stroke-width="1"/>` +
+    `<path d="${wob(10, 0.4, 12)}" fill="none" stroke="#B07A1E" stroke-width="1.1"/>` + sheen('#FFF8DC', 0.75) +
+    `<circle cx="-7" cy="5" r="6.2" fill="url(#${id('puriS')})" stroke="${INK}" stroke-width="1.3"/>` +
+    `<path transform="translate(-7 5)" d="${crPath(jaggedSym(0, 0, 2.8, rnd, 0.7, 8), true, 0.12)}" fill="#1E0C04"/>` +
+    `<circle cx="8" cy="-5" r="3.4" fill="#4E7A2A" stroke="${INK}" stroke-width="1"/>`;
+  return { vinegar, dahi, chaat, nayaplate };
 }
 
 /**
@@ -1025,7 +1025,7 @@ export function powerBackSvg(color: ColorId): string {
   }
   const k = katoris(id, rnd);
   const KR = 100;
-  const kinds = ['vinegar', 'dahi', 'chaat', 'khali'] as const;
+  const kinds = ['vinegar', 'dahi', 'chaat', 'nayaplate'] as const;
   const bowls = kinds.map((kind, i) => {
     const [x, y] = polar(CX, CY, KR, 22.5 + i * 45);
     return `<g transform="translate(${fx(x)} ${fx(y)})">${k[kind]}</g>`;

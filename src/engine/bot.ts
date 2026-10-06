@@ -136,10 +136,10 @@ function chooseSetup(view: PlayerView, rand: Rand): Action {
   const withAkabare = setup.hand.akabare > 0 && (size > setup.hand.panipuri || rand() < 0.15);
   const stack = Array.from({ length: size }, (): PuriKind => 'panipuri');
   if (withAkabare) stack[Math.floor(rand() * size) % size] = 'akabare';
-  // An Akabare at home wants protection; otherwise Chaat helps us eat and Khali traps others.
+  // An Akabare at home wants protection; otherwise Chaat helps us eat. Naya Plate is a shield against a planted pile.
   const weights: Record<PowerKind, number> = withAkabare
-    ? { vinegar: 4, dahi: 3, chaat: 2, khali: 1 }
-    : { chaat: 3, khali: 2, vinegar: 2, dahi: 1.5 };
+    ? { vinegar: 4, dahi: 3, chaat: 2, nayaplate: 2 }
+    : { chaat: 3, nayaplate: 2.5, vinegar: 2, dahi: 1.5 };
   const power = weighted(setup.availablePowers.map((k): [PowerKind, number] => [k, weights[k]]), rand);
   return { type: 'SUBMIT_SETUP', stack, power };
 }
@@ -170,7 +170,7 @@ export function akabareOdds(view: PlayerView, card: StackCardView, stackOf: Play
 export function estimateEatable(view: PlayerView): number {
   const me = self(view);
   const power = faceDown(me.power) ? me.power!.kind : null;
-  let shield = power === 'vinegar' || power === 'dahi';
+  let shield = power === 'vinegar' || power === 'dahi' || power === 'nayaplate';
   let expected = 0;
   let survive = 1;
   for (let i = me.stack.length - 1; i >= 0; i--) {
@@ -261,6 +261,10 @@ function chooseEat(view: PlayerView, rand: Rand): Action {
   const best = ranked[0];
   // Numb the tongue first when the next bite looks like (or is known to be) an Akabare.
   if (ownPower === 'vinegar' && !e.skipNext && best.risk >= 0.5) {
+    return { type: 'FLIP_POWER', targetPlayerId: me.id };
+  }
+  // Naya Plate: when our own stack's next card looks dangerous, open the table instead.
+  if (ownPower === 'nayaplate' && !e.freePlate && best.risk >= 0.4) {
     return { type: 'FLIP_POWER', targetPlayerId: me.id };
   }
   return { type: 'FLIP_PURI', targetPlayerId: best.id };

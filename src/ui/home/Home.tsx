@@ -204,7 +204,7 @@ function Teaser() {
       {
         n: '3',
         title: 'Eat',
-        text: 'Flip your own stack, then dig into others’. Bite an Akabare without Dahi and you bust.',
+        text: 'Flip your own stack, then dig into others’ (Naya Plate lets you pick any). Bite an Akabare without Dahi and you bust.',
         card: { back: 'puri' as const, color: 'red' as ColorId, face: 'akabare' as const },
       },
     ],

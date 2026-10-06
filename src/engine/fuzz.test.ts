@@ -91,6 +91,11 @@ function checkView(s: GameState, viewerId: PlayerId | null): void {
       }
     }
   });
+  if (s.eating && v.eating!.freePlate !== s.eating.freePlate) fail('freePlate not projected');
+  if (s.phase === 'eating' && s.eating?.freePlate && !s.eating.pendingAkabare && viewerId === s.eating.eaterId) {
+    const nonEmpty = s.players.filter((p) => p.stack.length > 0).map((p) => p.id);
+    if (JSON.stringify(v.legal.flipPuri) !== JSON.stringify(nonEmpty)) fail('free plate: every non-empty stack must be legal');
+  }
   if (viewerId === null) {
     if (v.me !== null || JSON.stringify(v.legal) !== ALL_EMPTY) fail('spectator sees private data');
   } else {
@@ -149,6 +154,17 @@ const MAX_STEPS = 20000;
 // 300 all-bot games
 // ---------------------------------------------------------------------------
 
+/** Naya Plate flips seen across the fuzz games (effect 'freePlate' / 'wasted'), asserted at the end of the file. */
+const nayaSeen = { allBot: 0, mixed: 0, wasted: 0, bustedPending: 0 };
+function tallyNaya(s: GameState, key: 'allBot' | 'mixed'): void {
+  for (const e of s.log) {
+    if (e.type !== 'flipPower' || e.kind !== 'nayaplate') continue;
+    if (e.effect === 'freePlate') nayaSeen[key]++;
+    else if (e.effect === 'wasted') nayaSeen.wasted++;
+    else if (e.effect === 'failedSave') nayaSeen.bustedPending++;
+  }
+}
+
 describe('fuzz: all-bot games', () => {
   const games = Array.from({ length: 300 }, (_, g) => g);
   test.each(games)('game %i', (g) => {
@@ -176,6 +192,7 @@ describe('fuzz: all-bot games', () => {
       s = step.state;
       checkAll(s);
     }
+    tallyNaya(s, 'allBot');
     expect(s.winners!.length).toBeGreaterThan(0);
     const top = Math.max(...s.players.map((p) => p.score));
     expect(s.winners!.every((id) => s.players.find((p) => p.id === id)!.score === top)).toBe(true);
@@ -284,6 +301,15 @@ describe('fuzz: mixed human/bot games with random legal moves', () => {
       s = result.state;
       checkAll(s);
     }
+    tallyNaya(s, 'mixed');
     expect(s.results).toHaveLength(s.round);
+  });
+});
+
+describe('fuzz: Naya Plate coverage', () => {
+  test('bots pick and flip Naya Plate (effect freePlate) in some all-bot games; random play also hits wasted and failedSave', () => {
+    expect(nayaSeen.allBot).toBeGreaterThan(0);
+    expect(nayaSeen.mixed).toBeGreaterThan(0);
+    expect(nayaSeen.wasted + nayaSeen.bustedPending).toBeGreaterThan(0);
   });
 });

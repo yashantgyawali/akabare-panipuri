@@ -16,7 +16,7 @@ export type ColorId = (typeof COLORS)[number];
 export const PURI_KINDS = ['panipuri', 'akabare'] as const;
 export type PuriKind = (typeof PURI_KINDS)[number];
 
-export const POWER_KINDS = ['vinegar', 'dahi', 'khali', 'chaat'] as const;
+export const POWER_KINDS = ['vinegar', 'dahi', 'nayaplate', 'chaat'] as const;
 export type PowerKind = (typeof POWER_KINDS)[number];
 
 /** Opaque, public player identifier (uuid-like). Never a secret. */
@@ -151,10 +151,10 @@ export interface EatenCard {
  * - saved: Dahi flipped while an Akabare was pending → saved
  * - failedSave: non-Dahi flipped while an Akabare was pending → bust
  * - wasted: flipped with no effect (Dahi without a pending Akabare, or Vinegar while already numb)
- * - targetUp: Khali Puri, target +1
+ * - freePlate: Naya Plate, the eater may now flip the top card of ANY stack (own included), in any order
  * - plusTwo: Chaat, eaten +2
  */
-export type PowerEffect = 'numb' | 'saved' | 'failedSave' | 'wasted' | 'targetUp' | 'plusTwo';
+export type PowerEffect = 'numb' | 'saved' | 'failedSave' | 'wasted' | 'freePlate' | 'plusTwo';
 
 export interface FlippedPower {
   kind: PowerKind;
@@ -172,13 +172,15 @@ export interface EatingState {
   eaterId: PlayerId;
   /** Winning bid as bid. */
   bid: number;
-  /** bid + 1 per Khali Puri flipped. */
+  /** Eaten count needed to succeed. Always equals the bid (kept separate so variants can change it). */
   target: number;
   /** Panipuri eaten + 2 per Chaat. */
   eaten: number;
   powersFlipped: number;
   /** Set by Vinegar, cleared by the next puri flip. */
   skipNext: boolean;
+  /** Set by Naya Plate: the own-stack-first rule no longer applies this round. */
+  freePlate: boolean;
   /** Bitten Akabare awaiting FLIP_POWER (Dahi hope) or ACCEPT_BUST. */
   pendingAkabare: PendingAkabare | null;
   /** Puri cards flipped this round, in order. */
@@ -194,7 +196,7 @@ export interface RoundResult {
   round: number;
   eaterId: PlayerId;
   bid: number;
-  /** Final bid incl. Khali Puri increases — the amount won or lost. */
+  /** Amount won or lost (the bid). */
   target: number;
   eaten: number;
   outcome: RoundOutcome;
@@ -365,6 +367,8 @@ export interface EatingView {
   eaten: number;
   powersFlipped: number;
   skipNext: boolean;
+  /** Naya Plate has been flipped: any non-empty stack may be flipped, in any order. */
+  freePlate: boolean;
   pendingAkabare: { owner: PlayerId; fromStackOf: PlayerId } | null;
   plate: PlateCardView[];
   powers: FlippedPower[];

@@ -183,7 +183,7 @@ export function canFlipPower(state: GameState): boolean {
 export const POWER_LABELS: Record<PowerKind, string> = {
   vinegar: 'Vinegar',
   dahi: 'Dahi',
-  khali: 'Khali Puri',
+  nayaplate: 'Naya Plate',
   chaat: 'Chaat',
 };
 

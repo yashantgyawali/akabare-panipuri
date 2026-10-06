@@ -8,6 +8,6 @@
  */
 
 export const BACK_IMAGE_VERSION = '1.0.0';
-export const BACK_IMAGE_REV = '4ad2671655';
+export const BACK_IMAGE_REV = '95a023663f';
 /** Pixel sizes of the two variants: `<kind>-<color>.webp` and `<kind>-<color>-2x.webp`. */
 export const BACK_IMAGE_SIZES = { x1: [375, 525], x2: [750, 1050] } as const;

@@ -118,6 +118,7 @@ function eatingView(state: GameState): EatingView | null {
     eaten: e.eaten,
     powersFlipped: e.powersFlipped,
     skipNext: e.skipNext,
+    freePlate: e.freePlate,
     pendingAkabare: e.pendingAkabare
       ? { owner: e.pendingAkabare.card.owner, fromStackOf: e.pendingAkabare.fromStackOf }
       : null,

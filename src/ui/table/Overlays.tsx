@@ -191,7 +191,7 @@ export function AkabareMoment({
             : `${names.name(moment.eaterId)} is safe and keeps eating.`;
       break;
     case 'failed':
-      headline = moment.power ? `It’s ${powerName(moment.power.kind)}. No Dahi…` : 'No Dahi…';
+      headline = moment.power?.kind === 'nayaplate' ? 'It was Naya Plate: no help now…' : moment.power ? `It’s ${powerName(moment.power.kind)}. No Dahi…` : 'No Dahi…';
       sub = eaterIsYou ? 'The chili wins this one.' : `${names.name(moment.eaterId)} is in trouble.`;
       break;
     case 'bust':
@@ -373,12 +373,7 @@ export function RoundEndPanel({
         </h2>
         <p className="ak-result__facts">
           Bid {result.bid}
-          {result.target !== result.bid ? (
-            <>
-              {' '}
-              <span aria-hidden="true">→</span> {result.target} <span className="ak-muted">(Khali Puri)</span>
-            </>
-          ) : null}{' '}
+          {' '}
           · ate {result.eaten}
         </p>
         {reason ? <p className="ak-result__reason">{reason}</p> : null}

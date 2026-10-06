@@ -10,7 +10,6 @@ export function EatingHud({ view, names, compact }: { view: PlayerView; names: N
   const max = view.config.powerFlipsMax;
   const left = Math.max(0, max - e.powersFlipped);
   const you = e.eaterId === view.youId;
-  const khali = e.target - e.bid;
   const pct = Math.min(100, Math.round((e.eaten / Math.max(1, e.target)) * 100));
   return (
     <section className={cx('ak-hud', compact && 'ak-hud--compact')} aria-label="Eating progress" style={{ ['--c' as string]: PLAYER_PALETTE[names.color(e.eaterId)].base }}>
@@ -35,14 +34,7 @@ export function EatingHud({ view, names, compact }: { view: PlayerView; names: N
         <span style={{ width: `${pct}%` }} />
       </div>
       <p className="ak-hud__bid">
-        {khali > 0 ? (
-          <>
-            Bid {e.bid} <span aria-hidden="true">→</span>
-            <span className="ak-sr"> raised to</span> <strong>{e.target}</strong> (Khali Puri)
-          </>
-        ) : (
-          <>Bid {e.bid}</>
-        )}
+        Bid {e.bid}
       </p>
       <div className="ak-hud__flips" aria-label={`${left} of ${max} power flips left`}>
         <span className="ak-hud__flipdots" aria-hidden="true">
@@ -57,6 +49,11 @@ export function EatingHud({ view, names, compact }: { view: PlayerView; names: N
       {e.skipNext ? (
         <p className="ak-hud__numb" role="note">
           Numb: the next puri is cancelled
+        </p>
+      ) : null}
+      {e.freePlate ? (
+        <p className="ak-hud__free" role="note">
+          Free plate: any stack, any order
         </p>
       ) : null}
       {e.powers.length > 0 ? (

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Extract the six unique card illustrations from the 750×1050 print-sheet fronts.
+ * Extract the five extractable card illustrations (nayaplate.webp has no print-sheet source; it is a standalone asset and is left untouched) from the 750×1050 print-sheet fronts.
  *
  *   node scripts/extract-art.mjs            → writes public/art/<kind>.webp
  *   node scripts/extract-art.mjs --check    → detect + verify only, write nothing
@@ -16,7 +16,7 @@
  *     also checks the 1px ring just outside the box is 100% frame fill.
  *  3. It verifies with pixel diffs that the art is identical across the 6 player
  *     colours and across panipuri_1..5, and reports the max channel diff.
- *  4. It writes public/art/{panipuri,akabare,vinegar,dahi,khali,chaat}.webp at
+ *  4. It writes public/art/{panipuri,akabare,vinegar,dahi,chaat}.webp at
  *     native resolution, plus print/art-extract-report.json.
  */
 import sharp from 'sharp';
@@ -44,7 +44,6 @@ const ART = {
   akabare: ['akabare'],
   vinegar: ['vinegar'],
   dahi: ['dahi'],
-  khali: ['khali'],
   chaat: ['chaat'],
 };
 
