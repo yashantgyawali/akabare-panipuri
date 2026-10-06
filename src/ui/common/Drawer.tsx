@@ -1,6 +1,6 @@
 /**
- * Drawer (side sheet on desktop, bottom sheet on phones) and a confirm dialog,
- * both on the native <dialog> (focus trap, Escape, top layer for free).
+ * Drawer (420px right sheet; full width on phones) and a confirm dialog, both
+ * on the native <dialog> (focus trap, Escape, top layer for free). Styles: overlays.css.
  */
 import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
@@ -46,7 +46,7 @@ export function Drawer({
   return (
     <dialog
       ref={ref}
-      className={cx('ak-drawer', wide && 'ak-drawer--wide', className)}
+      className={cx('tp-sheet', wide && 'tp-sheet--wide', className)}
       aria-labelledby={titleId}
       onClose={onClose}
       onCancel={(e) => {
@@ -58,16 +58,16 @@ export function Drawer({
       }}
     >
       {open ? (
-        <div className="ak-drawer__panel ak-paper">
-          <header className="ak-drawer__head">
-            <h2 id={titleId} className="ak-drawer__title">
+        <div className="tp-drawer tp-sheet__panel">
+          <header className="tp-sheet__head">
+            <h2 id={titleId} className="tp-sheet__title">
               {title}
             </h2>
-            <IconButton label="Close" onClick={onClose} className="ak-iconbtn--ink">
+            <IconButton label="Close" onClick={onClose} className="tp-sheet__close">
               <Icon name="close" />
             </IconButton>
           </header>
-          <div className="ak-drawer__body">{children}</div>
+          <div className="tp-sheet__body">{children}</div>
         </div>
       ) : null}
     </dialog>
@@ -79,7 +79,7 @@ export function ConfirmDialog({
   title,
   children,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = 'Stay',
   onConfirm,
   onCancel,
   danger,
@@ -100,7 +100,7 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      className="ak-confirm"
+      className="tp-confirm"
       aria-labelledby={titleId}
       onClose={onCancel}
       onCancel={(e) => {
@@ -109,16 +109,16 @@ export function ConfirmDialog({
       }}
     >
       {open ? (
-        <div className="ak-confirm__panel ak-paper">
-          <h2 id={titleId} className="ak-confirm__title">
+        <div className={cx('tp-dialog tp-dialog--sm', danger && 'tp-dialog--red')}>
+          <h2 id={titleId} className="tp-confirm__title">
             {title}
           </h2>
-          {children ? <div className="ak-confirm__body">{children}</div> : null}
-          <div className="ak-confirm__actions">
-            <Button variant="ghost" onClick={onCancel} autoFocus>
+          {children ? <div className="tp-confirm__body">{children}</div> : null}
+          <div className="tp-confirm__actions">
+            <Button variant="secondary" onClick={onCancel} autoFocus>
               {cancelLabel}
             </Button>
-            <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} busy={busy}>
+            <Button variant={danger ? 'solid-danger' : 'primary'} onClick={onConfirm} busy={busy}>
               {confirmLabel}
             </Button>
           </div>

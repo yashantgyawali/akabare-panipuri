@@ -16,15 +16,14 @@ import { useToast } from '../common/Toasts.tsx';
 import { HOME, navigate } from '../router.ts';
 import { RulesContent } from '../rules/Rules.tsx';
 import { usePlayback } from '../playback/usePlayback.ts';
-import { describeEvent, makeNameBook, powerName, type NameBook } from '../text.ts';
+import { describeEvent, makeNameBook, powerName } from '../text.ts';
 import { LogList, ScoresPanel, TableHeader, turnText, type DrawerName } from './Chrome.tsx';
 import { EatingHud } from './EatingHud.tsx';
 import { Hand, handCards } from './Hand.tsx';
 import { AkabareMoment, GameOverPanel, RoundEndPanel, type Moment } from './Overlays.tsx';
 import { ActionPanel } from './Panels.tsx';
-import { Plate } from './Plate.tsx';
 import { Seat, stackLabel, type Clickable, type SeatProps, type SeatStatus } from './Seat.tsx';
-import { SetupPanel, WaitingList } from './SetupPanel.tsx';
+import { SetupPanel } from './SetupPanel.tsx';
 
 const NO_LEGAL = noLegalActions();
 
@@ -37,30 +36,30 @@ function seatOrder(players: readonly PublicPlayerView[], you: PlayerId | null): 
 function statusFor(p: PublicPlayerView, view: PlayerView): SeatStatus | null {
   switch (view.phase) {
     case 'setup':
-      return p.setupDone ? { label: 'Set', tone: 'done' } : { label: 'Setting up…', tone: 'wait' };
+      return p.setupDone ? { label: 'set ✓', tone: 'done' } : { label: 'setting up…', tone: 'wait' };
     case 'serving':
-      if (view.serving?.turnId === p.id) return { label: 'Serving', tone: 'turn' };
-      return view.firstPlayerId === p.id ? { label: 'Served first', tone: 'wait' } : null;
+      if (view.serving?.turnId === p.id) return { label: 'serving', tone: 'turn' };
+      return view.firstPlayerId === p.id ? { label: 'served first', tone: 'wait' } : null;
     case 'bidding': {
       const b = view.bidding;
       if (!b) return null;
-      if (b.turnId === p.id) return { label: 'Raise or pass?', tone: 'turn' };
-      if (b.passed.includes(p.id)) return { label: 'Passed', tone: 'passed' };
-      if (b.highBidderId === p.id) return { label: `High bid ${b.highBid}`, tone: 'high' };
+      if (b.passed.includes(p.id)) return { label: 'passed', tone: 'passed' };
+      if (b.turnId === p.id) return { label: 'deciding…', tone: 'turn' };
+      if (b.highBidderId === p.id) return { label: `high bid ${b.highBid}`, tone: 'high' };
       return null;
     }
     case 'eating': {
       const e = view.eating;
-      if (e?.eaterId === p.id) return { label: `Eating ${e.eaten}/${e.target}`, tone: 'eater' };
-      return view.bidding?.passed.includes(p.id) ? { label: 'Watching', tone: 'passed' } : null;
+      if (e?.eaterId === p.id) return { label: `eating ${e.eaten}/${e.target}`, tone: 'eater' };
+      return view.bidding?.passed.includes(p.id) ? { label: 'watching', tone: 'passed' } : null;
     }
     case 'roundEnd': {
       const r = view.results.find((x) => x.round === view.round);
-      if (r?.eaterId === p.id) return r.outcome === 'success' ? { label: `Ate ${r.target}`, tone: 'done' } : { label: 'Bust', tone: 'bust' };
-      return p.isBot || p.ready ? { label: 'Ready', tone: 'done' } : { label: 'Reading…', tone: 'wait' };
+      if (r?.eaterId === p.id) return r.outcome === 'success' ? { label: `ate ${r.target}`, tone: 'done' } : { label: 'bust', tone: 'bust' };
+      return p.isBot || p.ready ? { label: 'ready', tone: 'done' } : { label: 'reading…', tone: 'wait' };
     }
     case 'gameOver':
-      return view.winners?.includes(p.id) ? { label: 'Winner', tone: 'win' } : null;
+      return view.winners?.includes(p.id) ? { label: 'winner', tone: 'win' } : null;
   }
 }
 
@@ -93,82 +92,6 @@ function cueFor(p: PublicPlayerView, e: GameEvent | null): SeatProps['cue'] {
   }
 }
 
-function BidBoard({ view, names }: { view: PlayerView; names: NameBook }) {
-  const b = view.bidding;
-  if (!b) return null;
-  return (
-    <div className="ak-bidboard">
-      <div className="ak-bidboard__high" style={{ ['--c' as string]: `var(--pc-${names.color(b.highBidderId)})` }}>
-        <span className="ak-bidboard__label">{view.phase === 'bidding' ? 'High bid' : 'Winning bid'}</span>
-        <span className="ak-bidboard__num" key={b.highBid}>
-          {b.highBid}
-        </span>
-        <span className="ak-bidboard__by">by {names.who(b.highBidderId)}</span>
-      </div>
-      <ol className="ak-bidchips" aria-label="Bids so far">
-        {b.history.map((h, i) => (
-          <li key={i} className={cx('ak-bidchip', `ak-bidchip--${h.action}`)} style={{ ['--c' as string]: `var(--pc-${names.color(h.playerId)})` }}>
-            <span className="ak-bidchip__who" aria-hidden="true">
-              {names.initial(h.playerId)}
-            </span>
-            <span className="ak-sr">{names.who(h.playerId)} </span>
-            {h.action === 'pass' ? 'pass' : h.amount}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function CenterStage({ view, names, plateW, reduced, compact }: { view: PlayerView; names: NameBook; plateW: number; reduced: boolean; compact: boolean }) {
-  const you = view.youId;
-  switch (view.phase) {
-    case 'setup':
-      return (
-        <div className="ak-stage ak-stage--setup">
-          <p className="ak-stage__kicker">Round {view.round}</p>
-          <h2 className="ak-stage__title">Hide your puri</h2>
-          <p className="ak-stage__text">
-            Everyone places {view.config.startingStack} puri face down and one power. {view.firstPlayerId === you ? 'You serve' : `${names.name(view.firstPlayerId)} serves`} first.
-          </p>
-          <WaitingList view={view} names={names} />
-        </div>
-      );
-    case 'serving': {
-      const turn = view.serving?.turnId ?? null;
-      return (
-        <div className="ak-stage">
-          <p className="ak-stage__kicker">Round {view.round} · serving</p>
-          <h2 className="ak-stage__title">{turn === you ? 'Your turn to serve' : `${names.name(turn)} is serving`}</h2>
-          <p className="ak-stage__text">Place a puri on any stack, or start the bid.</p>
-          <p className="ak-stage__meta">
-            Most anyone could eat right now: <strong>{view.tableMax}</strong>
-          </p>
-        </div>
-      );
-    }
-    case 'bidding':
-      return (
-        <div className="ak-stage">
-          <p className="ak-stage__kicker">Round {view.round} · bidding</p>
-          <BidBoard view={view} names={names} />
-          <p className="ak-stage__meta">
-            Most anyone could eat: <strong>{view.tableMax}</strong>
-          </p>
-        </div>
-      );
-    case 'eating':
-    case 'roundEnd':
-    case 'gameOver':
-      return (
-        <div className="ak-stage ak-stage--eat">
-          {view.eating ? <EatingHud view={view} names={names} compact={compact} /> : null}
-          {view.eating ? <Plate plate={view.eating.plate} names={names} width={plateW} reduced={reduced} empty="The plate is empty" /> : null}
-        </div>
-      );
-  }
-}
-
 /** The Akabare moment after `e` plays (bite → saved | failed → bust; cleared by later events). */
 function nextMoment(m: Moment | null, e: GameEvent): Moment | null {
   if (e.type === 'bite') return { eaterId: e.eaterId, owner: e.owner, fromStackOf: e.fromStackOf, stage: 'bitten' };
@@ -195,13 +118,13 @@ function nextMoment(m: Moment | null, e: GameEvent): Moment | null {
 /** Where keyboard focus was when you acted: a stable selector for "the same control", '*' for "whatever you can do next". */
 function focusMemoOf(el: Element | null): string | null {
   if (!(el instanceof HTMLElement) || el === document.body) return null;
-  if (el.closest('.ak-overlay')) return '*';
+  if (el.closest('.ak-overlay, .tp-scrim, .tp-bite, .tp-overlay')) return '*';
   const stack = el.closest<HTMLElement>('[data-stack-of]');
   if (stack?.dataset.stackOf) return `[data-stack-of="${CSS.escape(stack.dataset.stackOf)}"] > button`;
   const power = el.closest<HTMLElement>('[data-power-of]');
   if (power?.dataset.powerOf) return `[data-power-of="${CSS.escape(power.dataset.powerOf)}"] > button`;
-  if (el.closest('.ak-dock__panel') && el.classList.contains('ak-btn--primary')) return '.ak-dock__panel .ak-btn--primary';
-  return el.closest('.ak-tablescreen') ? '*' : null;
+  if (el.closest('.tp-dock__prompt') && el.classList.contains('btn-cta')) return '.tp-dock__prompt .btn-cta';
+  return el.closest('.tp-tablescreen') ? '*' : null;
 }
 
 /** The control to focus for a remembered spot: the same one if it's still actionable, else the first thing you can act on. */
@@ -213,9 +136,9 @@ function focusTargetFor(memo: string): HTMLElement | null {
     if (usable(same)) return same;
   }
   const next = [
-    ...document.querySelectorAll('.ak-arena [data-stack-of] > button.ak-card-stack--selectable, .ak-dock [data-stack-of] > button.ak-card-stack--selectable'),
-    ...document.querySelectorAll('.ak-arena [data-power-of] > button.ak-card--selectable, .ak-dock [data-power-of] > button.ak-card--selectable'),
-    ...document.querySelectorAll('.ak-dock__hand button, .ak-dock__panel .ak-btn--primary, .ak-dock__panel button, .ak-dock__setup button'),
+    ...document.querySelectorAll('.tp-seats [data-stack-of] > button.ak-card-stack--selectable'),
+    ...document.querySelectorAll('.tp-seats [data-power-of] > button.ak-card--selectable'),
+    ...document.querySelectorAll('.tp-dock__hand button, .tp-dock__prompt .btn-cta, .tp-dock__prompt button, .tp-dock button'),
   ];
   return next.find(usable) ?? null;
 }
@@ -226,7 +149,6 @@ export function Table({ game }: { game: UseGame }) {
   const you = snap.youId;
   const reduced = useReducedMotion();
   const phone = usePhone();
-  const big = useMediaQuery('(min-width: 1180px) and (min-height: 880px)');
   const narrow = useMediaQuery('(min-width: 641px) and (max-width: 900px)');
   const pb = usePlayback(live, you, reduced);
   const view = pb.display ?? live;
@@ -363,15 +285,11 @@ export function Table({ game }: { game: UseGame }) {
     : [];
 
   const ordered = seatOrder(view.players, you);
-  const opponents = ordered.slice(1);
-  const m = Math.min(5, Math.max(1, opponents.length));
-
-  const oppW = phone ? 38 : big ? 60 : narrow && opponents.length >= 4 ? 42 : 52;
-  const oppMax = phone ? 90 : big ? 152 : 128;
-  const meW = phone ? 42 : big ? 62 : 56;
-  const meMax = phone ? 104 : big ? 150 : 132;
-  const handW = phone ? 62 : big ? 92 : 80;
-  const plateW = phone ? 40 : big ? 54 : 46;
+  const n = ordered.length;
+  const cardW = phone ? 54 : narrow ? 62 : n <= 2 ? 84 : n === 3 ? 76 : n === 4 ? 70 : 60;
+  const stackMax = phone ? 150 : 240;
+  const handW = phone ? 46 : 60;
+  const plateW = phone ? 44 : 56;
 
   const stackClick = (p: PublicPlayerView): Clickable => {
     const label = stackLabel(p, names);
@@ -415,11 +333,7 @@ export function Table({ game }: { game: UseGame }) {
     }
     return { state: 'idle', label: '' };
   };
-  // Phones: your seat joins the seat grid (its last cell), and the dock keeps
-  // only what you act with, so a full table fits on one screen.
-  const meInGrid = phone && !!me;
-  const showHand = !phone || view.phase === 'serving';
-  const seatProps = (p: PublicPlayerView, variant: 'opp' | 'me'): SeatProps => ({
+  const seatProps = (p: PublicPlayerView): SeatProps => ({
     p,
     view,
     names,
@@ -427,18 +341,20 @@ export function Table({ game }: { game: UseGame }) {
     online: p.isBot || !graceOver ? null : p.id === you || game.online.includes(p.id),
     turn: (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating') && view.pendingActors.includes(p.id),
     status: statusFor(p, view),
-    cardW: variant === 'me' && !meInGrid ? meW : oppW,
-    stackMax: variant === 'me' && !meInGrid ? meMax : oppMax,
+    cardW,
+    stackMax,
     stack: stackClick(p),
     power: powerClick(p),
     cue: cueFor(p, current),
-    variant,
     compact: phone,
   });
 
-  const setupMode = view.phase === 'setup';
+  const setupMode = view.phase === 'setup' && !!me && !me.isBot;
   const setupView = live.phase === 'setup' && live.round === view.round ? live : view;
   const placing = !!legal.place && selKind !== null;
+  const botSeat = !!me?.isBot && view.phase !== 'gameOver';
+  const showHud = view.phase === 'eating' || view.phase === 'roundEnd' || view.phase === 'gameOver';
+  const showHand = !!me && !botSeat && (view.phase === 'serving' || (!phone && (view.phase === 'bidding' || view.phase === 'eating')));
 
   const leave = () =>
     void run('leave', async () => {
@@ -448,73 +364,48 @@ export function Table({ game }: { game: UseGame }) {
     });
 
   return (
-    <div className={cx('ak-tablescreen', `ak-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone', phone && opponents.length >= 3 && 'is-crowded')}>
+    <div className={cx('tp-tablescreen', `tp-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone')}>
       <TableHeader view={view} names={names} code={snap.code} phone={phone} onOpen={setDrawer} onLeave={() => setConfirmLeave(true)} />
 
-      {me?.isBot && view.phase !== 'gameOver' ? (
-        <div className="ak-banner" role="status">
-          <Icon name="bot" size={18} />
-          <span>A bot is playing your seat.</span>
-          <Button size="sm" variant="primary" busy={pending === `bot:${you}`} disabled={busy} onClick={() => setBot(you, false)}>
-            Take my seat back
-          </Button>
-        </div>
-      ) : null}
-      {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
-        <div className="ak-banner ak-banner--warn" role="status">
-          <span>
-            Waiting on <strong>{names.name(offlineWaiting[0])}</strong>, who seems to be offline.
-          </span>
-          <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
-            Replace with a bot
-          </Button>
-        </div>
-      ) : null}
-
-      <main className={cx('ak-arena', `ak-arena--m${m}`)} aria-label="The table">
-        <div className="ak-felt" aria-hidden="true" />
-        <div className={cx('ak-opps', `ak-opps--n${opponents.length + (meInGrid ? 1 : 0)}`)}>
-          {opponents.map((p, i) => (
-            <div key={p.id} className={cx('ak-oppslot', m >= 3 && (i === 0 || i === m - 1) && 'ak-oppslot--side')}>
-              <Seat {...seatProps(p, 'opp')} />
-            </div>
-          ))}
-          {meInGrid && me ? (
-            <div className="ak-oppslot ak-oppslot--me">
-              <Seat {...seatProps(me, 'me')} />
-            </div>
-          ) : null}
-        </div>
-        <div className="ak-center">
-          <div className="ak-announce" aria-hidden="true">
-            {line ? (
-              <p key={current?.seq} className={cx('ak-announce__line', `ak-announce__line--${line.tone}`)} style={line.actor ? { ['--c' as string]: `var(--pc-${names.color(line.actor)})` } : undefined}>
-                {line.text}
-              </p>
-            ) : null}
-            {pb.queued > 1 ? (
-              <button type="button" className="ak-skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`}>
-                <Icon name="skip" size={16} /> Skip {pb.queued}
-              </button>
-            ) : null}
+      <main className="tp-board" aria-label="The table">
+        {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
+          <div className="tp-notice" role="status">
+            <span>
+              Waiting on <strong>{names.name(offlineWaiting[0])}</strong>, who seems to be offline.
+            </span>
+            <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
+              Replace with a bot
+            </Button>
           </div>
-          <CenterStage view={view} names={names} plateW={plateW} reduced={reduced} compact={phone} />
+        ) : null}
+        <div className="tp-seats" style={{ ['--n' as string]: n, ['--md' as string]: Math.min(n, 3), ['--sm' as string]: Math.min(n, 2) }}>
+          {ordered.map((p) => (
+            <Seat key={p.id} {...seatProps(p)} />
+          ))}
+        </div>
+        {showHud && view.eating ? <EatingHud view={view} names={names} plateW={plateW} reduced={reduced} /> : null}
+        <div className={cx('tp-ticker', showHud && 'tp-ticker--hud')}>
+          {!showHud ? (
+            <p key={current?.seq ?? 'none'} className={cx('tp-ticker__line', line && `tp-ticker__line--${line.tone}`)} aria-hidden="true">
+              {line?.text ?? (view.phase === 'setup' ? 'Everyone hides their puri and one power.' : '')}
+            </p>
+          ) : null}
+          {pb.queued > 1 ? (
+            <button type="button" className="tp-link tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`}>
+              <Icon name="skip" size={16} /> Skip {pb.queued}
+            </button>
+          ) : null}
         </div>
       </main>
       {/* The one live region for the table: each move as it plays, then your turn (the header pill stays quiet). */}
-      <div className="ak-sr" aria-live="polite">
+      <div className="tp-sr" aria-live="polite">
         <p key={current?.seq ?? 'none'}>{line?.text ?? ''}</p>
         {yourMove && !overlayKey ? <p>{turnText(live, names)}.</p> : null}
       </div>
 
-      <section className={cx('ak-dock', setupMode && 'ak-dock--setup', meInGrid && 'ak-dock--noseat', !showHand && 'ak-dock--nohand')} aria-label="Your seat">
-        {me && !meInGrid ? (
-          <div className="ak-dock__seat">
-            <Seat {...seatProps(me, 'me')} />
-          </div>
-        ) : null}
-        {setupMode ? (
-          <div className="ak-dock__setup">
+      <section className={cx('tp-dock', setupMode && 'tp-dock--setup')} aria-label="Your seat">
+        <div className="tp-dock__inner">
+          {setupMode ? (
             <SetupPanel
               key={view.round}
               view={setupView}
@@ -532,39 +423,42 @@ export function Table({ game }: { game: UseGame }) {
                 return ok;
               }}
             />
-          </div>
-        ) : (
-          <>
-            {showHand ? (
-              <div className="ak-dock__hand">
-                <Hand
-                  cards={hand}
-                  color={me?.color ?? 'red'}
-                  width={handW}
-                  selected={legal.place ? sel : null}
-                  pickable={legal.place && !busy ? legal.place.kinds : null}
-                  onPick={(i) => setSel((s) => (s === i ? null : i))}
-                  emptyText={view.phase === 'serving' || view.phase === 'bidding' ? 'Your hand is empty.' : 'No cards in hand.'}
+          ) : (
+            <>
+              {showHand ? (
+                <div className="tp-dock__hand">
+                  <span className="tp-dock__label">Your hand · {hand.length}</span>
+                  <Hand
+                    cards={hand}
+                    color={me?.color ?? 'red'}
+                    width={handW}
+                    selected={legal.place ? sel : null}
+                    pickable={legal.place && !busy ? legal.place.kinds : null}
+                    onPick={(i) => setSel((s) => (s === i ? null : i))}
+                    emptyText="Empty"
+                  />
+                </div>
+              ) : null}
+              <div className="tp-dock__prompt">
+                <ActionPanel
+                  view={actView}
+                  names={names}
+                  busy={busy}
+                  pending={pending}
+                  playing={pb.playing}
+                  selectedKind={selKind}
+                  onClearSelection={() => setSel(null)}
+                  act={act}
+                  onUnpeek={
+                    peekingBite ? () => setBitePeek(null) : peek && (view.phase === 'roundEnd' || view.phase === 'gameOver') ? () => setPeek(false) : undefined
+                  }
+                  onTakeSeatBack={botSeat && you ? () => setBot(you, false) : undefined}
+                  takingBack={pending === `bot:${you}`}
                 />
               </div>
-            ) : null}
-            <div className="ak-dock__panel">
-              <ActionPanel
-                view={actView}
-                names={names}
-                busy={busy}
-                pending={pending}
-                playing={pb.playing}
-                selectedKind={selKind}
-                onClearSelection={() => setSel(null)}
-                act={act}
-                onUnpeek={
-                  peekingBite ? () => setBitePeek(null) : peek && (view.phase === 'roundEnd' || view.phase === 'gameOver') ? () => setPeek(false) : undefined
-                }
-              />
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </section>
 
       {shownMoment ? (

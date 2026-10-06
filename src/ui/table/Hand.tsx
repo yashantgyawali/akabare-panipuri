@@ -1,4 +1,4 @@
-/** Your hand as real card fronts (you know your own cards), fanned. */
+/** Your hand as real card fronts (you know your own cards), in a flat row. */
 import type { ColorId, PuriKind } from '../../engine/types.ts';
 import { Card, type CardState } from '../../cards/index.ts';
 import { cx } from '../common/hooks.ts';
@@ -40,31 +40,27 @@ export function Hand({
   className?: string;
 }) {
   const n = cards.length;
-  const overlap = n > 4 ? 0.42 : n > 2 ? 0.28 : 0.1;
   return (
-    <div className={cx('ak-hand', className)} role="group" aria-label={`${label}: ${n} card${n === 1 ? '' : 's'}`}>
-      {n === 0 ? <p className="ak-hand__empty">{emptyText}</p> : null}
-      <div className="ak-hand__fan" style={{ ['--w' as string]: `${width}px`, ['--overlap' as string]: overlap }}>
-        {cards.map((c, i) => {
-          const can = !!pickable && pickable.includes(c.kind) && !!onPick;
-          const state: CardState = selected === i ? 'selected' : can ? 'selectable' : pickable ? 'dim' : 'idle';
-          const mid = (n - 1) / 2;
-          return (
-            <div key={`${c.kind}-${c.instance}-${i}`} className="ak-hand__slot" style={{ ['--i' as string]: i - mid, zIndex: selected === i ? 20 : i }}>
-              <Card
-                back="puri"
-                color={color}
-                face={c.kind}
-                instance={c.instance}
-                width={width}
-                state={state}
-                onClick={can ? () => onPick!(i, c) : undefined}
-                ariaLabel={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand${selected === i ? ', selected' : ''}`}
-              />
-            </div>
-          );
-        })}
-      </div>
+    <div className={cx('tp-hand-row', className)} role="group" aria-label={`${label}: ${n} card${n === 1 ? '' : 's'}`}>
+      {n === 0 ? <p className="tp-hand-row__empty">{emptyText}</p> : null}
+      {cards.map((c, i) => {
+        const can = !!pickable && pickable.includes(c.kind) && !!onPick;
+        const state: CardState = selected === i ? 'selected' : can ? 'selectable' : pickable ? 'dim' : 'idle';
+        return (
+          <div key={`${c.kind}-${c.instance}-${i}`} className="tp-hand-row__card">
+            <Card
+              back="puri"
+              color={color}
+              face={c.kind}
+              instance={c.instance}
+              width={width}
+              state={state}
+              onClick={can ? () => onPick!(i, c) : undefined}
+              ariaLabel={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand${selected === i ? ', selected' : ''}`}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

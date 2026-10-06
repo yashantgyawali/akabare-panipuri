@@ -11,6 +11,7 @@ import { prefs } from '../common/hooks.ts';
 import { useToast } from '../common/Toasts.tsx';
 import { HOME } from '../router.ts';
 import { Lobby } from './Lobby.tsx';
+import { CodeTiles } from './ShareBlock.tsx';
 import { Table } from '../table/Table.tsx';
 
 const isColor = (v: string | null): v is ColorId => !!v && (COLORS as readonly string[]).includes(v);
@@ -48,13 +49,15 @@ export function GameRoute({ code }: { code: string }) {
   }
 }
 
-function Screen({ children, wide }: { children: ReactNode; wide?: boolean }) {
+function Screen({ children }: { children: ReactNode }) {
   return (
-    <main className={wide ? 'ak-screen ak-screen--wide' : 'ak-screen'}>
-      <header className="ak-screen__top">
-        <Wordmark size="sm" link />
-      </header>
-      {children}
+    <main className="tp-page">
+      <div className="tp-container">
+        <header className="tp-header">
+          <Wordmark link />
+        </header>
+        {children}
+      </div>
     </main>
   );
 }
@@ -62,8 +65,8 @@ function Screen({ children, wide }: { children: ReactNode; wide?: boolean }) {
 function Loading({ code }: { code: string }) {
   return (
     <Screen>
-      <div className="ak-loading" role="status">
-        <span className="ak-loading__puri" aria-hidden="true" />
+      <div className="tp-loading" role="status">
+        <span className="tp-spinner" aria-hidden="true" />
         <p>
           Setting the table for <strong>{code}</strong>…
         </p>
@@ -74,24 +77,28 @@ function Loading({ code }: { code: string }) {
 
 function GameError({ code, game }: { code: string; game: UseGame }) {
   const missing = game.errorCode === 'not_found';
+  const started = game.errorCode === 'wrong_status';
   return (
     <Screen>
-      <section className="ak-panel ak-paper ak-center-panel" aria-labelledby="err-h">
-        <h1 className="ak-h1" id="err-h">
-          {missing ? 'No table here' : 'Something went wrong'}
+      <section className="tp-center-card" aria-labelledby="err-h">
+        <span className="tp-eyebrow">{missing ? 'hmm…' : started ? 'too late' : 'oh no'}</span>
+        <h1 className="tp-h1 tp-h1--md" id="err-h">
+          {missing ? 'No table here' : started ? 'This game already started' : 'Something went wrong'}
         </h1>
         <p>
           {missing ? (
             <>
               We couldn’t find game <strong>{code}</strong>. The code may be mistyped, or the game has ended and been cleared away.
             </>
+          ) : started ? (
+            <>Game <strong>{code}</strong> is already under way, so new players can’t sit down now.</>
           ) : (
             <>We couldn’t reach the table ({game.error ?? 'unknown error'}). Check your connection and try again.</>
           )}
         </p>
-        <div className="ak-row">
-          <a className="ak-btn ak-btn--primary ak-btn--md" href={HOME}>
-            <span className="ak-btn__label">Back home</span>
+        <div className="tp-join-actions">
+          <a className="btn-cta red btn-cta--md" href={HOME}>
+            ← Home
           </a>
           {!missing ? (
             <Button variant="ghost" onClick={game.refresh}>
@@ -126,29 +133,27 @@ function JoinGame({ code, game }: { code: string; game: UseGame }) {
   };
   return (
     <Screen>
-      <section className="ak-join ak-paper" aria-labelledby="join-h">
-        <p className="ak-kicker">You’re invited to table</p>
-        <h1 className="ak-join__code" id="join-h">
-          {code}
-        </h1>
+      <section className="tp-join-card" aria-labelledby="join-h">
+        <span className="tp-eyebrow" id="join-h">
+          you’re invited to table
+        </span>
+        <CodeTiles code={code} />
         {suggested ? (
-          <div className="ak-join__suggest">
+          <div className="tp-join-suggest">
             <p>
               This browser already has a seat here as <strong>{suggested.name}</strong> (another tab, or an earlier visit).
             </p>
-            <Button variant="primary" size="lg" block onClick={() => game.continueAs(suggested)}>
+            <Button variant="primary" size="md" block onClick={() => game.continueAs(suggested)}>
               Continue as {suggested.name}
             </Button>
-            <p className="ak-join__or">
-              <span>or join as a new player</span>
-            </p>
+            <p className="tp-join-or">or join as a new player</p>
           </div>
         ) : null}
-        <form onSubmit={submit} className="ak-join__form">
-          <label className="ak-field">
-            <span className="ak-field__label">Your name</span>
+        <form onSubmit={submit} className="tp-join-form">
+          <label className="tp-field">
+            <span className="tp-label">Your name</span>
             <input
-              className="ak-input"
+              className="tp-input"
               value={name}
               maxLength={MAX_NAME_LENGTH}
               autoComplete="nickname"
@@ -157,12 +162,12 @@ function JoinGame({ code, game }: { code: string; game: UseGame }) {
               autoFocus={!suggested}
             />
           </label>
-          <div className="ak-field">
-            <span className="ak-field__label">Your colour</span>
-            <ColorPicker value={color} onChange={setColor} />
-            <span className="ak-field__hint">Pick one, or leave it and we’ll give you a free colour.</span>
+          <div className="tp-field">
+            <span className="tp-label">Your colour</span>
+            <ColorPicker value={color} onChange={setColor} size={32} />
+            <span className="tp-field__hint">Pick one, or leave it and we’ll give you a free colour.</span>
           </div>
-          <Button type="submit" variant={suggested ? 'secondary' : 'primary'} size="lg" block busy={game.busy} disabled={!trimmed}>
+          <Button type="submit" variant={suggested ? 'secondary' : 'primary'} size={suggested ? 'lg' : 'md'} block busy={game.busy} disabled={!trimmed}>
             {suggested ? 'Join as a new player' : 'Join the table'}
           </Button>
         </form>

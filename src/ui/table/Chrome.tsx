@@ -1,14 +1,10 @@
-/** Table chrome: header bar, menu, banners, and the log / scores drawers. */
-import { useEffect, useRef, useState, type JSX } from 'react';
+/** Table chrome: turn text, and the log / scores drawer contents (the header bar is in ChromeHeader.tsx). */
 import type { GameEvent, PlayerId, PlayerView } from '../../engine/types.ts';
 import { PLAYER_PALETTE } from '../../cards/index.ts';
-import { shareUrl } from '../../net/index.ts';
-import { Button, IconButton } from '../common/Button.tsx';
+import { Button } from '../common/Button.tsx';
 import { Icon } from '../common/Icon.tsx';
-import { Wordmark } from '../common/Brand.tsx';
-import { copyText, cx } from '../common/hooks.ts';
-import { useToast } from '../common/Toasts.tsx';
-import { PHASE_LABELS, describeEvent, num, roundText, signed, type NameBook } from '../text.ts';
+import { cx } from '../common/hooks.ts';
+import { describeEvent, num, signed, type NameBook } from '../text.ts';
 
 export type DrawerName = 'rules' | 'log' | 'scores' | null;
 
@@ -42,134 +38,33 @@ export function turnText(view: PlayerView, names: NameBook): string {
   }
 }
 
-export function TableHeader({
-  view,
-  names,
-  code,
-  phone,
-  onOpen,
-  onLeave,
-}: {
-  view: PlayerView;
-  names: NameBook;
-  code: string;
-  phone: boolean;
-  onOpen: (d: Exclude<DrawerName, null>) => void;
-  onLeave: () => void;
-}) {
-  const toast = useToast();
-  const [menu, setMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!menu) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent) {
-        if (e.key === 'Escape') setMenu(false);
-        return;
-      }
-      if (!menuRef.current?.contains(e.target as Node)) setMenu(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [menu]);
-  const copy = async () => {
-    const ok = await copyText(shareUrl(code));
-    toast(ok ? 'Invite link copied.' : shareUrl(code), ok ? 'good' : 'info');
-    setMenu(false);
-  };
-  const turn = turnText(view, names);
-  const yourTurn = turn.startsWith('Your turn') || turn === 'Set up your stack' || turn === 'Ready when you are';
-  const goal = view.config.targetScore !== null ? `to ${view.config.targetScore}` : 'no target';
-  return (
-    <header className="ak-thead">
-      <div className="ak-thead__brand">
-        <Wordmark size="sm" link />
-      </div>
-      <div className="ak-thead__round">
-        <span className="ak-thead__r">{roundText(view.round, view.config, phone)}</span>
-        <span className="ak-thead__goal">{goal}</span>
-      </div>
-      <div className={cx('ak-thead__phase', yourTurn && 'is-you')}>
-        <span className="ak-thead__phasename">{PHASE_LABELS[view.phase]}</span>
-        <span className="ak-thead__turn">{turn}</span>
-      </div>
-      <div className="ak-thead__tools">
-        {!phone ? (
-          <button type="button" className="ak-codechip" onClick={copy} title="Copy invite link" aria-label={`Game code ${code}: copy invite link`}>
-            {code}
-            <Icon name="copy" size={15} />
-          </button>
-        ) : null}
-        {!phone ? (
-          <IconButton label="Rules" onClick={() => onOpen('rules')}>
-            <Icon name="book" />
-          </IconButton>
-        ) : null}
-        <IconButton label="Game log" onClick={() => onOpen('log')}>
-          <Icon name="scroll" />
-        </IconButton>
-        <IconButton label="Scores and players" onClick={() => onOpen('scores')}>
-          <Icon name="trophy" />
-        </IconButton>
-        <div className="ak-menu" ref={menuRef}>
-          <IconButton label="Menu" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
-            <Icon name="dots" />
-          </IconButton>
-          {menu ? (
-            <div className="ak-menu__list ak-paper" role="menu">
-              {phone ? (
-                <button type="button" role="menuitem" onClick={() => (setMenu(false), onOpen('rules'))}>
-                  <Icon name="book" size={18} /> Rules
-                </button>
-              ) : null}
-              <button type="button" role="menuitem" onClick={copy}>
-                <Icon name="copy" size={18} /> Copy invite link ({code})
-              </button>
-              <button type="button" role="menuitem" onClick={() => (setMenu(false), onOpen('scores'))}>
-                <Icon name="users" size={18} /> Players &amp; seats
-              </button>
-              <button type="button" role="menuitem" className="is-danger" onClick={() => (setMenu(false), onLeave())}>
-                <Icon name="leave" size={18} /> Leave game
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </header>
-  );
-}
+export { TableHeader } from './ChromeHeader.tsx';
 
 export function LogList({ log, names, trapReward }: { log: GameEvent[]; names: NameBook; trapReward: number }) {
   const items = [...log].reverse();
-  const rows: JSX.Element[] = [];
-  let round = -1;
-  for (const e of items) {
-    if (e.round !== round) {
-      round = e.round;
-      rows.push(
-        <li key={`r${e.round}-${e.seq}`} className="ak-log__round" aria-hidden="true">
-          Round {e.round}
-        </li>,
-      );
-    }
-    const line = describeEvent(e, names, trapReward);
-    rows.push(
-      <li key={e.seq} className={cx('ak-log__item', `ak-log__item--${line.tone}`)}>
-        <span className="ak-log__dot" style={{ background: line.actor ? PLAYER_PALETTE[names.color(line.actor)].base : 'transparent' }} aria-hidden="true" />
-        <span>{line.text}</span>
-      </li>,
-    );
-  }
   return (
-    <ol className="ak-log" aria-label="Newest first">
-      {rows}
-      {items.length === 0 ? <li className="ak-muted">Nothing has happened yet.</li> : null}
+    <ol className="tp-log" aria-label="Newest first">
+      {items.map((e) => {
+        const line = describeEvent(e, names, trapReward);
+        return (
+          <li key={e.seq} className={cx('tp-log__item', `tp-log__item--${line.tone}`)}>
+            <span className="tp-log__r" aria-label={`Round ${e.round}`}>
+              R{e.round}
+            </span>
+            <span>{line.text}</span>
+          </li>
+        );
+      })}
+      {items.length === 0 ? <li className="tp-muted">Nothing has happened yet.</li> : null}
     </ol>
   );
+}
+
+function historyText(r: PlayerView['results'][number], names: NameBook, you: PlayerId | null): string {
+  if (r.outcome === 'success') return `${names.who(r.eaterId)} ate ${r.target}`;
+  if (r.bustReason === 'emptyTable') return `${names.who(r.eaterId)} ran out (${r.eaten}/${r.target})`;
+  const own = r.akabareOwnerId === r.eaterId ? (r.eaterId === you ? 'your own' : 'their own') : names.whose(r.akabareOwnerId);
+  return `${names.who(r.eaterId)} bit ${own} Akabare`;
 }
 
 export function ScoresPanel({
@@ -198,98 +93,99 @@ export function ScoresPanel({
   const you = view.youId;
   const standings = [...view.players].sort((a, b) => b.score - a.score || a.busts - b.busts || a.seat - b.seat);
   const finished = view.phase === 'gameOver';
+  const mine = view.players.find((p) => p.id === you);
+  const { targetScore, maxRounds } = view.config;
   return (
-    <div className="ak-scores">
-      <table className="ak-scoretable">
-        <caption className="ak-sr">Scores</caption>
-        <thead>
+    <div className="tp-scores">
+      <table className="tp-scores__table">
+        <caption className="tp-sr">Scores</caption>
+        <thead className="tp-sr">
           <tr>
             <th scope="col">Player</th>
-            <th scope="col">Points</th>
             <th scope="col">Busts</th>
+            <th scope="col">Points</th>
           </tr>
         </thead>
         <tbody>
           {standings.map((p) => (
             <tr key={p.id} style={{ ['--c' as string]: PLAYER_PALETTE[p.color].base }}>
-              <th scope="row">
-                <span className="ak-deltas__chip" aria-hidden="true">
-                  {names.initial(p.id)}
-                </span>
-                {p.id === you ? 'You' : p.name}
-                {p.id === hostId ? <Icon name="crown" size={14} className="ak-scoretable__crown" title="host" /> : null}
-                {p.isBot ? <span className="ak-tag ak-tag--bot">bot</span> : null}
+              <td className="tp-scores__dot">
+                <span className="tp-dot" aria-hidden="true" />
+              </td>
+              <th scope="row" className="tp-scores__name">
+                <span>{p.id === you ? 'You' : p.name}</span>
+                {p.id === hostId ? <Icon name="crown" size={14} className="tp-scores__crown" title="host" /> : null}
+                {p.isBot ? <span className="tp-tag">bot</span> : null}
               </th>
-              <td className="ak-scoretable__pts">{num(p.score)}</td>
-              <td>{p.busts}</td>
+              <td className="tp-scores__busts">
+                {p.busts} bust{p.busts === 1 ? '' : 's'}
+              </td>
+              <td className="tp-scores__pts">{num(p.score)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <p className="ak-small ak-muted">
-        Ties go to fewer busts; still tied, you share the win.{' '}
-        {view.config.targetScore !== null ? `First to ${view.config.targetScore}` : 'No target'}
-        {view.config.maxRounds !== null ? ` · ${view.config.maxRounds} round${view.config.maxRounds === 1 ? '' : 's'} max.` : ' · no round limit.'}
+      <p className="tp-scores__note">
+        {targetScore !== null ? `First to ${targetScore}` : 'No target'}
+        {maxRounds !== null ? `, ${maxRounds} round${maxRounds === 1 ? '' : 's'} max` : ', no round limit'}. Ties go to fewer busts; still tied, you share the win.
       </p>
 
       {view.results.length > 0 ? (
-        <>
-          <h3 className="ak-h3">Rounds</h3>
-          <ol className="ak-history">
+        <section className="tp-scores__sec">
+          <h3 className="tp-h3">Rounds</h3>
+          <ol className="tp-history">
             {[...view.results].reverse().map((r) => (
-              <li key={r.round} className={cx('ak-history__row', r.outcome === 'success' ? 'is-success' : 'is-bust')}>
-                <span className="ak-history__r">R{r.round}</span>
-                <span className="ak-history__what">
-                  {names.who(r.eaterId)} {r.outcome === 'success' ? `ate ${r.target}` : r.bustReason === 'emptyTable' ? `ran out (${r.eaten}/${r.target})` : `bit ${r.akabareOwnerId === r.eaterId ? (r.eaterId === you ? 'your own' : 'their own') : names.whose(r.akabareOwnerId)} Akabare`}
+              <li key={r.round} className="tp-history__row">
+                <span className="tp-history__r">R{r.round}</span>
+                <span>
+                  {historyText(r, names, you)}
                   {r.trapRewardTo ? ` · ${names.who(r.trapRewardTo)} +${view.config.trapReward}` : ''}
                 </span>
-                <span className="ak-history__d">{signed(r.outcome === 'success' ? r.target : -r.target)}</span>
+                <span className={cx('tp-history__d', r.outcome === 'success' ? 'is-up' : 'is-down')}>{signed(r.outcome === 'success' ? r.target : -r.target)}</span>
               </li>
             ))}
           </ol>
-        </>
+        </section>
       ) : null}
 
-      <h3 className="ak-h3">Seats</h3>
-      <ul className="ak-seatlist">
-        {[...view.players]
-          .sort((a, b) => a.seat - b.seat)
-          .map((p) => {
-            const isYou = p.id === you;
-            const on = isYou || online.includes(p.id);
-            return (
-              <li key={p.id} className="ak-seatlist__row" style={{ ['--c' as string]: PLAYER_PALETTE[p.color].base }}>
-                <span className="ak-deltas__chip" aria-hidden="true">
-                  {names.initial(p.id)}
-                </span>
-                <span className="ak-seatlist__name">
-                  {isYou ? 'You' : p.name}
-                  <span className="ak-muted ak-small">
-                    {p.isBot ? (isYou ? ' · a bot is playing for you' : ' · bot') : on ? ' · online' : graceOver ? ' · offline' : ''}
+      <section className="tp-scores__sec">
+        <h3 className="tp-h3">Seats</h3>
+        <ul className="tp-seatlist">
+          {[...view.players]
+            .sort((a, b) => a.seat - b.seat)
+            .map((p) => {
+              const isYou = p.id === you;
+              const on = isYou || online.includes(p.id);
+              return (
+                <li key={p.id} className="tp-seatlist__row" style={{ ['--c' as string]: PLAYER_PALETTE[p.color].base }}>
+                  <span className="tp-dot" aria-hidden="true" />
+                  <span className="tp-seatlist__name">
+                    <strong>{isYou ? 'You' : p.name}</strong>
+                    <span className="tp-muted tp-small">
+                      {p.isBot ? (isYou ? 'a bot is playing for you' : 'bot') : on ? 'online' : graceOver ? 'offline' : 'connecting'}
+                    </span>
                   </span>
-                </span>
-                {!finished && isYou && p.isBot ? (
-                  <Button size="sm" variant="primary" busy={pending === `bot:${p.id}`} disabled={busy} onClick={() => onSetBot(p.id, false)}>
-                    Take my seat back
-                  </Button>
-                ) : !finished && isHost && !isYou && !p.isBot ? (
-                  <Button size="sm" variant={on ? 'ghost' : 'secondary'} busy={pending === `bot:${p.id}`} disabled={busy} onClick={() => onSetBot(p.id, true)}>
-                    Replace with bot
-                  </Button>
-                ) : !finished && isYou && !p.isBot ? (
-                  <Button size="sm" variant="ghost" busy={pending === `bot:${p.id}`} disabled={busy} onClick={() => onSetBot(p.id, true)}>
-                    Let a bot play for me
-                  </Button>
-                ) : null}
-              </li>
-            );
-          })}
-      </ul>
-      <div className="ak-scores__leave">
+                  {!finished && isHost && !isYou && !p.isBot ? (
+                    <Button size="sm" variant={on ? 'secondary' : 'danger'} busy={pending === `bot:${p.id}`} disabled={busy} onClick={() => onSetBot(p.id, true)}>
+                      Replace with bot
+                    </Button>
+                  ) : null}
+                </li>
+              );
+            })}
+        </ul>
+      </section>
+
+      <div className="tp-scores__foot">
+        {!finished && mine ? (
+          <Button variant="secondary" busy={pending === `bot:${mine.id}`} disabled={busy} onClick={() => onSetBot(mine.id, !mine.isBot)}>
+            {mine.isBot ? 'Take my seat back' : 'Let a bot play for me'}
+          </Button>
+        ) : null}
         <Button variant="danger" icon={<Icon name="leave" size={18} />} onClick={onLeave}>
           Leave game
         </Button>
-        <p className="ak-small ak-muted">A bot takes over your seat so the others can keep playing.</p>
+        <p className="tp-small tp-muted">A bot takes over your seat so the others can keep playing.</p>
       </div>
     </div>
   );

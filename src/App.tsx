@@ -1,24 +1,24 @@
 /** Hash-routed app shell: #/ home, #/g/<CODE> game, #/rules, #/cards (gallery). */
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { Wordmark } from './ui/common/Brand.tsx';
 import { Icon } from './ui/common/Icon.tsx';
 import { ToastProvider } from './ui/common/Toasts.tsx';
 import { Home } from './ui/home/Home.tsx';
-import { HOME, useRoute } from './ui/router.ts';
+import { HOME, gameHref, useRoute, type Route } from './ui/router.ts';
 
 // Code-split: the home page loads first; the table, the rules and the card gallery load on demand.
 const GameRoute = lazy(() => import('./ui/game/GameRoute.tsx').then((m) => ({ default: m.GameRoute })));
-const RulesPage = lazy(() => import('./ui/rules/Rules.tsx').then((m) => ({ default: m.RulesPage })));
+const RulesPage = lazy(() => import('./ui/rules/RulesPage.tsx').then((m) => ({ default: m.RulesPage })));
 const CardGallery = lazy(() => import('./cards/CardGallery.tsx').then((m) => ({ default: m.CardGallery })));
 
 function Loading() {
   return (
-    <main className="ak-screen">
-      <div className="ak-loading" role="status">
-        <span className="ak-loading__puri" aria-hidden="true" />
+    <div className="tp-page">
+      <main className="tp-loading" role="status">
+        <span className="tp-spinner" aria-hidden="true" />
         <p>Loading…</p>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
 
@@ -27,20 +27,36 @@ function CardsPage() {
     document.title = 'The cards · Akabare Panipuri';
   }, []);
   return (
-    <main className="ak-screen ak-screen--wide ak-cardspage">
-      <header className="ak-screen__top">
-        <Wordmark size="sm" link />
-        <a className="ak-toplink" href={HOME}>
-          <Icon name="arrowLeft" size={18} /> Home
-        </a>
-      </header>
-      <CardGallery />
-    </main>
+    <div className="tp-page">
+      <main className="tp-container tp-cardspage">
+        <header className="tp-header">
+          <Wordmark link byline={false} />
+          <a className="tp-btn" href={HOME}>
+            <Icon name="arrowLeft" size={18} /> Home
+          </a>
+        </header>
+        <div className="tp-panel tp-panel--ink tp-cardspage__stage">
+          <CardGallery />
+        </div>
+      </main>
+    </div>
   );
+}
+
+/** Back target for the rules page: the table/lobby we came from, else home. */
+function rulesBack(prev: Route | null): { href: string; label: string } {
+  if (prev?.name === 'game') return { href: gameHref(prev.code), label: 'Back to the game' };
+  return { href: HOME, label: 'Home' };
 }
 
 export function App() {
   const route = useRoute();
+  const prev = useRef<Route | null>(null);
+  const last = useRef<Route | null>(null);
+  if (last.current !== route && last.current?.name !== route.name) {
+    prev.current = last.current;
+  }
+  last.current = route;
   const key = route.name === 'game' ? `game:${route.code}` : route.name;
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -51,7 +67,7 @@ export function App() {
       page = <GameRoute key={route.code} code={route.code} />;
       break;
     case 'rules':
-      page = <RulesPage />;
+      page = <RulesPage from={rulesBack(prev.current)} />;
       break;
     case 'cards':
       page = <CardsPage />;

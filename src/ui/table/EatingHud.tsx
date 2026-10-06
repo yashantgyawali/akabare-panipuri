@@ -1,73 +1,57 @@
-/** The eater's HUD: eaten / target, power flips left, numb, flipped powers. Everyone sees it (read-only). */
+/**
+ * The eating HUD: who is eating, eaten / target with a red bar, power flips
+ * left, note pills (Numb, Naya Plate), and "the plate". Everyone sees it
+ * (read-only); actions live in the dock and on the seats.
+ */
 import type { PlayerView } from '../../engine/types.ts';
-import { PLAYER_PALETTE } from '../../cards/index.ts';
 import { cx } from '../common/hooks.ts';
-import { EFFECT_TEXT, powerName, type NameBook } from '../text.ts';
+import type { NameBook } from '../text.ts';
+import { Plate } from './Plate.tsx';
 
-export function EatingHud({ view, names, compact }: { view: PlayerView; names: NameBook; compact?: boolean }) {
+export function EatingHud({ view, names, plateW, reduced }: { view: PlayerView; names: NameBook; plateW: number; reduced: boolean }) {
   const e = view.eating;
   if (!e) return null;
   const max = view.config.powerFlipsMax;
   const left = Math.max(0, max - e.powersFlipped);
   const you = e.eaterId === view.youId;
   const pct = Math.min(100, Math.round((e.eaten / Math.max(1, e.target)) * 100));
+  const r = view.phase === 'roundEnd' || view.phase === 'gameOver' ? view.results.find((x) => x.round === view.round) : null;
+  const who = r
+    ? `${you ? 'You' : names.name(e.eaterId)} ${r.outcome === 'success' ? `ate ${r.target}` : 'went bust'}`
+    : you
+      ? 'You are eating'
+      : `${names.name(e.eaterId)} is eating`;
   return (
-    <section className={cx('ak-hud', compact && 'ak-hud--compact')} aria-label="Eating progress" style={{ ['--c' as string]: PLAYER_PALETTE[names.color(e.eaterId)].base }}>
-      <div className="ak-hud__who">
-        <span className="ak-hud__avatar" aria-hidden="true">
-          {names.initial(e.eaterId)}
+    <section className="tp-panel tp-panel--ink tp-panel--shadow-red tp-hud" aria-label="Eating progress">
+      <div className="tp-hud__main">
+        <span className="tp-hud__who">{who}</span>
+        <div className="tp-hud__count" role="img" aria-label={`Eaten ${e.eaten} of ${e.target}`}>
+          <span className="tp-num tp-hud__eaten">{e.eaten}</span>
+          <span className="tp-num tp-hud__target">/ {e.target}</span>
+        </div>
+        <div className="tp-hud__bar" aria-hidden="true">
+          <span style={{ width: `${pct}%` }} />
+        </div>
+        <span className="tp-hud__flips" aria-label={`${left} of ${max} power flips left`}>
+          {left} of {max} power flips left
         </span>
-        <span>
-          {(() => {
-            const r = view.phase === 'roundEnd' || view.phase === 'gameOver' ? view.results.find((x) => x.round === view.round) : null;
-            if (r) return `${you ? 'You' : names.name(e.eaterId)} ${r.outcome === 'success' ? `ate ${r.target}` : you ? 'bust' : 'busted'}`;
-            return you ? 'You are eating' : `${names.name(e.eaterId)} is eating`;
-          })()}
-        </span>
+        <div className={cx('tp-hud__notes', !e.skipNext && !e.freePlate && 'is-empty')}>
+          {e.skipNext ? (
+            <span className="tp-tag tp-tag--yellow" role="note">
+              Numb: the next puri is cancelled
+            </span>
+          ) : null}
+          {e.freePlate ? (
+            <span className="tp-tag tp-tag--yellow" role="note">
+              Naya Plate: any stack, any order
+            </span>
+          ) : null}
+        </div>
       </div>
-      <div className="ak-hud__count" aria-label={`Eaten ${e.eaten} of ${e.target}`}>
-        <span className="ak-hud__eaten">{e.eaten}</span>
-        <span className="ak-hud__slash">/</span>
-        <span className="ak-hud__target">{e.target}</span>
+      <div className="tp-hud__plate">
+        <span className="tp-hand tp-hud__plate-label">the plate</span>
+        <Plate plate={e.plate} powers={e.powers} names={names} width={plateW} reduced={reduced} empty="Nothing eaten yet." />
       </div>
-      <div className="ak-hud__bar" aria-hidden="true">
-        <span style={{ width: `${pct}%` }} />
-      </div>
-      <p className="ak-hud__bid">
-        Bid {e.bid}
-      </p>
-      <div className="ak-hud__flips" aria-label={`${left} of ${max} power flips left`}>
-        <span className="ak-hud__flipdots" aria-hidden="true">
-          {Array.from({ length: max }, (_, i) => (
-            <i key={i} className={i < e.powersFlipped ? 'is-used' : ''} />
-          ))}
-        </span>
-        <span>
-          {left} power flip{left === 1 ? '' : 's'} left
-        </span>
-      </div>
-      {e.skipNext ? (
-        <p className="ak-hud__numb" role="note">
-          Numb: the next puri is cancelled
-        </p>
-      ) : null}
-      {e.freePlate ? (
-        <p className="ak-hud__free" role="note">
-          Free plate: any stack, any order
-        </p>
-      ) : null}
-      {e.powers.length > 0 ? (
-        <ul className="ak-hud__powers" aria-label="Powers flipped">
-          {e.powers.map((p, i) => (
-            <li key={i} className={cx('ak-pchip', `ak-pchip--${p.effect}`)} style={{ ['--c' as string]: PLAYER_PALETTE[names.color(p.owner)].base }}>
-              <strong>
-                {p.owner === view.youId ? 'Your' : `${names.name(p.owner)}’s`} {powerName(p.kind)}
-              </strong>
-              <span>{EFFECT_TEXT[p.effect]}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </section>
   );
 }

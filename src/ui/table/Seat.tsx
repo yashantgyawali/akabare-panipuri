@@ -1,6 +1,6 @@
 /**
- * One seat at the table: nameplate (colour, name, score, busts, hand count,
- * online/bot/host, status chip) plus the seat's STACK and its POWER card.
+ * One seat card: colour dot, name, big score, a status tag row, then the
+ * seat's STACK next to its POWER card.
  * Hidden information: other owners' face-down cards get face={null}; only
  * the viewer's own face-down cards carry a `peek`. Kinds come from the view,
  * which already hides what this viewer may not know.
@@ -37,11 +37,21 @@ export interface SeatProps {
   power: Clickable;
   /** Event cue: which part pulses, keyed by seq (alternating animations restart on every event). */
   cue: { part: 'stack' | 'power' | 'seat'; seq: number; tone?: 'good' | 'bad' } | null;
-  variant: 'opp' | 'me';
   compact?: boolean;
 }
 
-const pulseClass = (seq: number, tone?: 'good' | 'bad') => cx(seq % 2 ? 'ak-cue-a' : 'ak-cue-b', tone && `ak-cue--${tone}`);
+const pulseClass = (seq: number, tone?: 'good' | 'bad') => cx(seq % 2 ? 'tp-cue-a' : 'tp-cue-b', tone && `tp-cue--${tone}`);
+
+const TAG_FOR: Record<SeatStatus['tone'], string> = {
+  turn: 'tp-tag--yellow',
+  eater: 'tp-tag--red',
+  high: 'tp-tag--red',
+  done: 'tp-tag--green',
+  wait: '',
+  passed: '',
+  bust: 'tp-tag--red',
+  win: 'tp-tag--yellow',
+};
 
 export function stackItems(p: PublicPlayerView, view: PlayerView, names: NameBook): CardStackItem[] {
   return p.stack.map((c, i) => {
@@ -68,13 +78,13 @@ export function stackLabel(p: PublicPlayerView, names: NameBook): string {
   return `${whose} stack: ${p.stack.length} card${p.stack.length === 1 ? '' : 's'}, top card ${topOwner}${known}`;
 }
 
-export function Seat({ p, view, names, isHost, online, turn, status, cardW, stackMax, stack, power, cue, variant, compact }: SeatProps) {
+export function Seat({ p, view, names, isHost, online, turn, status, cardW, stackMax, stack, power, cue, compact }: SeatProps) {
   const pal = PLAYER_PALETTE[p.color];
   const you = p.id === view.youId;
   const items = stackItems(p, view, names);
   const pw = p.power;
   // Never below 35px: the back's owner badge needs that much room for a wide letter (M, W).
-  const powerW = Math.max(35, Math.round(cardW * 0.86));
+  const powerW = Math.max(35, Math.round(cardW * 0.78));
   const pwUp = !!pw && (pw.revealed || view.revealed) && pw.kind !== null;
   const pwLabel = !pw
     ? ''
@@ -83,66 +93,58 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
       : you && pw.kind
         ? `Your power, face down: ${powerName(pw.kind)}`
         : `${names.Whose(p.id)} power, face down`;
+  const showHand = (view.phase === 'serving' || view.phase === 'bidding') && p.handCount > 0;
   return (
     <section
       className={cx(
-        'ak-seat',
-        `ak-seat--${variant}`,
-        compact && 'ak-seat--compact',
-        turn && 'ak-seat--turn',
-        you && 'ak-seat--you',
-        p.isBot && 'ak-seat--bot',
+        'tp-seat',
+        compact && 'tp-seat--compact',
+        turn && 'tp-seat--turn',
+        you && 'tp-seat--you',
+        p.isBot && 'tp-seat--bot',
         cue?.part === 'seat' && pulseClass(cue.seq, cue.tone),
       )}
-      style={{ ['--c' as string]: pal.base, ['--c-deep' as string]: pal.deep, ['--c-light' as string]: pal.light, ['--c-ink' as string]: pal.ink }}
+      style={{ ['--c' as string]: pal.base }}
       aria-label={`${you ? 'You' : p.name}${turn ? ', to act' : ''}`}
       data-seat={p.id}
     >
-      <header className="ak-seat__plate">
-        <span className="ak-seat__avatar" aria-hidden="true">
-          {names.initial(p.id)}
+      <header className="tp-seat__head">
+        <span className="tp-dot" aria-hidden="true" />
+        <span className="tp-seat__name">
+          {p.name}
+          {you ? <span className="tp-seat__you"> (you)</span> : null}
         </span>
-        <span className="ak-seat__who">
-          <span className="ak-seat__name">
-            <span className="ak-seat__nametext">{you ? 'You' : p.name}</span>
-            {isHost ? (
-              <span className="ak-seat__icon" title="Host">
-                <Icon name="crown" size={13} title="host" />
-              </span>
-            ) : null}
-            {p.isBot ? (
-              <span className="ak-seat__bot" title={you ? 'A bot is playing for you' : 'Bot'}>
-                <Icon name="bot" size={13} /> bot
-              </span>
-            ) : online !== null ? (
-              <span className={cx('ak-dot', online ? 'ak-dot--on' : 'ak-dot--off')} title={online ? 'Online' : 'Offline'}>
-                <span className="ak-sr">{online ? 'online' : 'offline'}</span>
-              </span>
-            ) : null}
-          </span>
-          <span className="ak-seat__meta">
-            <span title="Cards in hand">
-              <Icon name="hand" size={13} /> {p.handCount}
-              <span className="ak-sr"> in hand</span>
-            </span>
-            {p.busts > 0 ? (
-              <span title="Busts this game" className="ak-seat__busts">
-                <Icon name="chili" size={13} /> {p.busts}
-                <span className="ak-sr"> busts</span>
-              </span>
-            ) : null}
-          </span>
-        </span>
-        <span className="ak-seat__score" aria-label={`${p.score} points`}>
+        {isHost ? <Icon name="crown" size={14} title="host" /> : null}
+        <span className="tp-seat__score tp-num" aria-label={`${p.score} points`}>
           {num(p.score)}
         </span>
       </header>
-      {status ? <span className={cx('ak-seat__status', `ak-seat__status--${status.tone}`)}>{status.label}</span> : null}
-      <div className="ak-seat__cards">
-        <div
-          className={cx('ak-seat__stack', cue?.part === 'stack' && pulseClass(cue.seq, cue.tone))}
-          data-stack-of={p.id}
-        >
+      <div className="tp-seat__tags">
+        {status ? <span className={cx('tp-tag', TAG_FOR[status.tone], status.tone === 'passed' && 'tp-tag--quiet')}>{status.label}</span> : null}
+        {p.isBot ? (
+          <span className="tp-tag tp-tag--beige" title={you ? 'A bot is playing for you' : 'Bot'}>
+            <Icon name="bot" size={12} /> bot
+          </span>
+        ) : online === false ? (
+          <span className="tp-tag tp-tag--red">offline</span>
+        ) : online === true ? (
+          <span className="tp-seat__online" title="Online">
+            <span className="tp-seat__onlinedot" aria-hidden="true" /> online
+          </span>
+        ) : null}
+        {showHand ? (
+          <span className="tp-seat__hand" title="Cards in hand">
+            {p.handCount} in hand
+          </span>
+        ) : null}
+        {p.busts > 0 ? (
+          <span className="tp-seat__hand" title="Busts this game">
+            {p.busts} bust{p.busts === 1 ? '' : 's'}
+          </span>
+        ) : null}
+      </div>
+      <div className="tp-seat__cards">
+        <div className={cx('tp-seat__stack', cue?.part === 'stack' && pulseClass(cue.seq, cue.tone))} data-stack-of={p.id}>
           <CardStack
             cards={items}
             width={cardW}
@@ -154,7 +156,7 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
             ariaLabel={stack.label}
           />
         </div>
-        <div className={cx('ak-seat__power', cue?.part === 'power' && pulseClass(cue.seq, cue.tone))} data-power-of={p.id}>
+        <div className={cx('tp-seat__power', cue?.part === 'power' && pulseClass(cue.seq, cue.tone))} data-power-of={p.id}>
           {pw ? (
             <Card
               back="power"
@@ -170,7 +172,7 @@ export function Seat({ p, view, names, isHost, online, turn, status, cardW, stac
               ariaLabel={power.onClick ? power.label : pwLabel}
             />
           ) : (
-            <span className="ak-seat__nopower" style={{ width: powerW, height: Math.round(powerW * (88 / 63)) }} aria-hidden="true" />
+            <span className="tp-seat__nopower" style={{ width: powerW, height: Math.round(powerW * (88 / 63)) }} aria-hidden="true" />
           )}
         </div>
       </div>

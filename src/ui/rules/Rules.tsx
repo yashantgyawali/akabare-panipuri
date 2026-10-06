@@ -1,11 +1,8 @@
 /** The rules (v0.6), condensed from the PDF plus the clarifications the engine implements. */
-import { useEffect } from 'react';
 import { DEFAULT_CONFIG, POWER_KINDS, type GameConfig, type PowerKind } from '../../engine/types.ts';
 import { CardFront, Card } from '../../cards/index.ts';
-import { Wordmark } from '../common/Brand.tsx';
 import { Icon } from '../common/Icon.tsx';
 import { cx, usePhone } from '../common/hooks.ts';
-import { HOME } from '../router.ts';
 import { goalText, powerName } from '../text.ts';
 
 const POWER_ROWS: Record<PowerKind, { when: string; effect: string }> = {
@@ -31,21 +28,21 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
   const phone = usePhone();
   const cardW = compact || phone ? 64 : 92;
   return (
-    <div className={cx('ak-rules', compact && 'ak-rules--compact')}>
-      <section className="ak-rules__sec">
+    <div className={cx('tp-rules', compact && 'tp-rules--compact')}>
+      <section className="tp-rules__sec">
         <h2>The idea</h2>
         <p>
           Everyone secretly builds a stack of puri, and anyone can add to anyone’s stack. Then comes the bidding: only the highest bidder eats. They start with their
           own stack, then dig into the others’ (unless Naya Plate frees the order). They may flip up to 2 power cards from anywhere on the table, but only their own is a known card. Bite an Akabare
           without the right power and you’re out.
         </p>
-        <p className="ak-rules__facts">
+        <p className="tp-rules__facts">
           <span>3–6 players</span>
           <span>{goalText(config)}</span>
         </p>
-        <div className="ak-rules__set" aria-label="Each player’s set">
+        <div className="tp-rules__set" aria-label="Each player’s set">
           <figure>
-            <div className="ak-rules__fan">
+            <div className="tp-rules__fan">
               {[0, 1, 2, 3, 4].map((i) => (
                 <Card key={i} back="puri" color="yellow" face="panipuri" instance={i + 1} width={cardW * 0.7} decorative />
               ))}
@@ -54,7 +51,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
             <figcaption>Your puri set: 5 Panipuri + 1 Akabare, in your colour. You get it all back every round.</figcaption>
           </figure>
           <figure>
-            <div className="ak-rules__fan">
+            <div className="tp-rules__fan">
               {POWER_KINDS.map((k) => (
                 <Card key={k} back="power" color="yellow" face={k} width={cardW * 0.7} decorative />
               ))}
@@ -64,7 +61,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </div>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>1 · Setup (every round)</h2>
         <ol>
           <li>
@@ -79,7 +76,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
           </li>
         </ol>
         <p>You can change your setup until the last player locks theirs in.</p>
-        <table className="ak-rules__table">
+        <table className="tp-rules__table">
           <caption>Which powers you can pick</caption>
           <thead>
             <tr>
@@ -118,7 +115,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </table>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>2 · Serving</h2>
         <p>Starting with the first player and going clockwise, on your turn do one thing:</p>
         <ul>
@@ -133,7 +130,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <p>Once the bid starts nobody places any more cards. If your hand is empty on your turn, you must start the bid.</p>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>3 · Bidding</h2>
         <p>
           Clockwise from the player who opened, each player either <strong>raises</strong> by at least 1 or <strong>passes</strong> and is out for the round. The
@@ -145,7 +142,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </p>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>4 · Eating</h2>
         <ol>
           <li>
@@ -169,15 +166,15 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </ol>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>Power cards</h2>
-        <ul className="ak-rules__powers">
+        <ul className="tp-rules__powers">
           {POWER_KINDS.map((k) => (
-            <li key={k} className="ak-rules__power">
+            <li key={k} className="tp-rules__power">
               <CardFront kind={k} color={k === 'vinegar' ? 'yellow' : k === 'dahi' ? 'blue' : k === 'nayaplate' ? 'orange' : 'green'} width={compact ? 96 : phone ? 104 : 150} showRule={!compact && !phone} />
               <div>
                 <h3>
-                  {powerName(k)} <span className="ak-rules__when">{POWER_ROWS[k].when}</span>
+                  {powerName(k)} <span className="tp-rules__when">{POWER_ROWS[k].when}</span>
                 </h3>
                 <p>{POWER_ROWS[k].effect}</p>
               </div>
@@ -186,7 +183,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </ul>
       </section>
 
-      <section className="ak-rules__sec ak-rules__sec--hot">
+      <section className="tp-rules__sec tp-rules__sec--hot">
         <h2>
           <Icon name="chili" /> Biting an Akabare
         </h2>
@@ -197,7 +194,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </p>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>Scoring</h2>
         <p>Only the eater scores from the bid.</p>
         <ul>
@@ -221,7 +218,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <p>No trap reward when the eater busts on their own Akabare, when the Akabare was cancelled by Vinegar or neutralised by Dahi, or when the table ran out.</p>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>Winning</h2>
         <p>
           At the end of each round everyone takes back their own puri and the first player moves clockwise.{' '}
@@ -231,12 +228,12 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         <p>
           <strong>Tiebreak:</strong> fewer busts across the game. Still tied? You share the win.
         </p>
-        <p className="ak-muted">Hosts can change the target, the round limit (or drop one of them) and the trap reward in the lobby.</p>
+        <p className="tp-muted">Hosts can change the target, the round limit (or drop one of them) and the trap reward in the lobby.</p>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>Examples</h2>
-        <ul className="ak-rules__examples">
+        <ul className="tp-rules__examples">
           {EXAMPLES.map((x) => (
             <li key={x.title}>
               <strong>{x.title}.</strong> {x.text}
@@ -245,7 +242,7 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </ul>
       </section>
 
-      <section className="ak-rules__sec">
+      <section className="tp-rules__sec">
         <h2>Small print</h2>
         <ul>
           <li>Vinegar cancels only the next puri you flip. Two Vinegars don’t stack.</li>
@@ -255,29 +252,5 @@ export function RulesContent({ compact = false, config = DEFAULT_CONFIG }: { com
         </ul>
       </section>
     </div>
-  );
-}
-
-export function RulesPage() {
-  useEffect(() => {
-    document.title = 'Rules · Akabare Panipuri';
-  }, []);
-  return (
-    <main className="ak-screen ak-screen--wide ak-rulespage">
-      <header className="ak-screen__top">
-        <Wordmark size="sm" link />
-        <a className="ak-toplink" href={HOME}>
-          <Icon name="arrowLeft" size={18} /> Home
-        </a>
-      </header>
-      <div className="ak-rulespage__hero">
-        <p className="ak-kicker">Rules v0.6</p>
-        <h1 className="ak-h1">How to play</h1>
-        <p className="ak-rulespage__lede">Stack the puri. Bluff the bid. Don’t bite the chili.</p>
-      </div>
-      <article className="ak-paper ak-rulespage__body">
-        <RulesContent />
-      </article>
-    </main>
   );
 }
