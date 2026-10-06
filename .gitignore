@@ -8,3 +8,4 @@ source_assets/svg
 *.local
 supabase/.build/game/
 supabase/functions/game/_lib/
+akabare-site.zip
