@@ -101,15 +101,9 @@ export function TableHeader({
   return (
     <header className={cx('tp-thead', collapsed && 'is-collapsed')}>
       {collapsed ? (
-        <div className="tp-thead__slim">
-          <span className={cx('tp-thead__pill', yourTurn && 'is-you')} title={PHASE_LABELS[view.phase]}>
-            <span className="tp-sr">{PHASE_LABELS[view.phase]}: </span>
-            {pill}
-          </span>
-          <button type="button" className="tp-thead__fold" onClick={() => toggleCollapsed(false)} aria-label="Show the top bar" aria-expanded={false}>
-            <Chevron up={false} /> Menu
-          </button>
-        </div>
+        <button type="button" className="tp-thead__handle" onClick={() => toggleCollapsed(false)} aria-label="Show the top bar" aria-expanded={false} title="Show the top bar">
+          <Chevron up={false} />
+        </button>
       ) : null}
       {collapsed ? null : (
       <>

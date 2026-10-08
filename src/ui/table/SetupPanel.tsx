@@ -90,7 +90,7 @@ export function SetupPanel({
     return { panipuri: full.panipuri - used.panipuri, akabare: full.akabare - used.akabare };
   }, [slots, full.panipuri, full.akabare]);
 
-  const cardW = phone ? 46 : 60;
+  const cardW = phone ? 44 : 42;
   const complete = slots.every((s) => s !== null) && power !== null;
   const canEdit = !!legal && !botSeat;
   const waiting = waitingSetupText(view, names);
@@ -147,7 +147,7 @@ export function SetupPanel({
       </h2>
       <div className="tp-setup__sections">
         <div className="tp-setup__col tp-setup__col--hand">
-          <h3 className="tp-setup__label">1 · Tap cards from your hand</h3>
+          <h3 className="tp-setup__label">1 · Your hand</h3>
           <Hand
             cards={handCards(remaining)}
             color={color}
@@ -161,7 +161,7 @@ export function SetupPanel({
           />
         </div>
         <div className="tp-setup__col">
-          <h3 className="tp-setup__label">2 · Your stack</h3>
+          <h3 className="tp-setup__label">2 · Stack (bottom → top)</h3>
           <ol className="tp-setup__slots" aria-label="Your stack slots, bottom to top">
             {slots.map((s, i) => (
               <li key={i} className="tp-slot">
@@ -174,13 +174,12 @@ export function SetupPanel({
                     <span aria-hidden="true">{i + 1}</span>
                   </span>
                 )}
-                <span className="tp-slot__cap">{slotName(i, size)}</span>
               </li>
             ))}
           </ol>
         </div>
         <div className="tp-setup__col">
-          <h3 className="tp-setup__label">3 · Pick one power</h3>
+          <h3 className="tp-setup__label">3 · Power</h3>
           <ul className="tp-setup__powers" role="radiogroup" aria-label="Power card">
             {POWER_KINDS.map((k) => {
               const ok = available.includes(k);

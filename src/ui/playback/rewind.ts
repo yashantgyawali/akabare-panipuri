@@ -494,58 +494,60 @@ export function eventDuration(e: GameEvent, own: boolean, queued: number, reduce
   } else if (own && (e.type === 'flipPuri' || e.type === 'flipPower')) {
     ms = e.type === 'flipPower' && (e.effect === 'saved' || e.effect === 'failedSave') ? 1300 : e.type === 'flipPuri' && e.kind === 'akabare' && !e.cancelled ? 500 : 520;
   } else {
+    // Other players' moves (bots especially) are paced slowly enough to read what they play.
     switch (e.type) {
       case 'setupDone':
       case 'ready':
-        ms = 220;
+        ms = 320;
         break;
       case 'servingStart':
-        ms = 420;
-        break;
-      case 'roundStart':
-        ms = 900;
-        break;
-      case 'place':
         ms = 650;
         break;
-      case 'bidStart':
-        ms = 850;
-        break;
-      case 'raise':
-        ms = 750;
-        break;
-      case 'pass':
-        ms = 560;
-        break;
-      case 'eater':
+      case 'roundStart':
         ms = 1100;
         break;
+      case 'place':
+        ms = 1500;
+        break;
+      case 'bidStart':
+        ms = 1700;
+        break;
+      case 'raise':
+        ms = 1600;
+        break;
+      case 'pass':
+        ms = 1200;
+        break;
+      case 'eater':
+        ms = 1600;
+        break;
       case 'flipPuri':
-        ms = e.cancelled ? 1200 : e.kind === 'akabare' ? 650 : 950;
+        ms = e.cancelled ? 1800 : e.kind === 'akabare' ? 1100 : 1600;
         break;
       case 'bite':
-        ms = 1300;
+        ms = 1800;
         break;
       case 'flipPower':
-        ms = e.effect === 'saved' || e.effect === 'failedSave' ? 1700 : 1200;
+        ms = e.effect === 'saved' || e.effect === 'failedSave' ? 2300 : 1900;
         break;
       case 'success':
-        ms = 1300;
+        ms = 1800;
         break;
       case 'bust':
-        ms = 1700;
+        ms = 2200;
         break;
       case 'roundEnd':
       case 'gameOver':
-        ms = 300;
+        ms = 400;
         break;
       case 'botSet':
-        ms = 500;
+        ms = 600;
         break;
     }
   }
-  if (queued > 10) ms *= 0.3;
-  else if (queued > 6) ms *= 0.6;
+  // Only a long backlog (a reconnect, a missed stretch) speeds up; a bot's normal turn plays at full pace.
+  if (queued > 18) ms *= 0.3;
+  else if (queued > 12) ms *= 0.6;
   if (reducedMotion) ms *= 0.8;
   return Math.round(ms);
 }

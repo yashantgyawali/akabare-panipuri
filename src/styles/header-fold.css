@@ -1,15 +1,50 @@
 /* Collapsible top bar on the table screen: a slim strip with the turn pill and a "Menu" button. */
+/* Minimized: the bar takes no space at all; only a small handle floats at the top right. */
 .tp-thead.is-collapsed {
   display: block;
-  padding: 4px var(--tp-gutter, 16px);
+  height: 0;
   min-height: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
 }
-.tp-thead__slim {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.tp-thead__handle {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 0 10px 10px;
+  background: rgb(19 13 1 / 0.55);
+  color: var(--tumlet-beige);
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
+.tp-thead__handle:hover,
+.tp-thead__handle:focus-visible {
+  opacity: 1;
+  background: var(--tumlet-yellow);
+  color: var(--tumlet-ink);
+}
+.tp-thead__handle::after {
+  content: '';
+  position: absolute;
+  inset: -4px -6px -14px;
+}
+@media (max-width: 800px) {
+  .tp-thead__handle {
+    top: 4px;
+    width: 44px;
+    height: 24px;
+  }
+}
+
 .tp-thead__fold {
   display: inline-flex;
   align-items: center;
@@ -31,6 +66,12 @@
   min-height: 0;
   padding: 0;
 }
+@media (max-width: 800px) {
+  .tp-thead__fold--icon {
+    width: 44px;
+    height: 44px;
+  }
+}
 .tp-thead__fold:hover {
   background: var(--tumlet-yellow);
   color: var(--tumlet-ink);
@@ -46,15 +87,4 @@
 }
 .tp-tablescreen .tp-thead__fold:hover {
   color: var(--tumlet-ink);
-}
-@media (max-width: 800px) {
-  .tp-thead.is-collapsed {
-    grid-template-columns: none;
-    padding: 4px 12px;
-    row-gap: 0;
-  }
-  .tp-thead__fold--icon {
-    width: 44px;
-    height: 44px;
-  }
 }
