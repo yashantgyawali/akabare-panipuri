@@ -1,141 +1,25 @@
 /*
- * The table (Tumlet): a grid of seat cards, the eating HUD or a ticker line,
- * and a sticky dock that holds everything the player can do.
- * Flat and hand-made: 2px borders, hard offset shadows, no blur.
- * Classes: tp-tablescreen, tp-board, tp-seats, tp-seat*, tp-hud*, tp-plate*,
- * tp-ticker*, tp-dock*, tp-prompt*, tp-bid*, tp-setup*, tp-slot*, tp-pick*, tp-hand-row*.
+ * The table screen chrome: the board that holds the 3D scene (scene.css), the
+ * ticker line, and the sticky dock that holds everything the player can do.
+ * The dock is flat and hand-made (2px borders, hard offset shadows, no blur)
+ * and sits in front of the scene like a ledge.
+ * Classes: tp-tablescreen, tp-board, tp-notice, tp-ticker*, tp-dock*, tp-prompt*,
+ * tp-bid*, tp-setup*, tp-slot*, tp-pick*, tp-hand-row*, tp-cue-*.
  */
 
 .tp-tablescreen {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--tumlet-beige);
+  background: #120a05;
 }
 
+/* the board is just the stage for the 3D scene (and the offline notice above it) */
 .tp-board {
   flex: 1;
   width: 100%;
-  max-width: var(--tp-table);
-  margin: 0 auto;
-  padding: 28px 32px 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-.tp-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 16px;
-  border: 2px dashed var(--tumlet-brown);
-  border-radius: var(--radius-md);
-  background: var(--tumlet-field);
-}
-
-/* ===== seats ===== */
-.tp-seats {
-  display: grid;
-  grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
-  gap: 14px;
-}
-.tp-seat {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border: 2px solid var(--tumlet-line);
-  border-radius: var(--radius-md);
-  background: var(--tumlet-beige);
-  transition: box-shadow 0.2s ease;
-}
-.tp-seat--you {
-  border-color: var(--tumlet-brown);
-  background: var(--tumlet-field);
-}
-.tp-seat--turn {
-  border-color: var(--tumlet-ink);
-  box-shadow: 6px 6px 0 0 var(--tumlet-yellow);
-}
-.tp-seat__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.tp-seat__name {
-  flex: 1;
-  min-width: 0;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tp-seat__you {
-  font-weight: 400;
-  color: var(--tumlet-brown);
-}
-
-.tp-seat__host {
-  display: inline-flex;
-  color: var(--tumlet-brown);
-}
-.tp-seat__score {
-  font-size: 22px;
-}
-.tp-seat__tags {
-  min-height: 24px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-}
-.tp-tag--quiet {
-  color: var(--tumlet-brown);
-}
-.tp-seat__hand,
-.tp-seat__online {
-  font-size: 13px;
-  color: var(--tumlet-brown);
-  white-space: nowrap;
-}
-.tp-seat__online {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.tp-seat__onlinedot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--tumlet-green);
-}
-.tp-seat__cards {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 4px 6px 12px;
-}
-.tp-seat__stack,
-.tp-seat__power {
-  flex: none;
-  border-radius: 6px;
-}
-.tp-seat .ak-card-stack__slot {
-  /* the empty-pile slot is cream-on-dark by default; on the beige plate it needs the same dashed line as the power slot */
-  border: 2px dashed var(--tumlet-line);
-  background: transparent;
-}
-.tp-seat__nopower {
-  display: block;
-  border: 2px dashed var(--tumlet-line);
-  border-radius: 5px;
 }
 
 /* an event just touched this seat / stack / power: a quick yellow (or red) flash */
@@ -145,9 +29,9 @@
 .tp-cue-b {
   animation: tp-cue-b 0.9s ease-out;
 }
-.tp-seat__stack,
-.tp-seat__power,
-.tp-seat {
+.tp-pile__stack,
+.tp-pile__power,
+.tp-seat3d {
   --cue: var(--tumlet-yellow);
 }
 .tp-cue--bad {
@@ -174,145 +58,48 @@
   }
 }
 
-/* ===== eating HUD ===== */
-.tp-hud {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 32px;
-  align-items: center;
-  padding: 20px 24px;
-}
-.tp-hud__main {
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.tp-hud__who {
-  font-weight: 700;
-}
-.tp-hud__count {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.tp-hud__eaten {
-  font-size: 44px;
-}
-.tp-hud__target {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--tumlet-brown);
-}
-.tp-hud__bar {
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--tumlet-line-soft);
-  overflow: hidden;
-}
-.tp-hud__bar > span {
-  display: block;
-  height: 100%;
-  background: var(--tumlet-red);
-  transition: width 0.3s ease;
-}
-.tp-hud__flips {
-  font-size: 14px;
-  color: var(--tumlet-brown);
-}
-.tp-hud__notes {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-.tp-hud__notes.is-empty {
-  display: none;
-}
-.tp-hud__plate {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.tp-hud__plate-label {
-  font-size: 20px;
-  line-height: 1;
-}
-
-/* ===== the plate ===== */
-.tp-plate {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px;
-  min-height: 78px;
-}
-.tp-plate__empty {
-  align-self: center;
-  font-size: 14px;
-  color: var(--tumlet-brown);
-}
-.tp-plate__card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.tp-plate__card.is-cancelled {
-  opacity: 0.6;
-}
-.tp-plate__mark {
-  padding: 0 8px;
-  border-radius: var(--radius-pill);
-  background: var(--tumlet-line-soft);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  white-space: nowrap;
-}
-.tp-plate__mark--saved {
-  background: var(--tumlet-yellow);
-}
-.tp-plate__mark--power {
-  background: transparent;
-  padding: 0;
-  color: var(--tumlet-brown);
-}
-
-/* ===== ticker ===== */
+/* ===== ticker (inside the scene) ===== */
 .tp-ticker {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding: 0 12px;
   gap: 16px;
-  min-height: 33px;
-}
-.tp-ticker--hud {
-  min-height: 0;
-  justify-content: flex-end;
-}
-.tp-ticker--hud:empty {
-  display: none;
+  pointer-events: none;
 }
 .tp-ticker__line {
   margin: 0;
-  text-align: center;
+  max-width: min(36%, 420px);
+  padding: 2px 14px;
+  border-radius: 16px;
+  background: rgba(18, 10, 5, 0.6);
+  text-align: left;
   font-family: var(--font-hand);
-  font-size: 22px;
-  line-height: 1.5;
-  color: var(--tumlet-brown);
+  font-size: 20px;
+  line-height: 1.3;
+  color: #f6e7cf;
   animation: tp-ticker-in 0.3s ease-out;
 }
+.tp-ticker__line:empty {
+  display: none;
+}
 .tp-ticker__line--bad {
-  color: var(--tumlet-red-deep);
+  color: #ff9a85;
 }
 .tp-ticker__skip {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 99px;
+  background: rgba(18, 10, 5, 0.7);
+  color: #ffd9a0;
 }
 @keyframes tp-ticker-in {
   from {
@@ -330,7 +117,8 @@
   position: sticky;
   bottom: 0;
   z-index: 10;
-  margin-top: 24px;
+  margin-top: 0;
+  box-shadow: 0 -5px 0 0 rgba(18, 10, 5, 0.85);
   border-top: 2px solid var(--tumlet-brown);
   background: var(--tumlet-beige);
 }
@@ -546,69 +334,24 @@
   font-size: 22px;
 }
 
-/* ===== medium: three seats per row ===== */
+/* ===== medium ===== */
 @media (max-width: 900px) {
-  .tp-board {
-    padding: 20px 20px 0;
-  }
-  .tp-seats {
-    grid-template-columns: repeat(var(--md, 3), minmax(0, 1fr));
-  }
   .tp-dock__inner {
     padding: 16px 20px 20px;
     gap: 24px;
-  }
-  .tp-hud {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
   }
 }
 
 /* ===== phone ===== */
 @media (max-width: 640px) {
-  .tp-board {
-    padding: 14px 16px 0;
-    gap: 16px;
-  }
-  .tp-seats {
-    grid-template-columns: repeat(var(--sm, 2), minmax(0, 1fr));
-    gap: 10px;
-  }
-  .tp-seat {
-    gap: 6px;
-    padding: 10px;
-  }
-  .tp-seat--turn {
-    box-shadow: 4px 4px 0 0 var(--tumlet-yellow);
-  }
-  .tp-seat__name {
-    font-size: 15px;
-  }
-  .tp-seat__host {
-    display: none;
-  }
-  .tp-seat__score {
-    font-size: 20px;
-  }
-  .tp-seat__cards {
-    gap: 10px;
-    padding: 2px 2px 10px;
-  }
-  .tp-hud {
-    padding: 14px;
-    box-shadow: 4px 4px 0 0 var(--tumlet-red);
-  }
-  .tp-hud__main {
-    min-width: 0;
-  }
-  .tp-hud__eaten {
-    font-size: 36px;
+  .tp-ticker {
+    justify-content: center;
+    padding: 0 8px;
   }
   .tp-ticker__line {
-    font-size: 20px;
-  }
-  .tp-dock {
-    margin-top: 16px;
+    max-width: 100%;
+    font-size: 16px;
+    padding: 1px 10px;
   }
   .tp-dock__inner {
     min-height: 0;
@@ -700,4 +443,25 @@
   .tp-ticker__line {
     animation: none;
   }
+}
+
+/* offline notice: a dark wood plank floating at the top of the scene */
+.tp-notice {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-radius: var(--radius-md);
+  top: 46px;
+  left: 50%;
+  z-index: 7;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  border: 2px solid var(--tumlet-yellow);
+  background: rgba(18, 10, 5, 0.92);
+  color: #f6e7cf;
+  padding: 8px 14px;
 }

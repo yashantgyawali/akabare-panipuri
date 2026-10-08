@@ -1,0 +1,36 @@
+# Round-table scene: build brief
+
+The user loves the 3D look of *Liar's Bar* and wants the **table screen** to be a **circular round table seen in 3D perspective with the cards lying on top**, in a **dark, lamp-lit tavern**. Not a copy of the game: our own look, built with **CSS 3D transforms** (no WebGL, no new dependencies). The cards stay exactly as they are (`src/cards/**`), real DOM `<Card>`s, so they stay accessible, clickable and animatable.
+
+Only the table screen changes. Home, lobby, rules, cards pages stay in the beige Tumlet style (`src/styles/tumlet.css`). The bottom action DOCK and the overlays (bite, result, game over, drawers, dialogs) stay functionally exactly as they are; they sit on top of the scene.
+
+## Feel
+
+- A dim tavern room. One warm hanging lamp above the table throws a soft pool of light on the wood; the room falls off to near-black at the edges (vignette). Subtle floating dust or lamp flicker is welcome if cheap, restrained.
+- A heavy **round wooden table**: visible wood grain, a darker worn rim with a bevelled edge, a thickness you can see at the front edge, a soft contact shadow on the floor. The inner playing field can be a slightly darker inset (cloth or oiled wood). A round **brass thali plate** in the centre is where eaten cards land ("the plate").
+- Camera sits low and behind your seat, looking across the table: the table is a circle in a plane tilted back with `perspective` (about 1100-1600px) and `rotateX` about 52-62deg (less on phones, see below). You (bottom) are nearest the camera; opponents sit around the far side. Seats go **clockwise in seat order** with the viewer at the bottom (the next player clockwise is on the viewer's LEFT, as seen from above).
+- Cards lie **flat on the table** (they live inside the tilted plane), each seat's cards in front of that seat, rotated so the bottom of the card faces the seat. A seat's stack is a loose pile (each card slightly offset toward the seat + a tiny deterministic rotation derived from the card's INDEX, never from its kind, so nothing leaks), raised a hair with `translateZ` so they cast a contact shadow. The seat's face-down power card lies beside the stack.
+- Every player is a **nameplate standing upright at the table rim** (billboarded: counter-rotate the tilt so it faces the camera): coloured disc avatar with initial in the player's colour, name, big score, small status tags (bot, offline, host crown, "serving", "deciding", "high bid n", "passed", "eating a/b"). The player whose turn it is gets a warm spotlight: a bright ring/glow on the nameplate and the lamp light pool leaning toward them. No cartoon characters; keep the nameplates handsome and legible.
+- Your own cards show the same "peek" markers as today (you know what you placed); everyone else's stay `face={null}` (hidden information: never render another owner's kind anywhere, not in aria-labels, titles, classes or the seed of any random jitter).
+- Eaten cards: when the eater flips a card it **lands on the plate** with a short 3D drop (translateZ from above + tiny rotation, flips face-up). Cancelled cards are dimmed, saved Akabare marked, flipped power cards go on the plate too. Existing playback timing/events drive this; just render from the displayed view as `Table.tsx` already does.
+- The eater's progress ("You are eating 3 / 7", power flips left, Numb / Naya Plate pills) is a small dark-wood tally board floating above the plate in screen space (or standing on the far rim), always legible.
+- A very gentle idle camera sway (a few px / under 1deg, slow) makes it feel alive; disabled under `prefers-reduced-motion`.
+- Moments (bite, bust) can flash the lamp (brief red tint of the light pool) in addition to the existing overlay; keep subtle.
+
+## Layout rules
+
+- The scene fills the area between the table header and the sticky dock; the dock overlaps the lower part of the scene on phones (it already scrolls internally), so make sure your own seat/stack stays visible above the dock (compute the scene's bottom padding from the dock height, e.g. a CSS variable set by a ResizeObserver, or reserve space).
+- Desktop 1280x800: table diameter about min(78vw, 1.55 x available height) so it fills the stage; side seats fit inside the viewport.
+- Phone 375x812: reduce the tilt (about 38-46deg) so the ellipse is tall enough; table diameter about 104-112vw (rim may run off the sides a little); seats shrink to 44-52px avatars, cards 34-44px wide, nameplates compact (name truncated, score visible); up to 6 players must stay readable and tappable (tap targets of clickable stacks/powers get an enlarged invisible hit area >= 44px). No horizontal page scroll.
+- 2 to 6 seats (engine allows 3-6; handle 3,4,5,6 well) positioned on an ellipse with equal angular spacing, you at the bottom.
+- The dock, header, overlays keep their current behaviour. The header should become dark and translucent on the table screen (beige text, still the Tumlet header content and 44px targets); the dock stays beige for readable controls but gets a hard top shadow so it feels like a ledge in front of the table (design system: hard offset shadows, never blurred).
+- Styling: dark scene uses its own warm-dark palette (very dark brown #120a05 to #2a170c, wood #6b4423 / #8a5a2b / #3d2410, lamp #ffd9a0, brass #c9953a); Tumlet red #F16147 and yellow #F3B952 remain the interaction colours (turn glow = yellow, clickable ring = yellow, danger = red). The six player colours appear on avatars and card backs only.
+
+## Interaction (keep all of it working)
+
+Placing a card on a stack (select in the dock, then tap a stack), eating a stack, flipping a power, hover/focus highlights, keyboard focus order (seats in seat order, then dock), focus restore after actions (Table.tsx selectors reference `.tp-seats [data-stack-of] > button...`: keep those hooks working or update the selectors consistently), aria-live announcer, spectators, offline/replace-with-bot notices, skip playback, reduced motion, everything in `view.legal`.
+
+## Technical approach
+
+- Scene root `.tp-room` (`perspective`), inner `.tp-world` (`transform-style: preserve-3d; transform: rotateX(var(--tilt))`), table layers as absolutely-positioned discs (`border-radius: 50%`) offset in Z, seat anchors positioned with `transform: rotateZ(a) translateY(-R)` style math (or explicit px from JS using the measured table radius), upright nameplates via a counter `rotateX(calc(-1 * var(--tilt)))` + `translateZ`. Wood via layered `repeating-linear-gradient` / `conic-gradient` / an inline SVG `feTurbulence` data-URI; no external images. Keep `will-change` limited. Avoid heavy blur filters; hard shadows per the design system for UI chrome, soft shadows are fine inside the tavern scene itself.
+- New files under `src/ui/table/scene/` (TableScene.tsx, Seat3D.tsx, Pile3D.tsx, Plate3D.tsx, tally, `geometry.ts` for the seat-angle math with unit tests) and a new stylesheet `src/styles/scene.css` imported from `src/main.tsx`. `table.css` keeps the dock/prompt styles; remove the old seat-grid + HUD-panel CSS and components that the scene replaces (Seat.tsx grid card, EatingHud panel) once nothing uses them; keep the logic helpers (stackItems, stackLabel, etc.) wherever they are still used.

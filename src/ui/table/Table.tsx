@@ -11,18 +11,23 @@ import { noLegalActions } from '../../engine/index.ts';
 import { Button } from '../common/Button.tsx';
 import { ConfirmDialog, Drawer } from '../common/Drawer.tsx';
 import { Icon } from '../common/Icon.tsx';
-import { cx, useAfter, useMediaQuery, usePhone, useReducedMotion, useRunner } from '../common/hooks.ts';
+import { cx, useAfter, usePhone, useReducedMotion, useRunner } from '../common/hooks.ts';
 import { useToast } from '../common/Toasts.tsx';
 import { HOME, navigate } from '../router.ts';
 import { RulesContent } from '../rules/Rules.tsx';
 import { usePlayback } from '../playback/usePlayback.ts';
 import { describeEvent, makeNameBook, powerName } from '../text.ts';
 import { LogList, ScoresPanel, TableHeader, turnText, type DrawerName } from './Chrome.tsx';
-import { EatingHud } from './EatingHud.tsx';
+import { TableScene } from './scene/TableScene.tsx';
 import { Hand, handCards } from './Hand.tsx';
 import { AkabareMoment, GameOverPanel, RoundEndPanel, type Moment } from './Overlays.tsx';
 import { ActionPanel } from './Panels.tsx';
-import { Seat, stackLabel, type Clickable, type SeatProps, type SeatStatus } from './Seat.tsx';
+import { paramsFor, seatSpots } from './scene/geometry.ts';
+import { useChromeHeights } from './scene/useStage.ts';
+import { Plate3D } from './scene/Plate3D.tsx';
+import { SeatsLayer, type SeatBase } from './scene/SeatsLayer.tsx';
+import { Tally } from './scene/Tally.tsx';
+import { stackLabel, type Clickable, type SeatCue, type SeatStatus } from './scene/seatData.ts';
 import { SetupPanel } from './SetupPanel.tsx';
 
 const NO_LEGAL = noLegalActions();
@@ -63,7 +68,7 @@ function statusFor(p: PublicPlayerView, view: PlayerView): SeatStatus | null {
   }
 }
 
-function cueFor(p: PublicPlayerView, e: GameEvent | null): SeatProps['cue'] {
+function cueFor(p: PublicPlayerView, e: GameEvent | null): SeatCue | null {
   if (!e) return null;
   switch (e.type) {
     case 'place':
@@ -149,7 +154,6 @@ export function Table({ game }: { game: UseGame }) {
   const you = snap.youId;
   const reduced = useReducedMotion();
   const phone = usePhone();
-  const narrow = useMediaQuery('(min-width: 641px) and (max-width: 900px)');
   const pb = usePlayback(live, you, reduced);
   const view = pb.display ?? live;
   const names = useMemo(() => makeNameBook(view.players, you), [view.players, you]);
@@ -161,6 +165,8 @@ export function Table({ game }: { game: UseGame }) {
   // <button> only while you may tap it, and the panel shows "Playing…" while
   // your move plays back). Remember where you were and put focus back on the
   // same control, or the next thing you can act on, once the table settles.
+  const screenRef = useRef<HTMLDivElement>(null);
+  useChromeHeights(screenRef);
   const focusWant = useRef<string | null>(null);
   const act = useCallback(
     (key: string, action: Action) => {
@@ -285,11 +291,12 @@ export function Table({ game }: { game: UseGame }) {
     : [];
 
   const ordered = seatOrder(view.players, you);
-  const n = ordered.length;
-  const cardW = phone ? 54 : narrow ? 62 : n <= 2 ? 84 : n === 3 ? 76 : n === 4 ? 70 : 60;
-  const stackMax = phone ? 150 : 240;
   const handW = phone ? 46 : 60;
-  const plateW = phone ? 44 : 56;
+
+  // The lamp leans towards whoever's turn it is; it flashes red for the bite and the bust.
+  const turnIdx = ordered.findIndex((p) => (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating') && view.pendingActors.includes(p.id));
+  const lamp = turnIdx >= 0 ? (seatSpots(ordered.length, paramsFor(window.innerWidth))[turnIdx]?.pile ?? null) : null;
+  const flash = shownMoment?.stage === 'bitten' || shownMoment?.stage === 'bust' || shownMoment?.stage === 'failed';
 
   const stackClick = (p: PublicPlayerView): Clickable => {
     const label = stackLabel(p, names);
@@ -333,7 +340,7 @@ export function Table({ game }: { game: UseGame }) {
     }
     return { state: 'idle', label: '' };
   };
-  const seatProps = (p: PublicPlayerView): SeatProps => ({
+  const seatProps = (p: PublicPlayerView): SeatBase => ({
     p,
     view,
     names,
@@ -341,12 +348,9 @@ export function Table({ game }: { game: UseGame }) {
     online: p.isBot || !graceOver ? null : p.id === you || game.online.includes(p.id),
     turn: (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating') && view.pendingActors.includes(p.id),
     status: statusFor(p, view),
-    cardW,
-    stackMax,
     stack: stackClick(p),
     power: powerClick(p),
     cue: cueFor(p, current),
-    compact: phone,
   });
 
   const setupMode = view.phase === 'setup' && !!me && !me.isBot;
@@ -371,38 +375,50 @@ export function Table({ game }: { game: UseGame }) {
     });
 
   return (
-    <div className={cx('tp-tablescreen', `tp-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone')}>
+    <div ref={screenRef} className={cx('tp-tablescreen', `tp-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone')}>
       <TableHeader view={view} names={names} code={snap.code} phone={phone} onOpen={setDrawer} onLeave={() => setConfirmLeave(true)} />
 
       <main className="tp-board" aria-label="The table">
-        {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
-          <div className="tp-notice" role="status">
-            <span>
-              Waiting on <strong>{names.name(offlineWaiting[0])}</strong>, who seems to be offline.
-            </span>
-            <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
-              Replace with a bot
-            </Button>
-          </div>
-        ) : null}
-        <div className="tp-seats" style={{ ['--n' as string]: n, ['--md' as string]: Math.min(n, 3), ['--sm' as string]: Math.min(n, 2) }}>
-          {ordered.map((p) => (
-            <Seat key={p.id} {...seatProps(p)} />
-          ))}
-        </div>
-        {showHud && view.eating ? <EatingHud view={view} names={names} plateW={plateW} reduced={reduced} /> : null}
-        <div className={cx('tp-ticker', showHud && 'tp-ticker--hud')}>
-          {!showHud ? (
-            <p key={current?.seq ?? 'none'} className={cx('tp-ticker__line', line && `tp-ticker__line--${line.tone}`)} aria-hidden="true">
-              {line?.text ?? (view.phase === 'setup' ? 'Everyone hides their puri and one power.' : '')}
-            </p>
-          ) : null}
-          {pb.queued > 1 ? (
-            <button type="button" className="tp-link tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`}>
-              <Icon name="skip" size={16} /> Skip {pb.queued}
-            </button>
-          ) : null}
-        </div>
+        <TableScene
+          lamp={lamp}
+          flash={flash}
+          overlay={
+            <>
+              {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
+                <div className="tp-notice" role="status">
+                  <span>
+                    Waiting on <strong>{names.name(offlineWaiting[0])}</strong>, who seems to be offline.
+                  </span>
+                  <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
+                    Replace with a bot
+                  </Button>
+                </div>
+              ) : null}
+              {showHud && view.eating ? <Tally view={view} names={names} /> : null}
+              <div className="tp-ticker">
+              {!showHud ? (
+                <p key={current?.seq ?? 'none'} className={cx('tp-ticker__line', line && `tp-ticker__line--${line.tone}`)} aria-hidden="true">
+                  {line?.text ?? (view.phase === 'setup' ? 'Everyone hides their puri and one power.' : '')}
+                </p>
+              ) : null}
+              {pb.queued > 1 ? (
+                <button type="button" className="tp-link tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`}>
+                  <Icon name="skip" size={16} /> Skip {pb.queued}
+                </button>
+              ) : null}
+              </div>
+            </>
+          }
+        >
+          {(stage) => (
+            <>
+              {view.eating && showHud ? (
+                <Plate3D plate={view.eating.plate} powers={view.eating.powers} names={names} width={Math.round(stage.D * (stage.phone ? 0.085 : 0.066))} radius={stage.D * 0.105} reduced={reduced} />
+              ) : null}
+              <SeatsLayer stage={stage} seats={ordered.map(seatProps)} />
+            </>
+          )}
+        </TableScene>
       </main>
       {/* The one live region for the table: each move as it plays, then your turn (the header pill stays quiet). */}
       <div className="tp-sr" aria-live="polite">
