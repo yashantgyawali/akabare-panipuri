@@ -40,6 +40,10 @@ export function TableScene({
   return (
     <div ref={ref} className={cx('tp-room', flash && 'is-flash', className)} style={style}>
       <div className="tp-room__glow" aria-hidden="true" />
+      <div className="tp-room__lamp" aria-hidden="true">
+        <i className="tp-room__cone" />
+        <i className="tp-room__shade" />
+      </div>
       {D > 0 ? (
         <div className="tp-world">
           <div className="tp-table" aria-hidden="true">

@@ -355,7 +355,7 @@
   }
   .tp-dock__inner {
     min-height: 0;
-    max-height: 58vh;
+    max-height: max(150px, calc(100dvh - var(--head-h, 96px) - 420px));
     overflow-y: auto;
     flex-direction: column;
     align-items: stretch;
@@ -386,8 +386,20 @@
   .tp-prompt__controls {
     align-items: stretch;
   }
+  .tp-prompt {
+    position: relative;
+  }
   .tp-prompt__cancel {
-    min-height: 36px;
+    position: absolute;
+    top: -8px;
+    right: -6px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    min-height: 44px;
+    padding: 0 8px;
   }
   .tp-bid {
     align-items: stretch;

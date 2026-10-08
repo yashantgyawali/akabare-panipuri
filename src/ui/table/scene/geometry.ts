@@ -32,9 +32,9 @@ export interface SceneParams {
   ky: number;
 }
 
-export const DESKTOP: SceneParams = { tilt: 56, perspective: 1400, tiltMin: 48, tiltMax: 56, widthFrac: 0.78, padTop: 58, padBottom: 28, pileR: 0.6, nameR: 0.95, nameSide: 0.35, sideLift: 0, ky: 1 };
+export const DESKTOP: SceneParams = { tilt: 56, perspective: 1400, tiltMin: 48, tiltMax: 56, widthFrac: 0.78, padTop: 84, padBottom: 28, pileR: 0.58, nameR: 1.03, nameSide: 0.3, sideLift: 0, ky: 1 };
 export const TABLET: SceneParams = { tilt: 52, perspective: 1300, tiltMin: 42, tiltMax: 52, widthFrac: 0.92, padTop: 56, padBottom: 28, pileR: 0.6, nameR: 0.95, nameSide: 0, sideLift: 0.28, ky: 1 };
-export const PHONE: SceneParams = { tilt: 42, perspective: 1100, tiltMin: 26, tiltMax: 50, widthFrac: 1.12, padTop: 70, padBottom: 26, pileR: 0.6, nameR: 0.97, nameSide: 0, sideLift: 0.3, ky: 1 };
+export const PHONE: SceneParams = { tilt: 42, perspective: 1100, tiltMin: 26, tiltMax: 50, widthFrac: 1.12, padTop: 98, padBottom: 14, pileR: 0.6, nameR: 0.97, nameSide: 0, sideLift: 0.3, ky: 1 };
 
 export interface SeatSpot {
   /** 0 = the viewer; increases clockwise. */

@@ -1,0 +1,60 @@
+/* Collapsible top bar on the table screen: a slim strip with the turn pill and a "Menu" button. */
+.tp-thead.is-collapsed {
+  display: block;
+  padding: 4px var(--tp-gutter, 16px);
+  min-height: 0;
+}
+.tp-thead__slim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tp-thead__fold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 2px solid currentColor;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  position: relative;
+}
+.tp-thead__fold--icon {
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+}
+.tp-thead__fold:hover {
+  background: var(--tumlet-yellow);
+  color: var(--tumlet-ink);
+}
+/* Keep a 44px touch target without making the strip taller. */
+.tp-thead__fold::after {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+.tp-tablescreen .tp-thead__fold {
+  color: var(--tumlet-beige);
+}
+.tp-tablescreen .tp-thead__fold:hover {
+  color: var(--tumlet-ink);
+}
+@media (max-width: 800px) {
+  .tp-thead.is-collapsed {
+    grid-template-columns: none;
+    padding: 4px 12px;
+    row-gap: 0;
+  }
+  .tp-thead__fold--icon {
+    width: 44px;
+    height: 44px;
+  }
+}

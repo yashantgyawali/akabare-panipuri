@@ -876,3 +876,19 @@
     justify-content: center;
   }
 }
+
+/* bite / bust: a brief red pulse of lamplight bleeds through the scrim */
+.tp-tablescreen:has(.tp-room.is-flash) .tp-ov::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 55% at 50% 40%, rgba(241, 97, 71, 0.45), transparent 72%);
+  animation: tp-flash 1.6s ease-out 1 both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-room.is-flash .tp-room__glow::after,
+  .tp-tablescreen:has(.tp-room.is-flash) .tp-ov::before {
+    animation: none;
+  }
+}

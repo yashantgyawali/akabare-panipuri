@@ -7,6 +7,7 @@ import './styles/lobby.css';
 import './styles/table.css';
 import './styles/scene.css';
 import './styles/overlays.css';
+import './styles/header-fold.css';
 import './styles/rules.css';
 import { App } from './App.tsx';
 

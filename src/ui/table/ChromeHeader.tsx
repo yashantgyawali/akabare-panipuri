@@ -37,6 +37,22 @@ export function TableHeader({
 }) {
   const toast = useToast();
   const [menu, setMenu] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('akp.headerCollapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleCollapsed = (next: boolean) => {
+    setMenu(false);
+    setCollapsed(next);
+    try {
+      localStorage.setItem('akp.headerCollapsed', next ? '1' : '0');
+    } catch {
+      /* private mode: just don't remember it */
+    }
+  };
   const menuRef = useRef<HTMLDivElement>(null);
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   useEffect(() => {
@@ -83,7 +99,20 @@ export function TableHeader({
     onOpen(d);
   };
   return (
-    <header className="tp-thead">
+    <header className={cx('tp-thead', collapsed && 'is-collapsed')}>
+      {collapsed ? (
+        <div className="tp-thead__slim">
+          <span className={cx('tp-thead__pill', yourTurn && 'is-you')} title={PHASE_LABELS[view.phase]}>
+            <span className="tp-sr">{PHASE_LABELS[view.phase]}: </span>
+            {pill}
+          </span>
+          <button type="button" className="tp-thead__fold" onClick={() => toggleCollapsed(false)} aria-label="Show the top bar" aria-expanded={false}>
+            <Chevron up={false} /> Menu
+          </button>
+        </div>
+      ) : null}
+      {collapsed ? null : (
+      <>
       <button type="button" className="tp-thead__brand" onClick={onLeave} title="Leave the table">
         Akabare Panipuri
       </button>
@@ -129,7 +158,21 @@ export function TableHeader({
             </div>
           ) : null}
         </div>
+        <button type="button" className="tp-thead__fold tp-thead__fold--icon" onClick={() => toggleCollapsed(true)} aria-label="Hide the top bar" aria-expanded title="Hide the top bar">
+          <Chevron up />
+        </button>
       </nav>
+      </>
+      )}
     </header>
+  );
+}
+
+/** A small chevron: up = "hide the bar", down = "show it again". */
+function Chevron({ up }: { up: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d={up ? 'M3 10.5 8 5.5l5 5' : 'M3 5.5 8 10.5l5-5'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
