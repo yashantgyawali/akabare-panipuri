@@ -22,9 +22,10 @@ import { TableScene } from './scene/TableScene.tsx';
 import { Hand, handCards } from './Hand.tsx';
 import { AkabareMoment, GameOverPanel, RoundEndPanel, type Moment } from './Overlays.tsx';
 import { ActionPanel } from './Panels.tsx';
-import { paramsFor, seatSpots } from './scene/geometry.ts';
 import { useChromeHeights } from './scene/useStage.ts';
 import { Plate3D } from './scene/Plate3D.tsx';
+import { PLAYER_PALETTE } from '../../cards/index.ts';
+import { BidDisc, EventBanner, EventTrail, fxEvent } from './scene/EventFx.tsx';
 import { SeatsLayer, type SeatBase } from './scene/SeatsLayer.tsx';
 import { Tally } from './scene/Tally.tsx';
 import { stackLabel, type Clickable, type SeatCue, type SeatStatus } from './scene/seatData.ts';
@@ -281,6 +282,7 @@ export function Table({ game }: { game: UseGame }) {
   }, [yourMove, snap.code]);
 
   const line = current ? describeEvent(current, names, view.config.trapReward) : null;
+  const fx = fxEvent(current);
 
   const setBot = (id: PlayerId, isBot: boolean) => void run(`bot:${id}`, () => game.setBot(id, isBot));
   const offlineWaiting = graceOver
@@ -293,9 +295,7 @@ export function Table({ game }: { game: UseGame }) {
   const ordered = seatOrder(view.players, you);
   const handW = phone ? 46 : 60;
 
-  // The lamp leans towards whoever's turn it is; it flashes red for the bite and the bust.
-  const turnIdx = ordered.findIndex((p) => (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating') && view.pendingActors.includes(p.id));
-  const lamp = turnIdx >= 0 ? (seatSpots(ordered.length, paramsFor(window.innerWidth))[turnIdx]?.pile ?? null) : null;
+  // The lamp flashes red for the bite and the bust (it no longer leans towards the active player).
   const flash = shownMoment?.stage === 'bitten' || shownMoment?.stage === 'bust' || shownMoment?.stage === 'failed';
 
   const stackClick = (p: PublicPlayerView): Clickable => {
@@ -380,7 +380,7 @@ export function Table({ game }: { game: UseGame }) {
 
       <main className="tp-board" aria-label="The table">
         <TableScene
-          lamp={lamp}
+          lamp={null}
           flash={flash}
           overlay={
             <>
@@ -395,8 +395,14 @@ export function Table({ game }: { game: UseGame }) {
                 </div>
               ) : null}
               {showHud && view.eating ? <Tally view={view} names={names} /> : null}
+              {fx ? (
+                <>
+                  <EventTrail e={fx} names={names} />
+                  <EventBanner e={fx} names={names} />
+                </>
+              ) : null}
               <div className="tp-ticker">
-              {!showHud ? (
+              {!showHud && !fx ? (
                 <p key={current?.seq ?? 'none'} className={cx('tp-ticker__line', line && `tp-ticker__line--${line.tone}`)} aria-hidden="true">
                   {line?.text ?? (view.phase === 'setup' ? 'Everyone hides their puri and one power.' : '')}
                 </p>
@@ -412,6 +418,9 @@ export function Table({ game }: { game: UseGame }) {
         >
           {(stage) => (
             <>
+              {view.phase === 'bidding' && view.bidding ? (
+                <BidDisc amount={view.bidding.highBid} by={names.who(view.bidding.highBidderId)} color={PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base} />
+              ) : null}
               {view.eating && showHud ? (
                 <Plate3D plate={view.eating.plate} powers={view.eating.powers} names={names} width={Math.round(stage.D * (stage.phone ? 0.085 : 0.066))} radius={stage.D * 0.105} reduced={reduced} />
               ) : null}

@@ -51,7 +51,6 @@ export function Seat3D(props: Seat3DProps) {
       aria-label={`${you ? 'You' : p.name}${turn ? ', to act' : ''}`}
       data-seat={p.id}
     >
-      {turn ? <div className="tp-seat3d__spot" aria-hidden="true" /> : null}
       <Pile3D p={p} view={view} names={names} rot={spot.rot} cardW={cardW} stackMax={stackMax} stack={stack} power={power} cue={cue} />
       <div className="tp-seat3d__foot" style={{ transform: `translate3d(${nx}px, ${ny}px, 0)` }}>
         <Nameplate

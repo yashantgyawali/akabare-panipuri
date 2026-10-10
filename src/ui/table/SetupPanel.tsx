@@ -141,7 +141,12 @@ export function SetupPanel({
   const todo = [empty > 0 ? `fill ${empty} more slot${empty === 1 ? '' : 's'}` : '', !power ? 'pick a power' : ''].filter(Boolean).join(' and ');
 
   return (
-    <section className="tp-setup" aria-labelledby="setup-h" ref={rootRef}>
+    <section
+      className="tp-setup"
+      aria-labelledby="setup-h"
+      ref={rootRef}
+      style={{ ['--cw' as string]: cardW, ['--slots' as string]: size, ['--hand-n' as string]: full.panipuri + full.akabare }}
+    >
       <h2 className="tp-prompt__title tp-setup__title" id="setup-h">
         Round {view.round} · set up
       </h2>
@@ -160,7 +165,7 @@ export function SetupPanel({
             className="tp-setup__hand"
           />
         </div>
-        <div className="tp-setup__col">
+        <div className="tp-setup__col tp-setup__col--slots">
           <h3 className="tp-setup__label">2 · Stack (bottom → top)</h3>
           <ol className="tp-setup__slots" aria-label="Your stack slots, bottom to top">
             {slots.map((s, i) => (

@@ -271,9 +271,10 @@ describe('helpers', () => {
     );
     expect(b).toMatchObject({ starterId: 'p1', highBid: 5, highBidderId: 'p3', passed: ['p2'], turnId: 'p0' });
   });
-  it('own actions play instantly and long queues speed up', () => {
+  it('own placements and bids stay briefly, other own actions are instant, and long queues speed up', () => {
     const place = { type: 'place', playerId: 'p0', onStackOf: 'p1', seq: 5, round: 1 } as const;
-    expect(eventDuration(place, true, 1, false)).toBe(0);
+    expect(eventDuration(place, true, 1, false)).toBe(900);
+    expect(eventDuration({ type: 'setupDone', playerId: 'p0', seq: 6, round: 1 }, true, 1, false)).toBe(0);
     expect(eventDuration(place, false, 1, false)).toBeGreaterThan(eventDuration(place, false, 20, false));
   });
 });

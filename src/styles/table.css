@@ -124,12 +124,16 @@
 }
 .tp-dock__inner {
   max-width: var(--tp-table);
-  min-height: 168px;
+  /* One fixed height in EVERY phase: nothing above the dock ever moves or resizes when you click. */
+  height: var(--dock-fixed, 176px);
   margin: 0 auto;
-  padding: 20px 32px 24px;
+  padding: 12px 32px 14px;
   display: flex;
-  align-items: center;
-  gap: 40px;
+  align-items: flex-start;
+  gap: 32px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .tp-dock__hand {
   flex: none;
@@ -337,8 +341,8 @@
 /* ===== medium ===== */
 @media (max-width: 900px) {
   .tp-dock__inner {
-    padding: 16px 20px 20px;
-    gap: 24px;
+    padding: 12px 20px 14px;
+    gap: 20px;
   }
 }
 
@@ -354,16 +358,11 @@
     padding: 1px 10px;
   }
   .tp-dock__inner {
-    min-height: 0;
-    max-height: max(150px, calc(100dvh - var(--head-h, 96px) - 420px));
-    overflow-y: auto;
+    height: var(--dock-fixed, clamp(210px, 36dvh, 300px));
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-    padding: 12px 16px 16px;
-  }
-  .tp-dock--setup .tp-dock__inner {
-    max-height: 72vh;
+    padding: 10px 16px 14px;
   }
   .tp-dock__hand {
     max-width: none;
@@ -483,18 +482,46 @@
   font-size: 15px;
   line-height: 1.2;
 }
-.tp-dock__inner:has(.tp-setup:not(.tp-setup--done)) {
-  min-height: 0;
-  padding-top: 10px;
-  padding-bottom: 12px;
-}
 .tp-setup__col--cta .tp-btn,
 .tp-setup__col--cta .btn-cta {
   padding-top: 10px;
   padding-bottom: 10px;
 }
+
+/* No layout shift inside the setup row: every column reserves its largest size. */
+.tp-setup__col--hand {
+  min-width: calc(var(--hand-n, 6) * (var(--cw, 42) * 1px + 6px));
+}
+.tp-setup__hand {
+  min-height: calc(var(--cw, 42) * 1px * 88 / 63);
+}
+.tp-setup__col--slots {
+  min-width: calc(var(--slots, 2) * (var(--cw, 42) * 1px + 6px));
+}
+.tp-setup__powers .tp-slot__cap,
+.tp-pick .tp-slot__cap {
+  min-height: 2.4em; /* "Used in round 1" wraps to two lines: always reserve both */
+}
+.tp-setup__todo {
+  min-height: 1.5em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.tp-setup__waiting {
+  min-height: 2.6em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.tp-setup__sections {
+  align-items: flex-start;
+}
 @media (max-width: 640px) {
-  .tp-dock__inner:has(.tp-setup:not(.tp-setup--done)) {
-    padding: 8px 12px 10px;
+  .tp-setup__col--hand,
+  .tp-setup__col--slots {
+    min-width: 0;
   }
 }

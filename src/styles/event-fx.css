@@ -1,0 +1,224 @@
+/* Event spotlight on the table: who placed a card / bid, impossible to miss. */
+.tp-fx-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(92%, 640px);
+  padding: 8px 18px 8px 8px;
+  border: 2px solid var(--tumlet-ink);
+  border-radius: var(--radius-md);
+  background: var(--tumlet-beige);
+  box-shadow: 5px 5px 0 0 var(--c, var(--tumlet-yellow));
+  transform: translateX(-50%) rotate(-0.88deg);
+  animation: tp-fx-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  pointer-events: none;
+}
+.tp-fx-banner__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c);
+  color: var(--tumlet-beige);
+  font-weight: 800;
+}
+.tp-fx-banner__text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--tumlet-ink);
+}
+.tp-fx-banner__text b {
+  font-weight: 800;
+}
+.tp-fx-banner__text em {
+  font-style: normal;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--tumlet-red);
+}
+@keyframes tp-fx-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-14px) scale(0.9) rotate(-0.88deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) rotate(-0.88deg);
+  }
+}
+
+/* the arrow + target ring + bidder bubble */
+.tp-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.tp-fx__svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.tp-fx__arrow {
+  stroke: var(--c);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 12 9;
+  filter: drop-shadow(0 0 5px rgb(0 0 0 / 0.55));
+  animation: tp-fx-dash 1.1s linear infinite, tp-fx-in 0.35s ease-out both;
+}
+.tp-fx__ring {
+  stroke: var(--tumlet-yellow);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 8px var(--tumlet-yellow));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tp-fx-ring 0.8s ease-out 3 both;
+}
+@keyframes tp-fx-dash {
+  to {
+    stroke-dashoffset: -42;
+  }
+}
+@keyframes tp-fx-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes tp-fx-ring {
+  from {
+    opacity: 1;
+    transform: scale(0.75);
+  }
+  to {
+    opacity: 0.35;
+    transform: scale(1.2);
+  }
+}
+.tp-fx__bubble {
+  position: absolute;
+  transform: translate(-50%, -150%);
+  padding: 6px 14px;
+  border: 2px solid var(--tumlet-ink);
+  border-radius: var(--radius-md);
+  background: var(--tumlet-yellow);
+  color: var(--tumlet-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  white-space: nowrap;
+  box-shadow: 4px 4px 0 0 var(--c);
+  animation: tp-fx-pop-b 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes tp-fx-pop-b {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -110%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -150%);
+  }
+}
+
+/* the high bid painted on the brass plate (lies flat in the table plane) */
+.tp-bid3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  display: grid;
+  place-items: center;
+  transform: translateZ(7px);
+  font-family: var(--font-display);
+  color: #2a170c;
+  text-shadow: 0 1px 0 rgb(255 226 160 / 0.7);
+  animation: tp-bid3d-pop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.tp-bid3d > * {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  text-align: center;
+}
+.tp-bid3d b {
+  font-weight: 800;
+  font-size: calc(var(--D, 600px) * 0.14);
+  line-height: 1;
+}
+.tp-bid3d small {
+  font-weight: 700;
+  font-size: calc(var(--D, 600px) * 0.026);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tp-bid3d small:first-child {
+  transform: translateY(calc(var(--D, 600px) * -0.085));
+}
+.tp-bid3d small:last-child {
+  transform: translateY(calc(var(--D, 600px) * 0.085));
+  color: var(--c);
+  text-shadow: none;
+  -webkit-text-stroke: 0.5px #2a170c;
+}
+@keyframes tp-bid3d-pop {
+  from {
+    opacity: 0;
+    transform: translateZ(40px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateZ(7px);
+  }
+}
+
+/* stronger flash for a card that was just touched */
+.tp-cue-a {
+  animation-duration: 1.7s;
+}
+.tp-cue-b {
+  animation-duration: 1.7s;
+}
+
+@media (max-width: 640px) {
+  .tp-fx-banner {
+    top: 6px;
+    gap: 8px;
+    padding: 6px 12px 6px 6px;
+  }
+  .tp-fx-banner__avatar {
+    width: 32px;
+    height: 32px;
+  }
+  .tp-fx-banner__text {
+    font-size: 15px;
+  }
+  .tp-fx-banner__text em {
+    font-size: 22px;
+  }
+  .tp-fx__bubble {
+    font-size: 15px;
+    padding: 4px 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-fx__arrow,
+  .tp-fx__ring,
+  .tp-fx-banner,
+  .tp-fx__bubble,
+  .tp-bid3d {
+    animation: none;
+  }
+}

@@ -489,7 +489,10 @@ export function actorOf(e: GameEvent): PlayerId | null {
  */
 export function eventDuration(e: GameEvent, own: boolean, queued: number, reducedMotion: boolean): number {
   let ms: number;
-  if (own && (e.type === 'place' || e.type === 'bidStart' || e.type === 'raise' || e.type === 'pass' || e.type === 'setupDone' || e.type === 'ready' || e.type === 'botSet')) {
+  if (own && (e.type === 'place' || e.type === 'bidStart' || e.type === 'raise' || e.type === 'pass')) {
+    // Your own placement or bid stays on screen briefly: the banner and arrow confirm what you just did.
+    ms = 900;
+  } else if (own && (e.type === 'setupDone' || e.type === 'ready' || e.type === 'botSet')) {
     ms = 0;
   } else if (own && (e.type === 'flipPuri' || e.type === 'flipPower')) {
     ms = e.type === 'flipPower' && (e.effect === 'saved' || e.effect === 'failedSave') ? 1300 : e.type === 'flipPuri' && e.kind === 'akabare' && !e.cancelled ? 500 : 520;
