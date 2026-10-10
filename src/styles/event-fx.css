@@ -133,42 +133,41 @@
   }
 }
 
-/* the high bid painted on the brass plate (lies flat in the table plane) */
+/* the high bid painted on the brass plate (lies flat in the table plane), centred on the plate */
 .tp-bid3d {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 0;
-  height: 0;
-  display: grid;
-  place-items: center;
-  transform: translateZ(7px);
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--D, 600px) * 0.004);
+  transform: translate(-50%, -50%) translateZ(7px);
   font-family: var(--font-display);
   color: #2a170c;
+  text-align: center;
   text-shadow: 0 1px 0 rgb(255 226 160 / 0.7);
+  pointer-events: none;
   animation: tp-bid3d-pop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both;
 }
-.tp-bid3d > * {
-  grid-area: 1 / 1;
-  white-space: nowrap;
-  text-align: center;
-}
 .tp-bid3d b {
+  display: block;
   font-weight: 800;
   font-size: calc(var(--D, 600px) * 0.14);
-  line-height: 1;
+  line-height: 0.95;
 }
 .tp-bid3d small {
+  display: block;
   font-weight: 700;
   font-size: calc(var(--D, 600px) * 0.026);
   letter-spacing: 0.08em;
+  line-height: 1.1;
   text-transform: uppercase;
-}
-.tp-bid3d small:first-child {
-  transform: translateY(calc(var(--D, 600px) * -0.085));
+  white-space: nowrap;
 }
 .tp-bid3d small:last-child {
-  transform: translateY(calc(var(--D, 600px) * 0.085));
   color: var(--c);
   text-shadow: none;
   -webkit-text-stroke: 0.5px #2a170c;
@@ -176,11 +175,11 @@
 @keyframes tp-bid3d-pop {
   from {
     opacity: 0;
-    transform: translateZ(40px) scale(0.6);
+    transform: translate(-50%, -50%) translateZ(40px) scale(0.6);
   }
   to {
     opacity: 1;
-    transform: translateZ(7px);
+    transform: translate(-50%, -50%) translateZ(7px);
   }
 }
 
