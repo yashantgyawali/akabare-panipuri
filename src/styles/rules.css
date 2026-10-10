@@ -2,11 +2,6 @@
 .tp-rulespage {
   gap: 48px;
 }
-.tp-rulespage__title {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .tp-rulespage__sec {
   display: flex;
   flex-direction: column;
@@ -66,29 +61,7 @@
   text-wrap: pretty;
 }
 
-/* the details */
-.tp-details {
-  margin: 0;
-  display: grid;
-  gap: 14px;
-}
-.tp-details__row {
-  display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
-  gap: 24px;
-}
-.tp-details dt {
-  font-weight: 700;
-}
-.tp-details dd {
-  margin: 0;
-  text-wrap: pretty;
-}
-
 /* full rules body */
-.tp-rulespage__body {
-  padding: clamp(18px, 4vw, 40px);
-}
 .tp-rules {
   display: flex;
   flex-direction: column;
@@ -251,13 +224,6 @@
   .tp-rcards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px 12px;
-  }
-  .tp-details__row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
-  .tp-rulespage__body.tp-panel--shadow-yellow {
-    box-shadow: 4px 4px 0 0 var(--tumlet-yellow);
   }
   .tp-rules__power {
     flex-direction: column;

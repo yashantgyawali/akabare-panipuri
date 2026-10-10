@@ -77,7 +77,6 @@ export function Drawer({
 export function ConfirmDialog({
   open,
   title,
-  children,
   confirmLabel,
   cancelLabel = 'Stay',
   onConfirm,
@@ -87,6 +86,7 @@ export function ConfirmDialog({
 }: {
   open: boolean;
   title: ReactNode;
+  /** Unused: the dialog is title and two buttons only. */
   children?: ReactNode;
   confirmLabel: string;
   cancelLabel?: string;
@@ -113,7 +113,6 @@ export function ConfirmDialog({
           <h2 id={titleId} className="tp-confirm__title">
             {title}
           </h2>
-          {children ? <div className="tp-confirm__body">{children}</div> : null}
           <div className="tp-confirm__actions">
             <Button variant="secondary" onClick={onCancel} autoFocus>
               {cancelLabel}

@@ -1,11 +1,10 @@
-/** The #/rules page: three bites, the cards, quick details, then the full rules. */
+/** The #/rules page: three steps and the six cards. */
 import { useEffect } from 'react';
 import { Card } from '../../cards/index.ts';
 import { Wordmark } from '../common/Brand.tsx';
 import { usePhone } from '../common/hooks.ts';
 import { HOME } from '../router.ts';
-import { RulesContent } from './Rules.tsx';
-import { DETAILS, GALLERY, STEPS } from './data.ts';
+import { GALLERY, STEPS } from './data.ts';
 
 export interface RulesPageProps {
   /** Where the visitor came from, for the back button. */
@@ -27,11 +26,7 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
           </a>
         </header>
 
-        <section className="tp-rulespage__title">
-          <span className="tp-eyebrow">rules v0.6 · 3–6 players · ~20 minutes</span>
-          <h1 className="tp-h1 tp-h1--md">How to play, in three bites</h1>
-        </section>
-
+        <h1 className="tp-sr">Rules</h1>
         <ol className="tp-bites">
           {STEPS.map((s) => (
             <li key={s.n} className="tp-bite">
@@ -45,8 +40,8 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
         </ol>
 
         <section className="tp-rulespage__sec" aria-labelledby="rules-cards">
-          <h2 className="tp-h2 tp-h2--lg" id="rules-cards">
-            The cards
+          <h2 className="tp-sr" id="rules-cards">
+            Cards
           </h2>
           <ul className="tp-rcards">
             {GALLERY.map((g) => (
@@ -56,30 +51,6 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
               </li>
             ))}
           </ul>
-        </section>
-
-        <section className="tp-rulespage__sec" aria-labelledby="rules-details">
-          <h2 className="tp-h2 tp-h2--lg" id="rules-details">
-            The details
-          </h2>
-          <dl className="tp-details">
-            {DETAILS.map((d) => (
-              <div key={d.k} className="tp-details__row">
-                <dt>{d.k}</dt>
-                <dd>{d.v}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section className="tp-rulespage__sec tp-rulespage__full" aria-labelledby="rules-full">
-          <h2 className="tp-h2 tp-h2--lg" id="rules-full">
-            The full rules
-          </h2>
-          <p className="tp-muted">Every power, every edge case and some worked examples.</p>
-          <article className="tp-panel tp-panel--shadow-yellow tp-rulespage__body">
-            <RulesContent />
-          </article>
         </section>
       </main>
     </div>

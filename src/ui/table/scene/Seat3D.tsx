@@ -43,7 +43,6 @@ export function Seat3D(props: Seat3DProps) {
   const limit = Math.max(0, halfW - plateHalf - 4);
   const nx = Math.max(-limit - spot.pile.x * R, Math.min(limit - spot.pile.x * R, (spot.name.x - spot.pile.x) * R));
   const ny = (spot.name.y - spot.pile.y) * R;
-  const showHand = (view.phase === 'serving' || view.phase === 'bidding') && p.handCount > 0;
   return (
     <section
       className={cx('tp-seat3d', turn && 'is-turn', you && 'is-you')}
@@ -63,8 +62,6 @@ export function Seat3D(props: Seat3DProps) {
           online={online}
           turn={turn}
           status={status}
-          handCount={showHand ? p.handCount : null}
-          busts={p.busts}
           pulse={cue?.part === 'seat' ? pulseClass(cue.seq, cue.tone) : undefined}
         />
       </div>

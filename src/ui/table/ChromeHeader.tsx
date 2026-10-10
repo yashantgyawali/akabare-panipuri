@@ -1,4 +1,4 @@
-/** The table's header bar: brand (leave), round + goal + phase pill, code + Scores / Log / Rules. */
+/** The table's header bar: round + phase pill, code, one menu (Scores / Log / Rules / Share / Leave). */
 import { useEffect, useRef, useState } from 'react';
 import type { PlayerView } from '../../engine/types.ts';
 import { shareUrl } from '../../net/index.ts';
@@ -24,16 +24,13 @@ export function TableHeader({
   phone,
   onOpen,
   onLeave,
-  openDrawer,
-}: {
+  }: {
   view: PlayerView;
   names: NameBook;
   code: string;
   phone: boolean;
   onOpen: (d: Drawers) => void;
   onLeave: () => void;
-  /** The drawer that is open right now (its button is highlighted). */
-  openDrawer?: DrawerName;
 }) {
   const toast = useToast();
   const [menu, setMenu] = useState(false);
@@ -91,9 +88,8 @@ export function TableHeader({
     }
   };
   const turn = turnText(view, names);
-  const yourTurn = turn.startsWith('Your turn') || turn === 'Set up your stack' || turn === 'Ready when you are';
+  const yourTurn = turn.startsWith('Your turn') || turn === 'Set up' || turn === 'Ready?';
   const pill = view.phase === 'roundEnd' || view.phase === 'gameOver' ? PHASE_LABELS[view.phase] : turn;
-  const goal = view.config.targetScore !== null ? `first to ${view.config.targetScore}` : 'no target';
   const open = (d: Drawers) => {
     setMenu(false);
     onOpen(d);
@@ -107,12 +103,8 @@ export function TableHeader({
       ) : null}
       {collapsed ? null : (
       <>
-      <button type="button" className="tp-thead__brand" onClick={onLeave} title="Leave the table">
-        Akabare Panipuri
-      </button>
       <div className="tp-thead__mid">
-        <span className="tp-thead__round">{roundText(view.round, view.config, phone)}</span>
-        <span className="tp-thead__goal">{goal}</span>
+        <span className="tp-thead__round">{view.config.maxRounds === null ? `Round ${view.round}` : roundText(view.round, view.config, phone)}</span>
         <span className={cx('tp-thead__pill', yourTurn && 'is-you')} title={PHASE_LABELS[view.phase]}>
           <span className="tp-sr">{PHASE_LABELS[view.phase]}: </span>
           {pill}
@@ -122,11 +114,6 @@ export function TableHeader({
         <button type="button" className="tp-thead__code" onClick={copy} title="Copy invite link" aria-label={`Game code ${code}: copy invite link`}>
           {code}
         </button>
-        {NAV.map((n) => (
-          <button key={n.id} type="button" className={cx('tp-thead__link', openDrawer === n.id && 'is-active')} onClick={() => open(n.id)}>
-            {n.label}
-          </button>
-        ))}
         <div className="tp-thead__menu" ref={menuRef}>
           <IconButton label="Menu" className="tp-thead__menubtn" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
             <Icon name="dots" />
@@ -134,20 +121,17 @@ export function TableHeader({
           {menu ? (
             <div className="tp-thead__list" role="menu">
               {NAV.map((n) => (
-                <button key={n.id} type="button" role="menuitem" className="tp-thead__only-phone" onClick={() => open(n.id)}>
+                <button key={n.id} type="button" role="menuitem" onClick={() => open(n.id)}>
                   <Icon name={n.icon} size={18} /> {n.label}
                 </button>
               ))}
-              <button type="button" role="menuitem" onClick={copy}>
-                <Icon name="copy" size={18} /> Copy invite link ({code})
-              </button>
               {canShare ? (
                 <button type="button" role="menuitem" onClick={share}>
-                  <Icon name="share" size={18} /> Share the table
+                  <Icon name="share" size={18} /> Share
                 </button>
               ) : null}
               <button type="button" role="menuitem" className="is-danger" onClick={() => (setMenu(false), onLeave())}>
-                <Icon name="leave" size={18} /> Leave game
+                <Icon name="leave" size={18} /> Leave
               </button>
             </div>
           ) : null}

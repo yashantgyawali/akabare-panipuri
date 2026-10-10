@@ -79,7 +79,6 @@ export function EventTrail({ e, names }: { e: FxEvent; names: NameBook }) {
   }, [e]);
   const c = colorVar(names, e.playerId);
   const far = geo?.from && geo.to && Math.hypot(geo.from.x - geo.to.x, geo.from.y - geo.to.y) > 70;
-  const bubble = e.type === 'place' ? null : e.type === 'pass' ? 'Pass' : e.type === 'bidStart' ? `Opens at ${e.amount}` : `Raises to ${e.amount}`;
   return (
     <div className="tp-fx" key={e.seq} ref={ref} style={c} aria-hidden="true">
       {geo ? (
@@ -99,11 +98,6 @@ export function EventTrail({ e, names }: { e: FxEvent; names: NameBook }) {
           ) : null}
           {geo.to ? <ellipse className="tp-fx__ring" cx={geo.to.x} cy={geo.to.y} rx={geo.to.rx} ry={geo.to.ry} fill="none" /> : null}
         </svg>
-      ) : null}
-      {geo?.from && bubble ? (
-        <div className="tp-fx__bubble" style={{ left: geo.from.x, top: geo.from.y }}>
-          {bubble}
-        </div>
       ) : null}
     </div>
   );

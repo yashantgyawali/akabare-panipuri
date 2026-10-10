@@ -1,39 +1,36 @@
-/* Home: hero + create/join + fanned cards. */
+/* Home: title, create, join, recent. */
 .tp-home {
-  gap: 56px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
-.tp-home-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  grid-template-areas: 'text fan';
-  gap: 48px;
+.tp-home-rules {
+  position: absolute;
+  top: 20px;
+  right: 16px;
+  min-height: 44px;
+  display: inline-flex;
   align-items: center;
 }
-.tp-home-hero__text {
-  grid-area: text;
+.tp-home-main {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
+  width: 100%;
+  max-width: 460px;
   min-width: 0;
 }
-.tp-home-titleblock {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.tp-home-nepali {
-  font-size: 26px;
-}
-.tp-home-tag {
-  font-size: 20px;
-  max-width: 420px;
-  text-wrap: pretty;
+.tp-home-badge {
+  font-size: 12px;
+  margin: 0;
 }
 .tp-home-create {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 460px;
 }
 .tp-home-create__row {
   display: flex;
@@ -47,9 +44,9 @@
 }
 .tp-home-create__cta {
   display: flex;
-  align-items: center;
-  gap: 20px;
-  padding-top: 8px;
+}
+.tp-home-create__cta > * {
+  flex: 1;
 }
 .tp-home-join {
   display: flex;
@@ -57,20 +54,16 @@
   gap: 12px;
   padding-top: 20px;
   border-top: 2px dashed var(--tumlet-line);
-  max-width: 460px;
 }
-.tp-home-join label {
-  white-space: nowrap;
+.tp-home-join .tp-input--code {
+  flex: 1;
+  width: auto;
+  min-width: 0;
 }
 .tp-home-recent {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px;
-  max-width: 460px;
-}
-.tp-home-recent__h {
-  font-weight: 400;
 }
 .tp-home-recent__list {
   display: contents;
@@ -112,89 +105,7 @@
   text-decoration: underline;
 }
 
-/* fanned cards */
-.tp-home-fan {
-  grid-area: fan;
-  position: relative;
-  height: 440px;
-  min-width: 0;
-}
-.tp-home-fan__card {
-  position: absolute;
-}
-.tp-home-fan__card--l {
-  left: 6%;
-  top: 70px;
-  transform: rotate(-12deg);
-}
-.tp-home-fan__card--m {
-  left: 30%;
-  top: 20px;
-  transform: rotate(2deg);
-  z-index: 1;
-  filter: drop-shadow(8px 8px 0 var(--tumlet-yellow));
-}
-.tp-home-fan__card--r {
-  left: 58%;
-  top: 90px;
-  transform: rotate(13deg);
-}
-.tp-home-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding-top: 24px;
-}
-
-@media (max-width: 859px) {
-  .tp-home {
-    gap: 32px;
-  }
-  .tp-home-hero {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'fan' 'text';
-    gap: 24px;
-  }
-  .tp-home-fan {
-    height: 250px;
-    max-width: 420px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  .tp-home-fan__card--l {
-    left: 4%;
-    top: 40px;
-  }
-  .tp-home-fan__card--m {
-    left: 32%;
-    top: 8px;
-    filter: drop-shadow(4px 4px 0 var(--tumlet-yellow));
-  }
-  .tp-home-fan__card--r {
-    left: 60%;
-    top: 52px;
-  }
-  .tp-home-create,
-  .tp-home-join,
-  .tp-home-recent {
-    max-width: none;
-  }
-}
-@media (min-width: 641px) and (max-width: 859px) {
-  .tp-home-fan {
-    height: 290px;
-  }
-}
 @media (max-width: 520px) {
-  .tp-home-hero__text {
-    gap: 22px;
-  }
-  .tp-home-nepali {
-    font-size: 22px;
-  }
-  .tp-home-tag {
-    font-size: 18px;
-  }
   .tp-home-create__row {
     flex-direction: column;
     align-items: stretch;
@@ -202,38 +113,14 @@
   .tp-home-create__row .tp-swatches {
     justify-content: space-between;
   }
-  .tp-home-create__cta {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  .tp-home-create__cta .btn-cta {
-    box-shadow: 4px 4px 0 0 var(--tumlet-yellow);
-  }
-  .tp-home-join {
-    flex-wrap: wrap;
-  }
-  .tp-home-join .tp-input--code {
-    flex: 1;
-    width: auto;
-    min-width: 110px;
-  }
-  .tp-home-join .tp-btn {
-    min-height: 44px;
-  }
-}
-@media (max-width: 520px) {
   .tp-home-create__row .tp-swatch {
     width: 44px !important;
     height: 44px !important;
   }
-}
-@media (max-width: 520px) {
-  .tp-home-footer {
-    flex-direction: column;
-    gap: 4px;
+  .tp-home-create__cta .btn-cta {
+    box-shadow: 4px 4px 0 0 var(--tumlet-yellow);
   }
-  .tp-home-footer > span[aria-hidden='true'] {
-    display: none;
+  .tp-home-join .tp-btn {
+    min-height: 44px;
   }
 }

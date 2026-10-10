@@ -13,8 +13,8 @@ export function RecentGames() {
   if (sessions.length === 0) return null;
   return (
     <section className="tp-home-recent" aria-labelledby="recent-h">
-      <h2 className="tp-small tp-muted tp-home-recent__h" id="recent-h">
-        Recent:
+      <h2 className="tp-sr" id="recent-h">
+        Recent
       </h2>
       <ul className="tp-home-recent__list">
         {sessions.slice(0, 6).map((s) => (

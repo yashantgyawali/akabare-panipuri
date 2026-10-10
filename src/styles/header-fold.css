@@ -88,3 +88,20 @@
 .tp-tablescreen .tp-thead__fold:hover {
   color: var(--tumlet-ink);
 }
+
+/* Header on the table: round + pill on the left, code + one menu on the right. */
+.tp-tablescreen .tp-thead {
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'mid nav';
+  row-gap: 0;
+}
+.tp-tablescreen .tp-thead__mid {
+  grid-area: mid;
+  justify-content: flex-start;
+}
+.tp-tablescreen .tp-thead__nav {
+  grid-area: nav;
+}
+.tp-tablescreen .tp-thead__code {
+  min-height: 44px;
+}

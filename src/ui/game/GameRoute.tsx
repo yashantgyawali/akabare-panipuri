@@ -6,7 +6,7 @@ import { MAX_NAME_LENGTH } from '../../server/types.ts';
 import { useGame, type UseGame } from '../../net/useGame.ts';
 import { Button } from '../common/Button.tsx';
 import { ColorPicker } from '../common/ColorPicker.tsx';
-import { LocalBadge, Wordmark } from '../common/Brand.tsx';
+import { Wordmark } from '../common/Brand.tsx';
 import { prefs } from '../common/hooks.ts';
 import { useToast } from '../common/Toasts.tsx';
 import { HOME } from '../router.ts';
@@ -34,16 +34,16 @@ export function GameRoute({ code }: { code: string }) {
   switch (game.status) {
     case 'idle':
     case 'loading':
-      return <Loading code={code} />;
+      return <Loading />;
     case 'error':
-      return <GameError code={code} game={game} />;
+      return <GameError game={game} />;
     case 'needsJoin':
       return <JoinGame code={code} game={game} />;
     case 'ready': {
       const snap = game.snapshot;
-      if (!snap) return <Loading code={code} />;
+      if (!snap) return <Loading />;
       if (snap.status === 'lobby') return <Lobby game={game} />;
-      if (!snap.view) return <Loading code={code} />;
+      if (!snap.view) return <Loading />;
       return <Table key={`${snap.code}:${snap.youId}`} game={game} />;
     }
   }
@@ -62,49 +62,29 @@ function Screen({ children }: { children: ReactNode }) {
   );
 }
 
-function Loading({ code }: { code: string }) {
+function Loading() {
   return (
     <Screen>
-      <div className="tp-loading" role="status">
+      <div className="tp-loading" role="status" aria-label="Loading">
         <span className="tp-spinner" aria-hidden="true" />
-        <p>
-          Setting the table for <strong>{code}</strong>…
-        </p>
       </div>
     </Screen>
   );
 }
 
-function GameError({ code, game }: { code: string; game: UseGame }) {
+function GameError({ game }: { game: UseGame }) {
   const missing = game.errorCode === 'not_found';
   const started = game.errorCode === 'wrong_status';
   return (
     <Screen>
       <section className="tp-center-card" aria-labelledby="err-h">
-        <span className="tp-eyebrow">{missing ? 'hmm…' : started ? 'too late' : 'oh no'}</span>
         <h1 className="tp-h1 tp-h1--md" id="err-h">
-          {missing ? 'No table here' : started ? 'This game already started' : 'Something went wrong'}
+          {missing ? 'No table here' : started ? 'Game already started' : 'Can’t reach the table'}
         </h1>
-        <p>
-          {missing ? (
-            <>
-              We couldn’t find game <strong>{code}</strong>. The code may be mistyped, or the game has ended and been cleared away.
-            </>
-          ) : started ? (
-            <>Game <strong>{code}</strong> is already under way, so new players can’t sit down now.</>
-          ) : (
-            <>We couldn’t reach the table ({game.error ?? 'unknown error'}). Check your connection and try again.</>
-          )}
-        </p>
         <div className="tp-join-actions">
           <a className="btn-cta red btn-cta--md" href={HOME}>
-            ← Home
+            Home
           </a>
-          {!missing ? (
-            <Button variant="ghost" onClick={game.refresh}>
-              Try again
-            </Button>
-          ) : null}
         </div>
       </section>
     </Screen>
@@ -133,45 +113,29 @@ function JoinGame({ code, game }: { code: string; game: UseGame }) {
   };
   return (
     <Screen>
-      <section className="tp-join-card" aria-labelledby="join-h">
-        <span className="tp-eyebrow" id="join-h">
-          you’re invited to table
-        </span>
+      <section className="tp-join-card" aria-label="Join">
         <CodeTiles code={code} />
         {suggested ? (
-          <div className="tp-join-suggest">
-            <p>
-              This browser already has a seat here as <strong>{suggested.name}</strong> (another tab, or an earlier visit).
-            </p>
-            <Button variant="primary" size="md" block onClick={() => game.continueAs(suggested)}>
-              Continue as {suggested.name}
-            </Button>
-            <p className="tp-join-or">or join as a new player</p>
-          </div>
+          <Button variant="primary" size="md" block onClick={() => game.continueAs(suggested)}>
+            Continue as {suggested.name}
+          </Button>
         ) : null}
         <form onSubmit={submit} className="tp-join-form">
-          <label className="tp-field">
-            <span className="tp-label">Your name</span>
-            <input
-              className="tp-input"
-              value={name}
-              maxLength={MAX_NAME_LENGTH}
-              autoComplete="nickname"
-              placeholder="e.g. Ramesh"
-              onChange={(e) => setName(e.target.value)}
-              autoFocus={!suggested}
-            />
-          </label>
-          <div className="tp-field">
-            <span className="tp-label">Your colour</span>
-            <ColorPicker value={color} onChange={setColor} size={32} />
-            <span className="tp-field__hint">Pick one, or leave it and we’ll give you a free colour.</span>
-          </div>
-          <Button type="submit" variant={suggested ? 'secondary' : 'primary'} size={suggested ? 'lg' : 'md'} block busy={game.busy} disabled={!trimmed}>
-            {suggested ? 'Join as a new player' : 'Join the table'}
+          <input
+            className="tp-input"
+            aria-label="Your name"
+            value={name}
+            maxLength={MAX_NAME_LENGTH}
+            autoComplete="nickname"
+            placeholder="Name"
+            onChange={(e) => setName(e.target.value)}
+            autoFocus={!suggested}
+          />
+          <ColorPicker value={color} onChange={setColor} size={32} />
+          <Button type="submit" variant={suggested ? 'secondary' : 'primary'} size="md" block busy={game.busy} disabled={!trimmed}>
+            Join
           </Button>
         </form>
-        <LocalBadge />
       </section>
     </Screen>
   );

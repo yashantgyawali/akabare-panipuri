@@ -41,31 +41,25 @@ function seatOrder(players: readonly PublicPlayerView[], you: PlayerId | null): 
 
 function statusFor(p: PublicPlayerView, view: PlayerView): SeatStatus | null {
   switch (view.phase) {
-    case 'setup':
-      return p.setupDone ? { label: 'set ✓', tone: 'done' } : { label: 'setting up…', tone: 'wait' };
-    case 'serving':
-      if (view.serving?.turnId === p.id) return { label: 'serving', tone: 'turn' };
-      return view.firstPlayerId === p.id ? { label: 'served first', tone: 'wait' } : null;
     case 'bidding': {
       const b = view.bidding;
       if (!b) return null;
       if (b.passed.includes(p.id)) return { label: 'passed', tone: 'passed' };
-      if (b.turnId === p.id) return { label: 'deciding…', tone: 'turn' };
-      if (b.highBidderId === p.id) return { label: `high bid ${b.highBid}`, tone: 'high' };
-      return null;
+      return b.highBidderId === p.id ? { label: `high bid ${b.highBid}`, tone: 'high' } : null;
     }
     case 'eating': {
       const e = view.eating;
-      if (e?.eaterId === p.id) return { label: `eating ${e.eaten}/${e.target}`, tone: 'eater' };
-      return view.bidding?.passed.includes(p.id) ? { label: 'watching', tone: 'passed' } : null;
+      return e?.eaterId === p.id ? { label: `eating ${e.eaten}/${e.target}`, tone: 'eater' } : null;
     }
     case 'roundEnd': {
       const r = view.results.find((x) => x.round === view.round);
       if (r?.eaterId === p.id) return r.outcome === 'success' ? { label: `ate ${r.target}`, tone: 'done' } : { label: 'bust', tone: 'bust' };
-      return p.isBot || p.ready ? { label: 'ready', tone: 'done' } : { label: 'reading…', tone: 'wait' };
+      return p.isBot || p.ready ? { label: 'ready', tone: 'done' } : null;
     }
     case 'gameOver':
       return view.winners?.includes(p.id) ? { label: 'winner', tone: 'win' } : null;
+    default:
+      return null;
   }
 }
 
@@ -387,32 +381,25 @@ export function Table({ game }: { game: UseGame }) {
               {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
                 <div className="tp-notice" role="status">
                   <span>
-                    Waiting on <strong>{names.name(offlineWaiting[0])}</strong>, who seems to be offline.
+                    <strong>{names.name(offlineWaiting[0])}</strong> is offline
                   </span>
                   <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
-                    Replace with a bot
+                    Use a bot
                   </Button>
                 </div>
               ) : null}
-              {showHud && view.eating ? <Tally view={view} names={names} /> : null}
+              {showHud && view.eating ? <Tally view={view} /> : null}
               {fx ? (
                 <>
                   <EventTrail e={fx} names={names} />
                   <EventBanner e={fx} names={names} />
                 </>
               ) : null}
-              <div className="tp-ticker">
-              {!showHud && !fx ? (
-                <p key={current?.seq ?? 'none'} className={cx('tp-ticker__line', line && `tp-ticker__line--${line.tone}`)} aria-hidden="true">
-                  {line?.text ?? (view.phase === 'setup' ? 'Everyone hides their puri and one power.' : '')}
-                </p>
-              ) : null}
               {pb.queued > 1 ? (
-                <button type="button" className="tp-link tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`}>
-                  <Icon name="skip" size={16} /> Skip {pb.queued}
+                <button type="button" className="tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`} title="Skip ahead">
+                  <Icon name="skip" size={18} />
                 </button>
               ) : null}
-              </div>
             </>
           }
         >
@@ -441,7 +428,6 @@ export function Table({ game }: { game: UseGame }) {
             <SetupPanel
               key={view.round}
               view={setupView}
-              names={names}
               color={me?.color ?? 'red'}
               busy={busy}
               pending={pending === 'setup'}
@@ -459,7 +445,6 @@ export function Table({ game }: { game: UseGame }) {
             <>
               {showHand ? (
                 <div className="tp-dock__hand">
-                  <span className="tp-dock__label">Your hand · {hand.length}</span>
                   <Hand
                     cards={hand}
                     color={me?.color ?? 'red'}
@@ -467,7 +452,6 @@ export function Table({ game }: { game: UseGame }) {
                     selected={legal.place ? sel : null}
                     pickable={legal.place && !busy ? legal.place.kinds : null}
                     onPick={(i) => setSel((s) => (s === i ? null : i))}
-                    emptyText="Empty"
                   />
                 </div>
               ) : null}
@@ -571,9 +555,7 @@ export function Table({ game }: { game: UseGame }) {
         busy={pending === 'leave'}
         onCancel={() => setConfirmLeave(false)}
         onConfirm={leave}
-      >
-        <p>A bot takes over your seat so the others can keep playing.</p>
-      </ConfirmDialog>
+      />
     </div>
   );
 }

@@ -14,12 +14,10 @@ function ResultLines({ result, view }: { result: RoundResult; view: PlayerView }
     <ul className="tp-resrows">
       {rows.map((p) => {
         const d = result.scoreDeltas[p.id] ?? 0;
-        const why = p.id === result.eaterId ? (result.outcome === 'success' ? 'ate the bid' : 'bust') : p.id === result.trapRewardTo ? 'trap reward' : '';
         return (
           <li key={p.id} className="tp-resrows__row" style={{ ['--c' as string]: PLAYER_PALETTE[p.color].base }}>
             <span className="tp-dot" aria-hidden="true" />
             <span className="tp-resrows__name">{p.id === view.youId ? 'You' : p.name}</span>
-            <span className="tp-resrows__why">{why}</span>
             <span className={cx('tp-resrows__d', d > 0 && 'is-up', d < 0 && 'is-down')}>{d === 0 ? '·' : signed(d)}</span>
             <span className="tp-resrows__score">{num(result.scoresAfter[p.id] ?? p.score)}</span>
           </li>
@@ -37,7 +35,6 @@ export function RoundEndPanel({
   busy,
   pending,
   act,
-  onPeek,
   onTakeSeatBack,
 }: {
   view: PlayerView;
@@ -47,7 +44,8 @@ export function RoundEndPanel({
   busy: boolean;
   pending: string | null;
   act: (key: string, action: Action) => void;
-  onPeek: () => void;
+  /** Unused: kept so callers need not change. */
+  onPeek?: () => void;
   /** Set while a bot plays the viewer's seat: the banner with this button is hidden behind the overlay. */
   onTakeSeatBack?: () => void;
 }) {
@@ -62,58 +60,24 @@ export function RoundEndPanel({
   // empty for a moment whenever someone else's Ready plays back.
   const mine = view.players.find((p) => p.id === you);
   const youReady = !mine || mine.isBot || mine.ready;
-  const reason =
-    result.outcome === 'bust'
-      ? result.bustReason === 'emptyTable'
-        ? 'The table ran out before the bid was eaten.'
-        : result.akabareOwnerId
-          ? result.akabareOwnerId === eater
-            ? `Bit ${eater === you ? 'your' : 'their'} own Akabare: no trap reward.`
-            : `Bit ${result.akabareOwnerId === you ? 'your' : `${names.name(result.akabareOwnerId)}’s`} Akabare.`
-          : 'Bust.'
-      : result.eaten > result.target
-        ? `Overshot to ${result.eaten}, but the score is the bid.`
-        : null;
+  const who = eater === you ? 'You' : names.name(eater);
   return (
     <Overlay className="tp-result" labelledBy={titleId} focusKey={`r${result.round}:${youReady}:${!!onTakeSeatBack}`}>
       <div className={cx('tp-dialog tp-result__card', !success && 'tp-dialog--red')}>
-        <p className="tp-result__kicker">round {result.round} result</p>
         <div className="tp-result__head">
           <h2 className="tp-result__title" id={titleId}>
-            {success ? `${eater === you ? 'You' : names.name(eater)} ate ${result.target}!` : `${eater === you ? 'You' : names.name(eater)} ${eater === you ? 'bust' : 'busts'}!`}
+            {success ? `${who} ate ${result.target}` : `${who} ${eater === you ? 'bust' : 'busts'}`}
           </h2>
           <span className={cx('tp-result__big', !success && 'is-bust')} aria-hidden="true">
             {signed(success ? result.target : -result.target)}
           </span>
         </div>
-        <p className="tp-result__facts">
-          Bid {result.bid} · ate {result.eaten}
-          {reason ? ` · ${reason}` : ''}
-        </p>
-        {result.trapRewardTo ? (
-          <p className="tp-result__trap">
-            <Icon name="chili" size={18} /> {names.who(result.trapRewardTo)} {result.trapRewardTo === you ? 'get' : 'gets'} +{view.config.trapReward} for the trap.
-          </p>
-        ) : null}
         <ResultLines result={result} view={view} />
-        {view.revealed ? (
-          <p className="tp-small tp-muted">
-            Leftover cards are face up on the table.{' '}
-            <button type="button" className="tp-link tp-link--quiet" onClick={onPeek}>
-              Look at the table
-            </button>
-          </p>
-        ) : null}
         <div className="tp-result__actions">
           {onTakeSeatBack ? (
-            <>
-              <p className="tp-result__status" role="status">
-                <Icon name="bot" size={18} /> A bot is playing your seat.
-              </p>
-              <Button variant="primary" size="md" busy={pending === `bot:${you}`} disabled={busy} onClick={onTakeSeatBack} data-autofocus="">
-                Take my seat back
-              </Button>
-            </>
+            <Button variant="primary" size="md" busy={pending === `bot:${you}`} disabled={busy} onClick={onTakeSeatBack} data-autofocus="">
+              Take back
+            </Button>
           ) : !youReady ? (
             <Button
               variant="primary"
@@ -127,23 +91,18 @@ export function RoundEndPanel({
               }}
               data-autofocus=""
             >
-              {willEnd ? 'See the final scores' : `Ready for round ${view.round + 1}`}
+              {willEnd ? 'See results' : 'Ready'}
             </Button>
           ) : (
             <p className="tp-result__status" role="status">
-              <Icon name="check" size={18} /> You’re ready.{' '}
-              {waiting.length > 0 ? `Waiting for ${joinNames(waiting.map((p) => names.name(p.id)))}…` : ''}
+              <Icon name="check" size={18} /> Ready
+              <span className="tp-sr">{waiting.length > 0 ? `. Waiting for ${joinNames(waiting.map((p) => names.name(p.id)))}` : ''}</span>
             </p>
           )}
           {view.legal.forceContinue && isHost && waiting.some((p) => p.id !== you) ? (
-            <Button variant="secondary" size="sm" busy={pending === 'force'} disabled={busy} onClick={() => act('force', { type: 'FORCE_CONTINUE' })}>
-              Continue now
+            <Button variant="ghost" size="sm" busy={pending === 'force'} disabled={busy} onClick={() => act('force', { type: 'FORCE_CONTINUE' })}>
+              Skip waiting
             </Button>
-          ) : null}
-          {!view.revealed ? (
-            <button type="button" className="tp-link tp-link--quiet" onClick={onPeek}>
-              Look at the table
-            </button>
           ) : null}
         </div>
       </div>

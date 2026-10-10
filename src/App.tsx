@@ -24,7 +24,7 @@ function Loading() {
 
 function CardsPage() {
   useEffect(() => {
-    document.title = 'The cards · Akabare Panipuri';
+    document.title = 'Cards · Akabare Panipuri';
   }, []);
   return (
     <div className="tp-page">

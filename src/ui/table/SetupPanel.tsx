@@ -1,15 +1,15 @@
 /**
  * Setup (in the dock): fill the stack slots (bottom → top) from your hand and
- * pick one power. Re-submittable until everyone is done ("Change setup").
+ * pick one power. Re-submittable until everyone is done.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ColorId, PlayerView, PowerKind, PuriKind } from '../../engine/types.ts';
 import { POWER_KINDS } from '../../engine/types.ts';
 import { CARD_INFO, Card } from '../../cards/index.ts';
-import { Button } from '../common/Button.tsx';
+import { Button, IconButton } from '../common/Button.tsx';
 import { Icon } from '../common/Icon.tsx';
 import { cx } from '../common/hooks.ts';
-import { joinNames, powerName, type NameBook } from '../text.ts';
+import { powerName } from '../text.ts';
 import { Hand, handCards } from './Hand.tsx';
 
 export function usedInRound(view: PlayerView, kind: PowerKind): number | null {
@@ -25,15 +25,8 @@ function slotName(i: number, n: number): string {
   return `Card ${i + 1}`;
 }
 
-/** "Waiting for Sita and Anil." / "Everyone else is set." */
-export function waitingSetupText(view: PlayerView, names: NameBook): string {
-  const left = view.players.filter((p) => !p.setupDone && p.id !== view.youId).map((p) => names.name(p.id));
-  return left.length ? `Waiting for ${joinNames(left)}.` : 'Everyone else is set.';
-}
-
 export function SetupPanel({
   view,
-  names,
   color,
   busy,
   pending,
@@ -42,7 +35,6 @@ export function SetupPanel({
   onSubmit,
 }: {
   view: PlayerView;
-  names: NameBook;
   color: ColorId;
   busy: boolean;
   pending: boolean;
@@ -93,11 +85,10 @@ export function SetupPanel({
   const cardW = phone ? 44 : 42;
   const complete = slots.every((s) => s !== null) && power !== null;
   const canEdit = !!legal && !botSeat;
-  const waiting = waitingSetupText(view, names);
 
   if (submitted && (!editing || botSeat)) {
     return (
-      <section className="tp-setup tp-setup--done" aria-labelledby="setup-h">
+      <section className="tp-setup tp-setup--done" aria-label="Locked in">
         <div
           className="tp-setup__mini"
           aria-label={`Your stack, bottom to top: ${submitted.stack.join(', ')}; power: ${powerName(submitted.power)}`}
@@ -107,19 +98,10 @@ export function SetupPanel({
           ))}
           <Card back="power" color={color} face={submitted.power} width={phone ? 40 : 52} decorative />
         </div>
-        <div className="tp-setup__donetext">
-          <h2 className="tp-prompt__title" id="setup-h">
-            Locked in
-          </h2>
-          <p className="tp-prompt__sentence">
-            {waiting}
-            {canEdit ? ' You can change it until the last player locks in.' : ''}
-          </p>
-        </div>
         {canEdit ? (
-          <Button size="md" icon={<Icon name="edit" size={16} />} onClick={() => setEditing(true)}>
-            Change setup
-          </Button>
+          <IconButton label="Change setup" onClick={() => setEditing(true)}>
+            <Icon name="edit" size={18} />
+          </IconButton>
         ) : null}
       </section>
     );
@@ -143,16 +125,12 @@ export function SetupPanel({
   return (
     <section
       className="tp-setup"
-      aria-labelledby="setup-h"
+      aria-label="Set up your stack"
       ref={rootRef}
       style={{ ['--cw' as string]: cardW, ['--slots' as string]: size, ['--hand-n' as string]: full.panipuri + full.akabare }}
     >
-      <h2 className="tp-prompt__title tp-setup__title" id="setup-h">
-        Round {view.round} · set up
-      </h2>
       <div className="tp-setup__sections">
         <div className="tp-setup__col tp-setup__col--hand">
-          <h3 className="tp-setup__label">1 · Your hand</h3>
           <Hand
             cards={handCards(remaining)}
             color={color}
@@ -161,12 +139,11 @@ export function SetupPanel({
             pickable={slots.some((s) => s === null) ? (['panipuri', 'akabare'] as const) : null}
             onPick={(_, c) => fill(c.kind)}
             label="Your puri set"
-            emptyText="All your cards are placed."
+            emptyText=""
             className="tp-setup__hand"
           />
         </div>
         <div className="tp-setup__col tp-setup__col--slots">
-          <h3 className="tp-setup__label">2 · Stack (bottom → top)</h3>
           <ol className="tp-setup__slots" aria-label="Your stack slots, bottom to top">
             {slots.map((s, i) => (
               <li key={i} className="tp-slot">
@@ -184,13 +161,12 @@ export function SetupPanel({
           </ol>
         </div>
         <div className="tp-setup__col">
-          <h3 className="tp-setup__label">3 · Power</h3>
           <ul className="tp-setup__powers" role="radiogroup" aria-label="Power card">
             {POWER_KINDS.map((k) => {
               const ok = available.includes(k);
               const r = ok ? null : usedInRound(view, k);
               return (
-                <li key={k} className={cx('tp-pick', !ok && 'is-off', power === k && 'is-on')} title={ok ? CARD_INFO[k].short : `${powerName(k)} is used up until the powers reset.`}>
+                <li key={k} className={cx('tp-pick', !ok && 'is-off', power === k && 'is-on')} title={ok ? powerName(k) : `${powerName(k)} used`}>
                   <Card
                     back="power"
                     color={color}
@@ -200,16 +176,15 @@ export function SetupPanel({
                     onClick={ok ? () => setPower(k) : undefined}
                     ariaLabel={ok ? `${powerName(k)}: ${CARD_INFO[k].short}${power === k ? ' (chosen)' : ''}` : `${powerName(k)}: used${r ? ` in round ${r}` : ''}`}
                   />
-                  <span className="tp-slot__cap">{ok ? powerName(k) : r ? `Used in round ${r}` : 'Used'}</span>
                 </li>
               );
             })}
           </ul>
         </div>
         <div className="tp-setup__col tp-setup__col--cta">
-          <p className="tp-setup__todo" aria-live="polite">
-            {todo ? `${todo[0].toUpperCase()}${todo.slice(1)}.` : 'Ready when you are.'}
-          </p>
+          <span className="tp-sr" aria-live="polite">
+            {todo ? `${todo[0].toUpperCase()}${todo.slice(1)}.` : 'Ready.'}
+          </span>
           <Button
             variant="primary"
             size="md"
@@ -221,14 +196,8 @@ export function SetupPanel({
               if (ok) setEditing(false);
             }}
           >
-            {submitted ? 'Update setup' : 'Lock in'}
+            Lock in
           </Button>
-          {submitted ? (
-            <button type="button" className="tp-link tp-link--quiet" onClick={() => setEditing(false)}>
-              Keep my setup
-            </button>
-          ) : null}
-          <p className="tp-setup__waiting">{waiting}</p>
         </div>
       </div>
     </section>
