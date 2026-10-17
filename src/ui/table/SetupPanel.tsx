@@ -24,14 +24,23 @@ export interface HeldSetupHand {
   toggle: (index: number) => void;
 }
 
-/** Which hand card fills which slot: slot j takes the first unclaimed card of its kind. */
-export function slotOrders(cards: HandCard[], slots: (PuriKind | null)[]): (number | null)[] {
+/**
+ * Which hand card fills which slot: the card that was tapped for it (`from`), or
+ * else the first unclaimed card of its kind.
+ */
+export function slotOrders(cards: HandCard[], slots: (PuriKind | null)[], from: (number | null)[] = []): (number | null)[] {
   const orders: (number | null)[] = cards.map(() => null);
+  const pending: number[] = [];
   slots.forEach((k, j) => {
     if (!k) return;
-    const i = cards.findIndex((c, ci) => c.kind === k && orders[ci] === null);
-    if (i >= 0) orders[i] = j + 1;
+    const i = from[j];
+    if (i !== null && i !== undefined && cards[i]?.kind === k && orders[i] === null) orders[i] = j + 1;
+    else pending.push(j);
   });
+  for (const j of pending) {
+    const i = cards.findIndex((c, ci) => c.kind === slots[j] && orders[ci] === null);
+    if (i >= 0) orders[i] = j + 1;
+  }
   return orders;
 }
 
@@ -75,6 +84,8 @@ export function SetupPanel({
   const available = legal?.availablePowers ?? view.me?.availablePowers ?? [];
   const submitted = view.me?.setup ?? null;
   const [slots, setSlots] = useState<(PuriKind | null)[]>(() => submitted?.stack.slice(0, size) ?? Array(size).fill(null));
+  // Which hand card (index) was tapped into each slot, when it was tapped in the 3D hand.
+  const [slotFrom, setSlotFrom] = useState<(number | null)[]>(() => Array(size).fill(null));
   const [power, setPower] = useState<PowerKind | null>(() => submitted?.power ?? (available.length === 1 ? available[0] : null));
   // The tapped card leaves the hand (or the slot button turns into an empty slot), which would drop keyboard focus on <body>: keep it nearby.
   const rootRef = useRef<HTMLElement>(null);
@@ -113,7 +124,7 @@ export function SetupPanel({
   const editingHand = !(submitted && (!editing || botSeat)) && !!legal && !botSeat;
   const canFill = slots.some((s) => s === null);
   const fullCards = useMemo(() => handCards(full), [full.panipuri, full.akabare]);
-  const orders = useMemo(() => slotOrders(fullCards, slots), [fullCards, slots]);
+  const orders = useMemo(() => slotOrders(fullCards, slots, slotFrom), [fullCards, slots, slotFrom]);
   useEffect(() => {
     if (!onHeld) return;
     onHeld(editingHand ? { cards: fullCards, orders, pickable: canFill, toggle: (i) => toggleRef.current(i) } : null);
@@ -145,22 +156,24 @@ export function SetupPanel({
     );
   }
 
-  const fill = (kind: PuriKind) => {
+  const fill = (kind: PuriKind, fromCard: number | null = null) => {
     const i = slots.findIndex((s) => s === null);
     if (i < 0) return;
     const hand = [...(rootRef.current?.querySelectorAll<HTMLElement>('.tp-hand-row__card button') ?? [])];
     const at = hand.indexOf(document.activeElement as HTMLElement);
     if (at >= 0) refocus.current = { from: 'hand', idx: at };
     setSlots(slots.map((s, j) => (j === i ? kind : s)));
+    setSlotFrom(slotFrom.map((f, j) => (j === i ? fromCard : f)));
   };
   const clear = (i: number) => {
     refocus.current = { from: 'slot', idx: i };
     setSlots(slots.map((s, j) => (j === i ? null : s)));
+    setSlotFrom(slotFrom.map((f, j) => (j === i ? null : f)));
   };
   toggleRef.current = (i: number) => {
     const o = orders[i];
     if (o !== null && o !== undefined) clear(o - 1);
-    else if (fullCards[i]) fill(fullCards[i].kind);
+    else if (fullCards[i]) fill(fullCards[i].kind, i);
   };
   const empty = slots.filter((x) => x === null).length;
   const todo = [empty > 0 ? `fill ${empty} more slot${empty === 1 ? '' : 's'}` : '', !power ? 'pick a power' : ''].filter(Boolean).join(' and ');

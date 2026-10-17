@@ -8,7 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CARD_H, CARD_T, CARD_W, PLATE_R, platePos3, stackJitter, type Seat3DSpot } from './layout3d.ts';
 import { Card3D, GlowPad, cardGeo, cardMaterials, clickProps, heldMaterials, type Glow } from './Card3D.tsx';
-import { numberTex } from './textures.ts';
+import { badgeTex, numberTex } from './textures.ts';
 
 const MAX_SHOWN = 14;
 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
@@ -268,6 +268,8 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
   const fist = useRef<THREE.Group>(null);
   const other = useRef<THREE.Group>(null);
   const items = useRef<(THREE.Group | null)[]>([]);
+  const badges = useRef<(THREE.Mesh | null)[]>([]);
+  const edge = useMemo(() => new THREE.Vector3(), []);
   const [hover, setHover] = useState<number | null>(null);
   const n = cards.length;
   const active = cards.some((c) => c.pickable || c.selected);
@@ -304,6 +306,14 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
       it.position.z = -d + i * 0.0015;
       // Stand the card up to face the camera, leaned back a touch (X), turned in its own plane by the fan angle (Y, applied first).
       it.rotation.set(Math.PI / 2 - 0.22, -th, 0);
+      // Pick number: sits on the middle of the card's top edge, always upright and facing you.
+      const b = badges.current[i];
+      if (b) {
+        it.updateMatrix();
+        edge.set(0, 0.004, -CARD_H * 0.5).applyMatrix4(it.matrix);
+        b.position.set(edge.x, edge.y, edge.z + 0.004);
+        b.scale.setScalar(h * 0.24);
+      }
     });
     if (fist.current) {
       fist.current.position.set(pxX + h * 0.02, pyY + h * 0.12, -d + 0.03);
@@ -330,20 +340,29 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
           onPointerLeave={() => setHover((h) => (h === i ? null : h))}
         >
           {c.selected || c.focus || c.order ? (
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} scale={[CARD_W * 1.08, CARD_H * 1.06, 1]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} scale={[CARD_W * 1.05, CARD_H * 1.035, 1]}>
               <planeGeometry />
               <meshBasicMaterial color={c.focus ? '#ffffff' : '#F16147'} toneMapped={false} />
             </mesh>
           ) : null}
           <mesh geometry={heldGeo} material={heldMaterials(c.tex, anyPick && !c.pickable && !c.selected)[2]} />
-          {c.order ? (
-            <mesh position={[CARD_W * 0.3, 0.003, -CARD_H * 0.38]} rotation={[-Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[CARD_W * 0.2, 28]} />
-              <meshBasicMaterial map={numberTex(String(c.order), '#2a170c', '#F16147')} toneMapped={false} />
-            </mesh>
-          ) : null}
+
         </group>
       ))}
+      {cards.map((c, i) =>
+        c.order ? (
+          <mesh
+            key={`b${i}`}
+            ref={(el) => {
+              badges.current[i] = el;
+            }}
+            renderOrder={10}
+          >
+            <planeGeometry />
+            <meshBasicMaterial map={badgeTex(String(c.order))} transparent depthTest={false} toneMapped={false} />
+          </mesh>
+        ) : null,
+      )}
       <group ref={fist}>
         <BlockHand lit />
       </group>

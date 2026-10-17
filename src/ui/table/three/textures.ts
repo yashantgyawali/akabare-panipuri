@@ -121,10 +121,7 @@ export function frontTex(face: FaceKind, color: ColorId): THREE.Texture {
       // Corner index, like a playing card: readable on the sliver of a card held in a fan.
       const letter = info.title.slice(0, 1);
       const ink = face === 'akabare' ? '#C8321A' : INK;
-      for (const [x, y, flip] of [
-        [52, 66, false],
-        [W - 52, H - 66, true],
-      ] as const) {
+      for (const [x, y, flip] of [[52, 66, false]] as const) {
         g.save();
         g.translate(x, y);
         if (flip) g.rotate(Math.PI);
@@ -209,6 +206,36 @@ export function numberTex(text: string, ink: string, rim: string): THREE.Texture
     g.textBaseline = 'middle';
     g.fillText(text, 128, 138);
     return srgb(new THREE.CanvasTexture(c));
+  });
+}
+
+/** A flat pick-order badge: Tumlet red disc, cream ring, bold white number. */
+export function badgeTex(text: string): THREE.Texture {
+  return cached(`badge:${text}`, () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const t = srgb(new THREE.CanvasTexture(c));
+    const draw = () => {
+      const g = c.getContext('2d')!;
+      g.clearRect(0, 0, 128, 128);
+      g.fillStyle = '#F9EFD3';
+      g.beginPath();
+      g.arc(64, 64, 62, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#F16147';
+      g.beginPath();
+      g.arc(64, 64, 54, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#ffffff';
+      g.font = '800 68px Manrope, "Baloo 2", system-ui, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(text, 64, 68);
+      t.needsUpdate = true;
+    };
+    draw();
+    void document.fonts?.load('800 68px Manrope').then(draw, () => {});
+    return t;
   });
 }
 
