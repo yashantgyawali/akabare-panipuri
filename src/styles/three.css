@@ -1,0 +1,74 @@
+/*
+ * The real-3D table (src/ui/table/three): the WebGL canvas fills the room;
+ * nameplates are DOM pinned over the characters' heads; the stack/power
+ * controls are a visually hidden layer for keyboard and screen readers.
+ */
+.tp-room--3d {
+  perspective: none;
+  background: #0b0603;
+}
+.tp-room--3d .tp-gl {
+  position: absolute !important;
+  inset: 0;
+  z-index: 0;
+}
+.tp-room--3d .tp-room__vignette {
+  z-index: 1;
+}
+
+.tp-np3d-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.tp-np3d {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  will-change: transform;
+}
+.tp-np3d .tp-np {
+  position: static;
+  transform: none;
+}
+.tp-np3d--you {
+  top: auto;
+  left: auto;
+  bottom: 10px;
+  right: 10px;
+  opacity: 1;
+}
+.is-phone .tp-np3d .tp-np__card {
+  transform: scale(0.82);
+  transform-origin: 50% 100%;
+}
+.is-phone .tp-np3d--you .tp-np__card {
+  transform-origin: 100% 100%;
+}
+
+/* hidden controls: present for keyboard / screen readers, drawn by the 3D scene */
+.tp-a11y3d {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.tp-a11y3d button,
+.tp-a11y3d [role='img'] {
+  display: block;
+  width: 1px;
+  height: 1px;
+}
+
+/* the move banner sits low in the 3D room (the far players' nameplates are at the top) */
+.tp-room--3d .tp-fx-banner {
+  top: auto;
+  bottom: 14px;
+}

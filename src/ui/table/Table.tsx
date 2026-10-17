@@ -4,7 +4,7 @@
  * other players' moves play one at a time and the table always matches the
  * announcer. Actions come only from view.legal (empty while events play).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Action, GameEvent, PlayerId, PlayerView, PublicPlayerView } from '../../engine/types.ts';
 import type { UseGame } from '../../net/useGame.ts';
 import { noLegalActions } from '../../engine/index.ts';
@@ -30,6 +30,9 @@ import { SeatsLayer, type SeatBase } from './scene/SeatsLayer.tsx';
 import { Tally } from './scene/Tally.tsx';
 import { stackLabel, type Clickable, type SeatCue, type SeatStatus } from './scene/seatData.ts';
 import { SetupPanel } from './SetupPanel.tsx';
+import { hasWebGL } from './three/webgl.ts';
+
+const Table3D = lazy(() => import('./three/Table3D.tsx'));
 
 const NO_LEGAL = noLegalActions();
 
@@ -138,7 +141,7 @@ function focusTargetFor(memo: string): HTMLElement | null {
   const next = [
     ...document.querySelectorAll('.tp-seats [data-stack-of] > button.ak-card-stack--selectable'),
     ...document.querySelectorAll('.tp-seats [data-power-of] > button.ak-card--selectable'),
-    ...document.querySelectorAll('.tp-dock__hand button, .tp-dock__prompt .btn-cta, .tp-dock__prompt button, .tp-dock button'),
+    ...document.querySelectorAll('.tp-dock__hand button, .tp-a11y3d__hand button, .tp-dock__prompt .btn-cta, .tp-dock__prompt button, .tp-dock button'),
   ];
   return next.find(usable) ?? null;
 }
@@ -175,6 +178,8 @@ export function Table({ game }: { game: UseGame }) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
   const [peek, setPeek] = useState(false);
+  // The real-3D room where WebGL works; the CSS round table otherwise (or if the 3D one fails).
+  const [gl3d, setGl3d] = useState(() => hasWebGL());
 
   const me = view.players.find((p) => p.id === you) ?? null;
   // While a bot plays your seat you only watch (take the seat back to act again).
@@ -354,7 +359,7 @@ export function Table({ game }: { game: UseGame }) {
   useEffect(() => {
     if (!placing) return;
     const a = document.activeElement;
-    if (!(a instanceof HTMLElement) || !a.closest('.tp-dock__hand') || !a.matches(':focus-visible')) return;
+    if (!(a instanceof HTMLElement) || !a.closest('.tp-dock__hand, .tp-a11y3d__hand') || !a.matches(':focus-visible')) return;
     document.querySelector<HTMLElement>('.tp-seats [data-stack-of] > button.ak-card-stack--selectable')?.focus();
   }, [placing]);
   const botSeat = !!me?.isBot && view.phase !== 'gameOver';
@@ -368,53 +373,75 @@ export function Table({ game }: { game: UseGame }) {
       if (ok) navigate(HOME);
     });
 
+  const overlay = (trail: boolean) => (
+    <>
+      {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
+        <div className="tp-notice" role="status">
+          <span>
+            <strong>{names.name(offlineWaiting[0])}</strong> is offline
+          </span>
+          <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
+            Use a bot
+          </Button>
+        </div>
+      ) : null}
+      {showHud && view.eating ? <Tally view={view} /> : null}
+      {fx ? (
+        <>
+          {trail ? <EventTrail e={fx} names={names} /> : null}
+          <EventBanner e={fx} names={names} />
+        </>
+      ) : null}
+      {pb.queued > 1 ? (
+        <button type="button" className="tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`} title="Skip ahead">
+          <Icon name="skip" size={18} />
+        </button>
+      ) : null}
+    </>
+  );
+  const hand3d =
+    me && !botSeat && hand.length > 0 && (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating')
+      ? { cards: hand, selected: legal.place ? sel : null, pickable: legal.place && !busy ? legal.place.kinds : null, onPick: (i: number) => setSel((s) => (s === i ? null : i)) }
+      : null;
+  const cssScene = (
+    <TableScene lamp={null} flash={flash} overlay={overlay(true)}>
+      {(stage) => (
+        <>
+          {view.phase === 'bidding' && view.bidding ? (
+            <BidDisc amount={view.bidding.highBid} by={names.who(view.bidding.highBidderId)} color={PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base} />
+          ) : null}
+          {view.eating && showHud ? (
+            <Plate3D plate={view.eating.plate} powers={view.eating.powers} names={names} width={Math.round(stage.D * (stage.phone ? 0.085 : 0.066))} radius={stage.D * 0.105} reduced={reduced} />
+          ) : null}
+          <SeatsLayer stage={stage} seats={ordered.map(seatProps)} />
+        </>
+      )}
+    </TableScene>
+  );
+
   return (
-    <div ref={screenRef} className={cx('tp-tablescreen', `tp-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone')}>
+    <div ref={screenRef} className={cx('tp-tablescreen', `tp-phase-${view.phase}`, placing && 'is-placing', phone && 'is-phone', gl3d && 'is-3d')}>
       <TableHeader view={view} names={names} code={snap.code} phone={phone} onOpen={setDrawer} onLeave={() => setConfirmLeave(true)} />
 
       <main className="tp-board" aria-label="The table">
-        <TableScene
-          lamp={null}
-          flash={flash}
-          overlay={
-            <>
-              {game.isHost && offlineWaiting.length > 0 && view.phase !== 'gameOver' ? (
-                <div className="tp-notice" role="status">
-                  <span>
-                    <strong>{names.name(offlineWaiting[0])}</strong> is offline
-                  </span>
-                  <Button size="sm" variant="secondary" busy={pending === `bot:${offlineWaiting[0]}`} disabled={busy} onClick={() => setBot(offlineWaiting[0], true)}>
-                    Use a bot
-                  </Button>
-                </div>
-              ) : null}
-              {showHud && view.eating ? <Tally view={view} /> : null}
-              {fx ? (
-                <>
-                  <EventTrail e={fx} names={names} />
-                  <EventBanner e={fx} names={names} />
-                </>
-              ) : null}
-              {pb.queued > 1 ? (
-                <button type="button" className="tp-ticker__skip" onClick={pb.skip} aria-label={`Skip ahead (${pb.queued} moves to show)`} title="Skip ahead">
-                  <Icon name="skip" size={18} />
-                </button>
-              ) : null}
-            </>
-          }
-        >
-          {(stage) => (
-            <>
-              {view.phase === 'bidding' && view.bidding ? (
-                <BidDisc amount={view.bidding.highBid} by={names.who(view.bidding.highBidderId)} color={PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base} />
-              ) : null}
-              {view.eating && showHud ? (
-                <Plate3D plate={view.eating.plate} powers={view.eating.powers} names={names} width={Math.round(stage.D * (stage.phone ? 0.085 : 0.066))} radius={stage.D * 0.105} reduced={reduced} />
-              ) : null}
-              <SeatsLayer stage={stage} seats={ordered.map(seatProps)} />
-            </>
-          )}
-        </TableScene>
+        {gl3d ? (
+          <Suspense fallback={cssScene}>
+            <Table3D
+              seats={ordered.map(seatProps)}
+              current={current}
+              flash={flash}
+              reduced={reduced}
+              phone={phone}
+              bid={view.phase === 'bidding' && view.bidding ? { amount: view.bidding.highBid, rim: PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base } : null}
+              plate={view.eating && showHud ? { cards: view.eating.plate, powers: view.eating.powers ?? [] } : null}
+              hand={hand3d}
+              overlay={overlay(false)}
+              onFail={() => setGl3d(false)}
+            />
+          </Suspense>
+        ) : (
+          cssScene
+        )}
       </main>
       {/* The one live region for the table: each move as it plays, then your turn (the header pill stays quiet). */}
       <div className="tp-sr" aria-live="polite">
@@ -443,7 +470,7 @@ export function Table({ game }: { game: UseGame }) {
             />
           ) : (
             <>
-              {showHand ? (
+              {showHand && !gl3d ? (
                 <div className="tp-dock__hand">
                   <Hand
                     cards={hand}

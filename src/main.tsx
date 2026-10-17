@@ -6,6 +6,7 @@ import './styles/home.css';
 import './styles/lobby.css';
 import './styles/table.css';
 import './styles/scene.css';
+import './styles/three.css';
 import './styles/overlays.css';
 import './styles/header-fold.css';
 import './styles/event-fx.css';

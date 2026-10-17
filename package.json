@@ -21,15 +21,18 @@
     "build:function": "npm run sync:function && rolldown -c supabase/.build/rolldown.config.mjs"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.8.2",
     "@supabase/supabase-js": "^2.117.2",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
     "harfbuzzjs": "^1.6.2",
     "sharp": "^0.35.5",
