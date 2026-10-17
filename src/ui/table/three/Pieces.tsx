@@ -256,6 +256,10 @@ export function BlockHand({ lit = false, flip = false }: { lit?: boolean; flip?:
  * lifted `insetPx` above the bottom so the floating controls never cover it.
  * Resting (nothing to pick) it drops lower, out of the way of the table.
  */
+const TIP = -0.22;
+/** Held cards: the face only (a thin box would show its square edges past the rounded corners). */
+const heldGeo = new THREE.PlaneGeometry(CARD_W, CARD_H).rotateX(-Math.PI / 2);
+
 export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3D[]; onPick: (i: number) => void; phone: boolean; insetPx?: number }) {
   const { camera, size } = useThree();
   const root = useRef<THREE.Group>(null);
@@ -283,25 +287,26 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
     const R = h * 0.7;
     // The fist (fan pivot): low and a little left of centre; lower still when resting.
     // Held off to the left, so your own stack and power on the table stay in view.
-    const pxX = phone ? -halfW * 0.4 : -halfW * 0.48;
+    const pxX = phone ? -halfW * 0.26 : -halfW * 0.3;
     const pyY = -halfH + insetPx * px - h * 0.18 - rest.current * h * 0.4;
     cards.forEach((c, i) => {
       const it = items.current[i];
       if (!it) return;
-      const th = (i - (n - 1) / 2) * spread;
+      // The whole fan is held tipped a little to the left.
+      const th = (i - (n - 1) / 2) * spread + TIP;
       const up = c.selected ? h * 0.22 : hover === i && c.pickable ? h * 0.08 : 0;
       const rr = R + up;
       it.scale.setScalar(sc);
       it.position.x = pxX + Math.sin(th) * rr;
       it.position.y += (pyY + Math.cos(th) * rr - it.position.y) * Math.min(1, dt * 12);
       it.position.z = -d + i * 0.0015;
-      // Stand the card up to face the camera (X), turned in its own plane by the fan angle (Y, applied first).
-      it.rotation.set(Math.PI / 2, -th, 0);
+      // Stand the card up to face the camera, leaned back a touch (X), turned in its own plane by the fan angle (Y, applied first).
+      it.rotation.set(Math.PI / 2 - 0.22, -th, 0);
     });
     if (fist.current) {
       fist.current.position.set(pxX + h * 0.02, pyY + h * 0.12, -d + 0.03);
       fist.current.scale.setScalar(h * 2.6);
-      fist.current.rotation.set(0, 0, -0.15);
+      fist.current.rotation.set(0, 0, -0.15 - TIP);
     }
     if (other.current) {
       other.current.position.set(halfW * (phone ? 0.55 : 0.38), -halfH + insetPx * px - h * 0.05, -d + 0.02);
@@ -328,7 +333,7 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
               <meshBasicMaterial color={c.focus ? '#ffffff' : '#F16147'} toneMapped={false} />
             </mesh>
           ) : null}
-          <mesh geometry={cardGeo} material={heldMaterials(c.tex, anyPick && !c.pickable && !c.selected)} />
+          <mesh geometry={heldGeo} material={heldMaterials(c.tex, anyPick && !c.pickable && !c.selected)[2]} />
         </group>
       ))}
       <group ref={fist}>
