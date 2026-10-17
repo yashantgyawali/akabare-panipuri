@@ -67,11 +67,7 @@
   height: 1px;
 }
 
-/* the move banner sits low in the 3D room (the far players' nameplates are at the top) */
-.tp-room--3d .tp-fx-banner {
-  top: auto;
-  bottom: 14px;
-}
+
 
 /* ===== no dock strip: the room fills the screen, the controls float over it ===== */
 .tp-tablescreen.is-3d {
@@ -189,9 +185,7 @@
     bottom: 8px;
     left: 8px;
   }
-  .tp-room--3d .tp-fx-banner {
-    bottom: 146px;
-  }
+
 }
 
 /* ===== glass: the floating panel, nameplates and tally read as frosted glass over the room ===== */
@@ -258,7 +252,7 @@
 }
 
 /* setup: your hand is held up in the 3D room; the dock copy stays for keyboard users only */
-.tp-tablescreen.is-3d .tp-setup__col--hand:not(:focus-within) {
+.tp-tablescreen.is-3d .tp-setup__col--hand:not(:has(:focus-visible)) {
   position: absolute !important;
   width: 1px;
   height: 1px;

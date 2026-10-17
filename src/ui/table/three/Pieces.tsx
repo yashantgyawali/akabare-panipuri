@@ -295,7 +295,7 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
       it.position.y += (pyY + Math.cos(th) * rr - it.position.y) * Math.min(1, dt * 12);
       it.position.z = -d + i * 0.0015;
       // Stand the card up to face the camera (X), turned in its own plane by the fan angle (Y, applied first).
-      it.rotation.set(Math.PI / 2, th, 0);
+      it.rotation.set(Math.PI / 2, -th, 0);
     });
     if (fist.current) {
       fist.current.position.set(pxX + h * 0.02, pyY + h * 0.12, -d + 0.03);

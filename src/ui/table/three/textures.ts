@@ -118,6 +118,29 @@ export function frontTex(face: FaceKind, color: ColorId): THREE.Texture {
       g.font = '700 28px Mukta, sans-serif';
       g.fillStyle = FRAME_FILL[color];
       g.fillText(info.devanagari, W / 2, 462);
+      // Corner index, like a playing card: readable on the sliver of a card held in a fan.
+      const letter = info.title.slice(0, 1);
+      const ink = face === 'akabare' ? '#C8321A' : INK;
+      for (const [x, y, flip] of [
+        [52, 66, false],
+        [W - 52, H - 66, true],
+      ] as const) {
+        g.save();
+        g.translate(x, y);
+        if (flip) g.rotate(Math.PI);
+        g.fillStyle = CREAM_BRIGHT;
+        roundRect(g, -30, -36, 60, 72, 12);
+        g.fill();
+        g.strokeStyle = FRAME_FILL[color];
+        g.lineWidth = 4;
+        g.stroke();
+        g.fillStyle = ink;
+        g.font = '56px "Rozha One", Georgia, serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(letter, 0, 4);
+        g.restore();
+      }
       t.needsUpdate = true;
     };
     draw(null);
