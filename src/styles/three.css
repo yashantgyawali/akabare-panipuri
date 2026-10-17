@@ -193,3 +193,66 @@
     bottom: 146px;
   }
 }
+
+/* ===== glass: the floating panel, nameplates and tally read as frosted glass over the room ===== */
+.tp-tablescreen.is-3d .tp-dock__prompt,
+.tp-tablescreen.is-3d .tp-setup,
+.tp-np3d .tp-np__card,
+.tp-room--3d .tp-tally {
+  border: 1px solid rgba(255, 228, 190, 0.22);
+  background: rgba(30, 18, 9, 0.42);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+  color: #f6e7cf;
+}
+.tp-tablescreen.is-3d .tp-dock__prompt,
+.tp-tablescreen.is-3d .tp-setup {
+  border-radius: 18px;
+}
+.tp-tablescreen.is-3d .tp-dock .tp-prompt__title,
+.tp-tablescreen.is-3d .tp-dock .tp-prompt__sentence,
+.tp-tablescreen.is-3d .tp-dock .tp-link {
+  color: #f6e7cf;
+}
+.tp-tablescreen.is-3d .tp-dock .tp-link:hover:not(:disabled) {
+  color: var(--tumlet-yellow);
+}
+.tp-tablescreen.is-3d .tp-dock .tp-stepper {
+  border: 1px solid rgba(255, 228, 190, 0.35);
+  background: rgba(255, 255, 255, 0.07);
+}
+.tp-tablescreen.is-3d .tp-dock .tp-stepper__btn,
+.tp-tablescreen.is-3d .tp-dock .tp-stepper__input {
+  color: #f6e7cf;
+}
+.tp-tablescreen.is-3d .tp-dock .tp-stepper__btn:hover:not(:disabled) {
+  background: rgba(243, 185, 82, 0.25);
+}
+.tp-tablescreen.is-3d .tp-dock .tp-btn {
+  border: 1px solid rgba(255, 228, 190, 0.45);
+  color: #f6e7cf;
+}
+.tp-tablescreen.is-3d .tp-dock .tp-btn:hover:not(:disabled) {
+  background: rgba(243, 185, 82, 0.25);
+  color: #f6e7cf;
+}
+.tp-tablescreen.is-3d .tp-dock .btn-cta {
+  box-shadow: 0 6px 18px rgba(241, 97, 71, 0.35);
+}
+.tp-tablescreen.is-3d .tp-dock .tp-slot__empty {
+  border-color: rgba(255, 228, 190, 0.5);
+  color: #f6e7cf;
+}
+.tp-tablescreen.is-3d .tp-dock .tp-dots,
+.tp-tablescreen.is-3d .tp-dock .tp-bid__over {
+  color: #f6e7cf;
+}
+.tp-np3d .tp-np.is-turn .tp-np__card {
+  border-color: var(--tumlet-yellow);
+  box-shadow:
+    0 0 0 2px rgba(243, 185, 82, 0.8),
+    0 0 24px 4px rgba(255, 217, 160, 0.35);
+}

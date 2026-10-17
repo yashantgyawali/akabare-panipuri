@@ -13,7 +13,7 @@ export const PILE_R = 0.66;
 /** The power card sits beside the stack, this far to the seat's right. */
 export const POWER_SIDE = 0.24;
 export const PLATE_R = 0.3;
-export const CARD_W = 0.17;
+export const CARD_W = 0.2;
 export const CARD_H = CARD_W * (88 / 63);
 export const CARD_T = 0.0035;
 
@@ -71,5 +71,5 @@ export function cameraFor(aspect: number, phone: boolean): { fov: number; y: num
   const hfov = phone ? 84 : 74;
   const vfov = (2 * Math.atan(Math.tan((hfov * Math.PI) / 360) / Math.max(0.3, aspect)) * 180) / Math.PI;
   const fov = Math.min(phone ? 102 : 62, Math.max(44, vfov));
-  return phone ? { fov, y: 1.2, z: 1.55, lookY: -0.1, lookZ: -0.05 } : { fov, y: 0.92, z: 2.15, lookY: 0.0, lookZ: -0.3 };
+  return phone ? { fov, y: 1.55, z: 1.35, lookY: -0.2, lookZ: -0.2 } : { fov, y: 1.5, z: 1.85, lookY: -0.12, lookZ: -0.4 };
 }

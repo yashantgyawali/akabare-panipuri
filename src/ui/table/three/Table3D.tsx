@@ -181,7 +181,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
     const cam = camRef.current;
     if (!el || !cam) return;
     tmp.copy(v);
-    tmp.y += 0.5;
+    tmp.y += 0.4;
     tmp.project(cam);
     const half = el.offsetWidth / 2 + 8;
     const x = Math.min(size.current.w - half, Math.max(half, ((tmp.x + 1) / 2) * size.current.w));

@@ -227,11 +227,11 @@ export function Hand3D({ cards, onPick, phone }: { cards: HandCard3D[]; onPick: 
   const n = cards.length;
   // Held low (resting) unless you're picking a card to place.
   const active = cards.some((c) => c.pickable || c.selected);
-  const rest = useRef(active ? 0 : -0.16);
+  const rest = useRef(active ? 0 : -0.2);
   useFrame((_, dt) => {
     const r = root.current;
     if (!r) return;
-    rest.current += ((active ? 0 : -0.16) - rest.current) * Math.min(1, dt * 6);
+    rest.current += ((active ? 0 : -0.2) - rest.current) * Math.min(1, dt * 6);
     r.position.copy(camera.position);
     r.quaternion.copy(camera.quaternion);
     cards.forEach((c, i) => {
@@ -247,10 +247,10 @@ export function Hand3D({ cards, onPick, phone }: { cards: HandCard3D[]; onPick: 
       it.rotation.set(Math.PI / 2, a, 0);
     });
   });
-  const s = phone ? 0.6 : 0.5;
+  const s = phone ? 0.55 : 0.45;
   return (
     <group ref={root}>
-      <group position={[phone ? 0 : -0.06, phone ? -0.3 : -0.19, -0.6]} rotation={[-0.12, 0, 0]} scale={s}>
+      <group position={[phone ? 0 : -0.06, phone ? -0.33 : -0.25, -0.6]} rotation={[-0.12, 0, 0]} scale={s}>
         {cards.map((c, i) => (
           <group
             key={i}
