@@ -124,6 +124,12 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
   const [focused, setFocused] = useState<string | null>(null);
 
   // A card in flight for a 'place' move.
+  // When each move started playing, pinned by its seq: the table re-renders often while a
+  // move is still the current one (it stays current through your turn), and a start time
+  // taken at render would restart the flight every time (the card and the target stack blink).
+  const startedAt = useRef<{ seq: number; at: number } | null>(null);
+  if (current && startedAt.current?.seq !== current.seq) startedAt.current = { seq: current.seq, at: performance.now() };
+  const moveStart = current ? startedAt.current!.at : 0;
   const flight = useMemo(() => {
     if (!current || current.type !== 'place' || reduced) return null;
     const to = spotOf(current.onStackOf);
@@ -136,13 +142,13 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
     return {
       seq: current.seq,
       to: current.onStackOf,
-      start: performance.now(),
+      start: moveStart,
       from: fromV,
       dest: new THREE.Vector3(to.pile.x, CARD_T * h + 0.003, to.pile.z),
       yaw: to.yaw,
       tex: backTex('puri', actor.p.color),
     };
-  }, [current, reduced, spotOf, seats, youId]);
+  }, [current, reduced, spotOf, seats, youId, moveStart]);
 
   // Eaten cards: the newest one flies in from the stack it was eaten from.
   const plateCards: PlateCard[] = useMemo(() => {

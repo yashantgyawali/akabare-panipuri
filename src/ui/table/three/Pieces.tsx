@@ -210,8 +210,8 @@ export function FlyingCard({ from, to, yaw, tex, start, ms }: { from: THREE.Vect
     grp.visible = t < 1;
   });
   return (
-    <group ref={g} position={from}>
-      <mesh geometry={cardGeo} material={cardMaterials(tex)} castShadow />
+    <group ref={g} position={from} visible={performance.now() - start < ms}>
+      <mesh geometry={cardGeo} material={cardMaterials(tex)} />
     </group>
   );
 }
