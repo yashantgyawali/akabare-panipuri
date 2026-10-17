@@ -282,7 +282,8 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
     const spread = n > 1 ? Math.min(0.26, 1.3 / (n - 1)) : 0;
     const R = h * 0.7;
     // The fist (fan pivot): low and a little left of centre; lower still when resting.
-    const pxX = phone ? -halfW * 0.1 : -halfW * 0.16;
+    // Held off to the left, so your own stack and power on the table stay in view.
+    const pxX = phone ? -halfW * 0.4 : -halfW * 0.48;
     const pyY = -halfH + insetPx * px - h * 0.18 - rest.current * h * 0.4;
     cards.forEach((c, i) => {
       const it = items.current[i];

@@ -289,3 +289,10 @@
     bottom: 14px;
   }
 }
+/* phones: your hand is held at the left, so your nameplate sits right */
+@media (max-width: 640px) {
+  .tp-tablescreen.is-3d .tp-np3d--you {
+    left: auto;
+    right: 8px;
+  }
+}
