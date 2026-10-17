@@ -70,6 +70,6 @@ export function stackJitter(i: number): { dx: number; dz: number; rot: number } 
 export function cameraFor(aspect: number, phone: boolean): { fov: number; y: number; z: number; lookY: number; lookZ: number } {
   const hfov = phone ? 84 : 74;
   const vfov = (2 * Math.atan(Math.tan((hfov * Math.PI) / 360) / Math.max(0.3, aspect)) * 180) / Math.PI;
-  const fov = Math.min(phone ? 88 : 62, Math.max(44, vfov));
-  return phone ? { fov, y: 1.12, z: 1.5, lookY: -0.12, lookZ: 0.02 } : { fov, y: 0.92, z: 2.15, lookY: 0.0, lookZ: -0.3 };
+  const fov = Math.min(phone ? 102 : 62, Math.max(44, vfov));
+  return phone ? { fov, y: 1.2, z: 1.55, lookY: -0.1, lookZ: -0.05 } : { fov, y: 0.92, z: 2.15, lookY: 0.0, lookZ: -0.3 };
 }

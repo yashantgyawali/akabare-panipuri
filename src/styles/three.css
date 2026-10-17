@@ -72,3 +72,124 @@
   top: auto;
   bottom: 14px;
 }
+
+/* ===== no dock strip: the room fills the screen, the controls float over it ===== */
+.tp-tablescreen.is-3d {
+  position: relative;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.tp-tablescreen.is-3d .tp-board {
+  min-height: 0;
+}
+.tp-tablescreen.is-3d .tp-room {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.tp-tablescreen.is-3d .tp-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+.tp-tablescreen.is-3d .tp-dock__inner {
+  max-width: none;
+  height: auto;
+  padding: 0 16px 16px;
+  justify-content: flex-end;
+  align-items: flex-end;
+  overflow: visible;
+}
+.tp-tablescreen.is-3d .tp-dock--setup .tp-dock__inner {
+  justify-content: center;
+}
+/* the floating panel: the Tumlet card (2px ink border, hard offset shadow) */
+.tp-tablescreen.is-3d .tp-dock__prompt,
+.tp-tablescreen.is-3d .tp-setup {
+  flex: none;
+  max-width: min(560px, 100%);
+  padding: 12px 16px;
+  border: 2px solid var(--tumlet-ink);
+  border-radius: var(--radius-md, 14px);
+  background: var(--tumlet-beige);
+  box-shadow: 5px 5px 0 0 rgba(8, 4, 2, 0.85);
+  pointer-events: auto;
+}
+.tp-tablescreen.is-3d .tp-setup {
+  max-width: min(960px, 100%);
+}
+.tp-tablescreen.is-3d .tp-prompt {
+  flex-wrap: nowrap;
+  gap: 12px 20px;
+}
+.tp-tablescreen.is-3d .tp-prompt__text {
+  flex: 0 1 auto;
+}
+.tp-tablescreen.is-3d .tp-prompt__title {
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.tp-tablescreen.is-3d .tp-prompt__controls {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.tp-tablescreen.is-3d .tp-prompt__cancel {
+  position: static;
+  align-self: center;
+}
+
+/* your nameplate and the eating tally move out of the panel's way */
+.tp-tablescreen.is-3d .tp-np3d--you {
+  left: 12px;
+  right: auto;
+  bottom: 16px;
+}
+.tp-tablescreen.is-3d.tp-phase-setup .tp-np3d--you {
+  display: none;
+}
+.tp-room--3d .tp-tally {
+  top: 60px;
+  bottom: auto;
+}
+
+/* phones: the panel spans the bottom; the 3D view stops just above it so your hand stays visible */
+@media (max-width: 640px) {
+  .tp-tablescreen.is-3d .tp-dock__inner {
+    padding: 0 8px 8px;
+    justify-content: stretch;
+  }
+  .tp-tablescreen.is-3d .tp-dock__prompt,
+  .tp-tablescreen.is-3d .tp-setup {
+    flex: 1;
+    max-width: none;
+    padding: 10px 12px;
+  }
+  .tp-tablescreen.is-3d .tp-prompt {
+    flex-wrap: wrap;
+  }
+  .tp-tablescreen.is-3d .tp-prompt__title {
+    font-size: 18px;
+  }
+  .tp-room--3d .tp-gl,
+  .tp-room--3d .tp-room__vignette,
+  .tp-room--3d .tp-np3d-layer {
+    bottom: 132px !important;
+    height: auto !important;
+  }
+  .tp-tablescreen.is-3d .tp-np3d--you {
+    bottom: 8px;
+    left: 8px;
+  }
+  .tp-room--3d .tp-fx-banner {
+    bottom: 146px;
+  }
+}

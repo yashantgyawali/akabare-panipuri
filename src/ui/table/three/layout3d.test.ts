@@ -39,7 +39,7 @@ describe('3D table layout', () => {
       for (const phone of [true, false]) {
         const c = cameraFor(a, phone);
         expect(c.fov).toBeGreaterThanOrEqual(44);
-        expect(c.fov).toBeLessThanOrEqual(88);
+        expect(c.fov).toBeLessThanOrEqual(102);
       }
     }
   });

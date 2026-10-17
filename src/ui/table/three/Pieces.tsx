@@ -250,7 +250,7 @@ export function Hand3D({ cards, onPick, phone }: { cards: HandCard3D[]; onPick: 
   const s = phone ? 0.6 : 0.5;
   return (
     <group ref={root}>
-      <group position={[0, phone ? -0.3 : -0.19, -0.6]} rotation={[-0.12, 0, 0]} scale={s}>
+      <group position={[phone ? 0 : -0.06, phone ? -0.3 : -0.19, -0.6]} rotation={[-0.12, 0, 0]} scale={s}>
         {cards.map((c, i) => (
           <group
             key={i}
