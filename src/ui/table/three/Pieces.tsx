@@ -222,6 +222,8 @@ export interface HandCard3D {
   selected: boolean;
   /** Keyboard focus is on this card's hidden control. */
   focus?: boolean;
+  /** Picked in setup: lifted out of the fan with this number (1st, 2nd…). */
+  order?: number | null;
 }
 
 const SKIN = new THREE.MeshStandardMaterial({ color: '#d99a6c', roughness: 0.8 });
@@ -294,7 +296,7 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
       if (!it) return;
       // The whole fan is held tipped a little to the left.
       const th = (i - (n - 1) / 2) * spread + TIP;
-      const up = c.selected ? h * 0.22 : hover === i && c.pickable ? h * 0.08 : 0;
+      const up = c.selected || c.order ? h * 0.3 : hover === i && c.pickable ? h * 0.08 : 0;
       const rr = R + up;
       it.scale.setScalar(sc);
       it.position.x = pxX + Math.sin(th) * rr;
@@ -327,13 +329,19 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
           onPointerEnter={() => setHover(i)}
           onPointerLeave={() => setHover((h) => (h === i ? null : h))}
         >
-          {c.selected || c.focus ? (
+          {c.selected || c.focus || c.order ? (
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} scale={[CARD_W * 1.08, CARD_H * 1.06, 1]}>
               <planeGeometry />
               <meshBasicMaterial color={c.focus ? '#ffffff' : '#F16147'} toneMapped={false} />
             </mesh>
           ) : null}
           <mesh geometry={heldGeo} material={heldMaterials(c.tex, anyPick && !c.pickable && !c.selected)[2]} />
+          {c.order ? (
+            <mesh position={[CARD_W * 0.3, 0.003, -CARD_H * 0.38]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[CARD_W * 0.2, 28]} />
+              <meshBasicMaterial map={numberTex(String(c.order), '#2a170c', '#F16147')} toneMapped={false} />
+            </mesh>
+          ) : null}
         </group>
       ))}
       <group ref={fist}>

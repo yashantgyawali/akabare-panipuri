@@ -210,6 +210,17 @@ export function Table({ game }: { game: UseGame }) {
   const [peek, setPeek] = useState(false);
   // The real-3D room where WebGL works; the CSS round table otherwise (or if the 3D one fails).
   const [gl3d, setGl3d] = useState(() => hasWebGL());
+  // A lost GPU context or a one-off render error restarts the 3D table (a fresh mount);
+  // only repeated failures (3 within a minute) fall back to the CSS table.
+  const [glRun, setGlRun] = useState(0);
+  const glFails = useRef<number[]>([]);
+  const onGlFail = useCallback((why: unknown) => {
+    console.warn('[akabare] 3D table failed, restarting it:', why);
+    const now = Date.now();
+    glFails.current = [...glFails.current.filter((t) => now - t < 60_000), now];
+    if (glFails.current.length >= 3) setGl3d(false);
+    else setTimeout(() => setGlRun((n) => n + 1), 400);
+  }, []);
   const [setupHeld, setSetupHeld] = useState<HeldSetupHand | null>(null);
 
   const me = view.players.find((p) => p.id === you) ?? null;
@@ -443,12 +454,10 @@ export function Table({ game }: { game: UseGame }) {
     setupMode && setupHeld
       ? {
           cards: setupHeld.cards,
+          orders: setupHeld.orders,
           selected: null,
           pickable: setupHeld.pickable ? (['panipuri', 'akabare'] as const) : null,
-          onPick: (i: number) => {
-            const c = setupHeld.cards[i];
-            if (c) setupHeld.pick(c.kind);
-          },
+          onPick: (i: number) => setupHeld.toggle(i),
         }
       : me && !botSeat && hand.length > 0 && (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating')
       ? { cards: hand, selected: legal.place ? sel : null, pickable: legal.place && !busy ? legal.place.kinds : null, onPick: (i: number) => setSel((s) => (s === i ? null : i)) }
@@ -486,7 +495,8 @@ export function Table({ game }: { game: UseGame }) {
               plate={view.eating && showHud ? { cards: view.eating.plate, powers: view.eating.powers ?? [] } : null}
               hand={hand3d}
               overlay={overlay(false)}
-              onFail={() => setGl3d(false)}
+              key={glRun}
+              onFail={onGlFail}
             />
           </Suspense>
         ) : (

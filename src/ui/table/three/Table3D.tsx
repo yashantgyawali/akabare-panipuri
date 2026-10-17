@@ -35,9 +35,9 @@ export interface Table3DProps {
   phone: boolean;
   bid: { amount: number; rim: string } | null;
   plate: { cards: PlateCardView[]; powers: PlatePower[] } | null;
-  hand: { cards: HandCard[]; selected: number | null; pickable: readonly PuriKind[] | null; onPick: (i: number) => void } | null;
+  hand: { cards: HandCard[]; selected: number | null; pickable: readonly PuriKind[] | null; onPick: (i: number) => void; orders?: (number | null)[] } | null;
   overlay?: ReactNode;
-  onFail: () => void;
+  onFail: (why: unknown) => void;
 }
 
 const PLACE_MS = 700;
@@ -94,13 +94,13 @@ function reactionFor(id: PlayerId, e: GameEvent | null): Reaction | null {
   }
 }
 
-class Boundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
+class Boundary extends Component<{ onFail: (why: unknown) => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  componentDidCatch() {
-    this.props.onFail();
+  componentDidCatch(error: unknown) {
+    this.props.onFail(error);
   }
   render() {
     return this.state.failed ? null : this.props.children;
@@ -195,8 +195,9 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
       hand
         ? hand.cards.map((c, i) => ({
             tex: frontTex(c.kind, seats[0]?.p.color ?? 'red'),
-            pickable: !!hand.pickable?.includes(c.kind),
+            pickable: !!hand.pickable?.includes(c.kind) || hand.orders?.[i] != null,
             selected: hand.selected === i,
+            order: hand.orders?.[i] ?? null,
             focus: focused === `hand:${i}`,
           }))
         : [],
@@ -248,7 +249,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
             size.current = { w: s.width, h: s.height };
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.15;
-            gl.domElement.addEventListener('webglcontextlost', () => alive.current && onFail(), { once: true });
+            gl.domElement.addEventListener('webglcontextlost', () => alive.current && onFail('WebGL context lost'), { once: true });
           }}
           onPointerMissed={() => {
             document.body.style.cursor = '';
@@ -397,12 +398,12 @@ function A11yLayer({ seats, hand, onFocusTarget }: { seats: SeatBase[]; hand: Ta
       {hand && hand.cards.length > 0 ? (
         <div className="tp-a11y3d__hand" role="group" aria-label="Your hand">
           {hand.cards.map((c, i) =>
-            hand.pickable?.includes(c.kind) ? (
+            hand.pickable?.includes(c.kind) || hand.orders?.[i] != null ? (
               <button
                 key={i}
                 type="button"
-                aria-pressed={hand.selected === i}
-                aria-label={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand`}
+                aria-pressed={hand.selected === i || hand.orders?.[i] != null}
+                aria-label={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand${hand.orders?.[i] != null ? `, picked ${hand.orders[i]}` : ''}`}
                 onClick={() => hand.onPick(i)}
                 onFocus={onFocus(`hand:${i}`)}
                 onBlur={onBlur}

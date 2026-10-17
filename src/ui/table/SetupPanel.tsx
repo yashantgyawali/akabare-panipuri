@@ -14,9 +14,25 @@ import { Hand, handCards, type HandCard } from './Hand.tsx';
 
 /** The setup hand, for the 3D table to hold up in first person. */
 export interface HeldSetupHand {
+  /** The whole hand; picked cards stay in it, lifted, with their slot number. */
   cards: HandCard[];
+  /** Slot number (1-based, bottom → top) per card, or null when not picked. */
+  orders: (number | null)[];
+  /** Whether another card can still be picked. */
   pickable: boolean;
-  pick: (kind: PuriKind) => void;
+  /** Tap a card: pick it into the next free slot, or take it back if picked. */
+  toggle: (index: number) => void;
+}
+
+/** Which hand card fills which slot: slot j takes the first unclaimed card of its kind. */
+export function slotOrders(cards: HandCard[], slots: (PuriKind | null)[]): (number | null)[] {
+  const orders: (number | null)[] = cards.map(() => null);
+  slots.forEach((k, j) => {
+    if (!k) return;
+    const i = cards.findIndex((c, ci) => c.kind === k && orders[ci] === null);
+    if (i >= 0) orders[i] = j + 1;
+  });
+  return orders;
 }
 
 export function usedInRound(view: PlayerView, kind: PowerKind): number | null {
@@ -92,14 +108,16 @@ export function SetupPanel({
     return { panipuri: full.panipuri - used.panipuri, akabare: full.akabare - used.akabare };
   }, [slots, full.panipuri, full.akabare]);
 
-  // Hand the editable hand to the 3D table (a ref keeps `pick` current without re-reporting).
-  const fillRef = useRef<(k: PuriKind) => void>(() => {});
+  // Hand the editable hand to the 3D table (a ref keeps `toggle` current without re-reporting).
+  const toggleRef = useRef<(i: number) => void>(() => {});
   const editingHand = !(submitted && (!editing || botSeat)) && !!legal && !botSeat;
   const canFill = slots.some((s) => s === null);
+  const fullCards = useMemo(() => handCards(full), [full.panipuri, full.akabare]);
+  const orders = useMemo(() => slotOrders(fullCards, slots), [fullCards, slots]);
   useEffect(() => {
     if (!onHeld) return;
-    onHeld(editingHand ? { cards: handCards(remaining), pickable: canFill, pick: (k) => fillRef.current(k) } : null);
-  }, [onHeld, editingHand, remaining, canFill]);
+    onHeld(editingHand ? { cards: fullCards, orders, pickable: canFill, toggle: (i) => toggleRef.current(i) } : null);
+  }, [onHeld, editingHand, fullCards, orders, canFill]);
   useEffect(() => () => onHeld?.(null), [onHeld]);
 
   const cardW = phone ? 44 : 42;
@@ -135,10 +153,14 @@ export function SetupPanel({
     if (at >= 0) refocus.current = { from: 'hand', idx: at };
     setSlots(slots.map((s, j) => (j === i ? kind : s)));
   };
-  fillRef.current = fill;
   const clear = (i: number) => {
     refocus.current = { from: 'slot', idx: i };
     setSlots(slots.map((s, j) => (j === i ? null : s)));
+  };
+  toggleRef.current = (i: number) => {
+    const o = orders[i];
+    if (o !== null && o !== undefined) clear(o - 1);
+    else if (fullCards[i]) fill(fullCards[i].kind);
   };
   const empty = slots.filter((x) => x === null).length;
   const todo = [empty > 0 ? `fill ${empty} more slot${empty === 1 ? '' : 's'}` : '', !power ? 'pick a power' : ''].filter(Boolean).join(' and ');
