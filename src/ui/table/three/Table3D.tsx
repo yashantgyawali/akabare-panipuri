@@ -217,7 +217,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
         const p = panel.getBoundingClientRect();
         const handL = c.left + c.width * 0.2;
         const handR = c.left + c.width * 0.6;
-        if (p.width > 0 && p.left < handR && p.right > handL) px = Math.max(0, Math.round(c.bottom - p.top + 10));
+        if (p.width > 0 && p.top > c.top + c.height * 0.5 && p.left < handR && p.right > handL) px = Math.max(0, Math.round(c.bottom - p.top + 10));
       }
       setInset((v) => (Math.abs(v - px) > 2 ? px : v));
     };
