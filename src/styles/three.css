@@ -256,3 +256,42 @@
     0 0 0 2px rgba(243, 185, 82, 0.8),
     0 0 24px 4px rgba(255, 217, 160, 0.35);
 }
+
+/* setup: your hand is held up in the 3D room; the dock copy stays for keyboard users only */
+.tp-tablescreen.is-3d .tp-setup__col--hand:not(:focus-within) {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+/* the eating tally sits above your nameplate (the top corners belong to the players' nameplates) */
+.tp-room--3d .tp-tally {
+  top: auto;
+  bottom: 70px;
+}
+
+/* ===== Liar's Bar style HUD on desktop: your turn + actions top-right, you top-left ===== */
+@media (min-width: 641px) {
+  .tp-tablescreen.is-3d:not(.tp-phase-setup) .tp-dock {
+    top: var(--head-h, 72px);
+    bottom: auto;
+  }
+  .tp-tablescreen.is-3d:not(.tp-phase-setup) .tp-dock__inner {
+    padding: 14px 16px 0;
+    align-items: flex-start;
+  }
+  .tp-tablescreen.is-3d .tp-np3d--you {
+    top: 14px;
+    bottom: auto;
+  }
+  .tp-room--3d .tp-tally {
+    top: 76px;
+    bottom: auto;
+  }
+  .tp-room--3d .tp-ticker__skip {
+    top: auto;
+    bottom: 14px;
+  }
+}

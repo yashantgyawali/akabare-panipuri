@@ -3,7 +3,7 @@
  * one warm hanging lamp (the only shadow-casting light), dust in the lamp
  * light, and the camera rig (your seat, turning a little toward whoever acts).
  */
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { TABLE_R, cameraFor, type Vec2 } from './layout3d.ts';
@@ -37,7 +37,7 @@ export function Lights({ flash, shadows, phone }: { flash: boolean; shadows: boo
   });
   return (
     <>
-      <hemisphereLight args={['#5a3a20', '#0a0503', 0.35]} />
+      <hemisphereLight args={['#7a4a2a', '#140804', 0.6]} />
       <ambientLight color="#3a2414" intensity={0.25} />
       <primitive object={target} />
       <spotLight
@@ -54,6 +54,20 @@ export function Lights({ flash, shadows, phone }: { flash: boolean; shadows: boo
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
       />
+      {/* Wall lamps: the room reads (warm wood, shelves) instead of falling into black. */}
+      {[
+        [-3.4, 1.6, -3.2],
+        [3.4, 1.6, -3.2],
+        [0, 1.7, -4.6],
+      ].map(([x, y, z], i) => (
+        <group key={i} position={[x, y, z]}>
+          <pointLight color="#ff9f55" intensity={4} distance={4.5} decay={1.6} />
+          <mesh>
+            <sphereGeometry args={[0.07, 12, 8]} />
+            <meshBasicMaterial color="#ffc27a" toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
       {/* A dim warm fill from your side, so the faces across the table read. */}
       <directionalLight position={[0, 1.3, 2.6]} color="#ffb877" intensity={0.55} />
       {/* Soft warm bounce from the table so faces aren't black. */}
@@ -85,7 +99,7 @@ export function RoomShell() {
     return t;
   }, []);
   const wall = useMemo(() => {
-    const t = woodTex('wall', [52, 32, 20], false).clone();
+    const t = woodTex('wall', [92, 48, 30], false).clone();
     t.rotation = Math.PI / 2;
     t.repeat.set(10, 2);
     t.needsUpdate = true;
@@ -101,6 +115,40 @@ export function RoomShell() {
         <cylinderGeometry args={[5, 5, 4.2, 40, 1, true]} />
         <meshStandardMaterial map={wall} side={THREE.BackSide} roughness={0.9} color="#8a6a50" />
       </mesh>
+      {/* Armchairs and a bookshelf around the walls. */}
+      {[
+        [-3.2, -2.2, 0.9],
+        [3.3, -1.6, -0.9],
+      ].map(([x, z, r], i) => (
+        <group key={`a${i}`} position={[x, FLOOR_Y, z]} rotation={[0, r, 0]}>
+          <mesh position={[0, 0.25, 0]}>
+            <boxGeometry args={[0.9, 0.5, 0.8]} />
+            <meshStandardMaterial color="#5a2418" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.7, -0.33]}>
+            <boxGeometry args={[0.9, 0.6, 0.18]} />
+            <meshStandardMaterial color="#5a2418" roughness={0.9} />
+          </mesh>
+          {[-0.4, 0.4].map((ax) => (
+            <mesh key={ax} position={[ax, 0.45, 0]}>
+              <boxGeometry args={[0.14, 0.4, 0.8]} />
+              <meshStandardMaterial color="#4a1d12" roughness={0.9} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      <group position={[-1.7, FLOOR_Y, -4.4]} rotation={[0, 0.35, 0]}>
+        <mesh position={[0, 1, 0]}>
+          <boxGeometry args={[1.4, 2, 0.4]} />
+          <meshStandardMaterial color="#3b2010" roughness={0.8} />
+        </mesh>
+        {[0.45, 0.95, 1.45].map((y, i) => (
+          <mesh key={i} position={[0, y, 0.12]}>
+            <boxGeometry args={[1.2, 0.32, 0.2]} />
+            <meshStandardMaterial color={['#6b2f1e', '#2f4a3a', '#7a5a2a'][i]} roughness={0.85} />
+          </mesh>
+        ))}
+      </group>
       {/* A few barrels and a shelf of bottles far back in the dark. */}
       {[
         [-2.6, -3.4],
@@ -212,11 +260,62 @@ export function Dust({ count }: { count: number }) {
   );
 }
 
-/** Your eyes: seated at your place, turning a little toward `focus` (a point on the table), breathing gently. */
+const ZOOM_MIN = 0.62;
+const ZOOM_MAX = 1.3;
+
+/**
+ * Your eyes: seated at your place, turning a little toward `focus` (a point on
+ * the table), breathing gently. Wheel / trackpad or a two-finger pinch moves
+ * you closer to or further from the table, within a small range.
+ */
 export function CameraRig({ focus, phone, reduced }: { focus: Vec2 | null; phone: boolean; reduced: boolean }) {
-  const { camera, size } = useThree();
+  const { camera, size, gl } = useThree();
   const look = useRef(new THREE.Vector3());
   const want = useMemo(() => new THREE.Vector3(), []);
+  const zoom = useRef({ now: 1, to: 1 });
+  useEffect(() => {
+    const el = gl.domElement;
+    const set = (z: number) => {
+      zoom.current.to = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    };
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      set(zoom.current.to * Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+    };
+    const touches = new Map<number, { x: number; y: number }>();
+    let pinch: { d: number; z: number } | null = null;
+    const dist = () => {
+      const [a, b] = [...touches.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.size === 2) pinch = { d: dist(), z: zoom.current.to };
+    };
+    const move = (e: PointerEvent) => {
+      if (!touches.has(e.pointerId)) return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && touches.size === 2) set(pinch.z * (pinch.d / Math.max(1, dist())));
+    };
+    const up = (e: PointerEvent) => {
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinch = null;
+    };
+    el.style.touchAction = 'none';
+    el.addEventListener('wheel', wheel, { passive: false });
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    return () => {
+      el.removeEventListener('wheel', wheel);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+    };
+  }, [gl]);
   useFrame(({ clock }, dt) => {
     const cam = camera as THREE.PerspectiveCamera;
     const c = cameraFor(size.width / Math.max(1, size.height), phone);
@@ -230,6 +329,10 @@ export function CameraRig({ focus, phone, reduced }: { focus: Vec2 | null; phone
     want.set((focus?.x ?? 0) * 0.32, c.lookY, c.lookZ + (focus ? (focus.z - c.lookZ) * 0.22 : 0));
     const k = reduced ? 1 : Math.min(1, dt * 2.2);
     look.current.lerp(want, k);
+    // Zoom = slide along the line from where you look to where you sit.
+    const z = zoom.current;
+    z.now += (z.to - z.now) * (reduced ? 1 : Math.min(1, dt * 8));
+    cam.position.sub(look.current).multiplyScalar(z.now).add(look.current);
     cam.lookAt(look.current);
   });
   return null;

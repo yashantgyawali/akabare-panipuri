@@ -6,6 +6,7 @@ import { IconButton } from '../common/Button.tsx';
 import { Icon } from '../common/Icon.tsx';
 import { copyText, cx } from '../common/hooks.ts';
 import { useToast } from '../common/Toasts.tsx';
+import { isMuted, onMuted, setMuted } from '../sound/sfx.ts';
 import { PHASE_LABELS, roundText, type NameBook } from '../text.ts';
 import { turnText, type DrawerName } from './Chrome.tsx';
 
@@ -34,6 +35,8 @@ export function TableHeader({
 }) {
   const toast = useToast();
   const [menu, setMenu] = useState(false);
+  const [soundOff, setSoundOff] = useState(isMuted);
+  useEffect(() => onMuted(setSoundOff), []);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('akp.headerCollapsed') === '1';
@@ -130,6 +133,9 @@ export function TableHeader({
                   <Icon name="share" size={18} /> Share
                 </button>
               ) : null}
+              <button type="button" role="menuitemcheckbox" aria-checked={!soundOff} onClick={() => setMuted(!soundOff)}>
+                <Icon name={soundOff ? 'mute' : 'sound'} size={18} /> {soundOff ? 'Sound off' : 'Sound on'}
+              </button>
               <button type="button" role="menuitem" className="is-danger" onClick={() => (setMenu(false), onLeave())}>
                 <Icon name="leave" size={18} /> Leave
               </button>

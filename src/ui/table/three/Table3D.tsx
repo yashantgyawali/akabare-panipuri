@@ -23,7 +23,7 @@ import { CARD_T, seatSpot, type Seat3DSpot } from './layout3d.ts';
 import { backTex, frontTex, peekTex } from './textures.ts';
 import { CHARACTERS } from './characters.ts';
 import { Character, type Reaction } from './Character.tsx';
-import { BidToken, FlyingCard, Hand3D, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
+import { BidToken, FlyingCard, Hand3D, HeldBacks, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
 import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from './Room.tsx';
 import type { Glow } from './Card3D.tsx';
 
@@ -204,6 +204,27 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
   );
 
   const shadows = !phone;
+  // How far the floating controls reach up over the bottom of the view where your hand is held.
+  const roomRef = useRef<HTMLDivElement>(null);
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const canvas = roomRef.current?.querySelector('canvas');
+      const panel = document.querySelector('.tp-tablescreen.is-3d .tp-dock__prompt, .tp-tablescreen.is-3d .tp-setup');
+      let px = 0;
+      if (canvas && panel) {
+        const c = canvas.getBoundingClientRect();
+        const p = panel.getBoundingClientRect();
+        const handL = c.left + c.width * 0.2;
+        const handR = c.left + c.width * 0.6;
+        if (p.width > 0 && p.left < handR && p.right > handL) px = Math.max(0, Math.round(c.bottom - p.top + 10));
+      }
+      setInset((v) => (Math.abs(v - px) > 2 ? px : v));
+    };
+    measure();
+    const t = setInterval(measure, 400);
+    return () => clearInterval(t);
+  }, []);
   // The renderer drops its context on unmount too: only a loss while we're on screen means trouble.
   const alive = useRef(true);
   useEffect(() => {
@@ -214,7 +235,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
   }, []);
   const me = seats[0];
   return (
-    <div className={cx('tp-room', 'tp-room--3d', flash && 'is-flash')}>
+    <div ref={roomRef} className={cx('tp-room', 'tp-room--3d', flash && 'is-flash')}>
       <Boundary onFail={onFail}>
         <Canvas
           className="tp-gl"
@@ -235,8 +256,8 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
           resize={{ debounce: 0 }}
         >
           <SizeSync size={size} camRef={camRef} />
-          <color attach="background" args={['#0b0603']} />
-          <fog attach="fog" args={['#0b0603', 3.2, 7.5]} />
+          <color attach="background" args={['#1a0d06']} />
+          <fog attach="fog" args={['#1a0d06', 4.5, 11]} />
           <Lights flash={flash} shadows={shadows} phone={phone} />
           <RoomShell />
           <TableMesh />
@@ -277,6 +298,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
                 {!you ? (
                   <>
                     <Chair at={{ x: spot.seat.x * 1.08, z: spot.seat.z * 1.08 }} yaw={spot.yaw + Math.PI} />
+                    <HeldBacks spot={spot} count={s.p.handCount} tex={backTex('puri', s.p.color)} />
                     <Suspense fallback={null}>
                       <Character
                         model={modelOf(s.p.seat)}
@@ -300,7 +322,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
           {bid ? <BidToken amount={bid.amount} rim={bid.rim} /> : null}
           {plate ? <PlateCards cards={plateCards} reduced={reduced} /> : null}
           {flight ? <FlyingCard key={flight.seq} from={flight.from} to={flight.dest} yaw={flight.yaw} tex={flight.tex} start={flight.start} ms={PLACE_MS} /> : null}
-          {hand && handCards.length > 0 ? <Hand3D cards={handCards} onPick={hand.onPick} phone={phone} /> : null}
+          {hand && handCards.length > 0 ? <Hand3D cards={handCards} onPick={hand.onPick} phone={phone} insetPx={inset} /> : null}
         </Canvas>
       </Boundary>
       <div className="tp-room__vignette" aria-hidden="true" />

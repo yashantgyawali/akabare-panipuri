@@ -10,7 +10,14 @@ import { Button, IconButton } from '../common/Button.tsx';
 import { Icon } from '../common/Icon.tsx';
 import { cx } from '../common/hooks.ts';
 import { powerName } from '../text.ts';
-import { Hand, handCards } from './Hand.tsx';
+import { Hand, handCards, type HandCard } from './Hand.tsx';
+
+/** The setup hand, for the 3D table to hold up in first person. */
+export interface HeldSetupHand {
+  cards: HandCard[];
+  pickable: boolean;
+  pick: (kind: PuriKind) => void;
+}
 
 export function usedInRound(view: PlayerView, kind: PowerKind): number | null {
   const picks = view.me?.powerPicks ?? [];
@@ -33,6 +40,7 @@ export function SetupPanel({
   phone,
   botSeat = false,
   onSubmit,
+  onHeld,
 }: {
   view: PlayerView;
   color: ColorId;
@@ -42,6 +50,8 @@ export function SetupPanel({
   /** A bot is playing this seat: show, don't edit. */
   botSeat?: boolean;
   onSubmit: (stack: PuriKind[], power: PowerKind) => Promise<boolean>;
+  /** Reports the hand while editing (null otherwise), so the 3D table can show it held. */
+  onHeld?: (held: HeldSetupHand | null) => void;
 }) {
   const legal = view.legal.setup;
   const size = legal?.stackSize ?? view.config.startingStack;
@@ -82,6 +92,16 @@ export function SetupPanel({
     return { panipuri: full.panipuri - used.panipuri, akabare: full.akabare - used.akabare };
   }, [slots, full.panipuri, full.akabare]);
 
+  // Hand the editable hand to the 3D table (a ref keeps `pick` current without re-reporting).
+  const fillRef = useRef<(k: PuriKind) => void>(() => {});
+  const editingHand = !(submitted && (!editing || botSeat)) && !!legal && !botSeat;
+  const canFill = slots.some((s) => s === null);
+  useEffect(() => {
+    if (!onHeld) return;
+    onHeld(editingHand ? { cards: handCards(remaining), pickable: canFill, pick: (k) => fillRef.current(k) } : null);
+  }, [onHeld, editingHand, remaining, canFill]);
+  useEffect(() => () => onHeld?.(null), [onHeld]);
+
   const cardW = phone ? 44 : 42;
   const complete = slots.every((s) => s !== null) && power !== null;
   const canEdit = !!legal && !botSeat;
@@ -115,6 +135,7 @@ export function SetupPanel({
     if (at >= 0) refocus.current = { from: 'hand', idx: at };
     setSlots(slots.map((s, j) => (j === i ? kind : s)));
   };
+  fillRef.current = fill;
   const clear = (i: number) => {
     refocus.current = { from: 'slot', idx: i };
     setSlots(slots.map((s, j) => (j === i ? null : s)));

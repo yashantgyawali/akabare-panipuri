@@ -92,7 +92,7 @@ export function Pile({ spot, cards, stackGlow, dimStack, onStack, power, landAt,
   );
 }
 
-/** The brass thali in the middle. */
+/** The brass thali in the middle, inside a softly glowing ring (where the play happens). */
 export function Plate() {
   const profile = useMemo(() => {
     const pts = [
@@ -109,10 +109,16 @@ export function Plate() {
     return pts.map(([x, y]) => new THREE.Vector2(x, y));
   }, []);
   return (
-    <mesh position={[0, 0.001, 0]} receiveShadow castShadow>
-      <latheGeometry args={[profile, 48]} />
-      <meshStandardMaterial color="#c9953a" metalness={0.85} roughness={0.32} />
-    </mesh>
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0012, 0]}>
+        <ringGeometry args={[0.46, 0.475, 96]} />
+        <meshBasicMaterial color="#f3d27a" toneMapped={false} transparent opacity={0.75} />
+      </mesh>
+      <mesh position={[0, 0.001, 0]} receiveShadow castShadow>
+        <latheGeometry args={[profile, 48]} />
+        <meshStandardMaterial color="#c9953a" metalness={0.85} roughness={0.32} />
+      </mesh>
+    </group>
   );
 }
 
@@ -218,58 +224,141 @@ export interface HandCard3D {
   focus?: boolean;
 }
 
-/** Your cards, held up at the bottom of your view (fanned), like holding them in your hands. */
-export function Hand3D({ cards, onPick, phone }: { cards: HandCard3D[]; onPick: (i: number) => void; phone: boolean }) {
-  const { camera } = useThree();
+const SKIN = new THREE.MeshStandardMaterial({ color: '#d99a6c', roughness: 0.8 });
+const SKIN_LIT = new THREE.MeshBasicMaterial({ color: '#c98a5e' });
+
+/** A blocky hand (the Kenney characters' style): palm, fingers, thumb. `lit` = unlit, for in front of the camera. */
+export function BlockHand({ lit = false, flip = false }: { lit?: boolean; flip?: boolean }) {
+  const m = lit ? SKIN_LIT : SKIN;
+  const f = flip ? -1 : 1;
+  return (
+    <group>
+      <mesh material={m} position={[0, 0, 0]}>
+        <boxGeometry args={[0.1, 0.11, 0.045]} />
+      </mesh>
+      <mesh material={m} position={[0, 0.07, 0.012]}>
+        <boxGeometry args={[0.095, 0.045, 0.04]} />
+      </mesh>
+      <mesh material={m} position={[0.06 * f, 0.02, 0.02]} rotation={[0, 0, -0.5 * f]}>
+        <boxGeometry args={[0.03, 0.07, 0.035]} />
+      </mesh>
+      <mesh material={m} position={[0, -0.1, -0.005]}>
+        <boxGeometry args={[0.075, 0.1, 0.04]} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Your cards held up in one hand like Liar's Bar: a small fan pivoting at your
+ * fist, a little left of centre, with your other hand resting lower right.
+ * Sized from the screen (about a third of the view tall, never too wide) and
+ * lifted `insetPx` above the bottom so the floating controls never cover it.
+ * Resting (nothing to pick) it drops lower, out of the way of the table.
+ */
+export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3D[]; onPick: (i: number) => void; phone: boolean; insetPx?: number }) {
+  const { camera, size } = useThree();
   const root = useRef<THREE.Group>(null);
+  const fist = useRef<THREE.Group>(null);
+  const other = useRef<THREE.Group>(null);
   const items = useRef<(THREE.Group | null)[]>([]);
   const [hover, setHover] = useState<number | null>(null);
   const n = cards.length;
-  // Held low (resting) unless you're picking a card to place.
   const active = cards.some((c) => c.pickable || c.selected);
-  const rest = useRef(active ? 0 : -0.2);
+  const rest = useRef(active ? 0 : 1);
   useFrame((_, dt) => {
     const r = root.current;
     if (!r) return;
-    rest.current += ((active ? 0 : -0.2) - rest.current) * Math.min(1, dt * 6);
-    r.position.copy(camera.position);
-    r.quaternion.copy(camera.quaternion);
+    const cam = camera as THREE.PerspectiveCamera;
+    r.position.copy(cam.position);
+    r.quaternion.copy(cam.quaternion);
+    rest.current += ((active ? 0 : 1) - rest.current) * Math.min(1, dt * 6);
+    const d = 0.6;
+    const halfH = d * Math.tan((cam.fov * Math.PI) / 360);
+    const halfW = halfH * (size.width / Math.max(1, size.height));
+    const px = (2 * halfH) / Math.max(1, size.height);
+    const sc = Math.min((2 * halfH * (phone ? 0.21 : 0.25)) / CARD_H, (2 * halfW * 0.15) / CARD_W);
+    const h = CARD_H * sc;
+    const spread = n > 1 ? Math.min(0.26, 1.3 / (n - 1)) : 0;
+    const R = h * 0.7;
+    // The fist (fan pivot): low and a little left of centre; lower still when resting.
+    const pxX = phone ? -halfW * 0.1 : -halfW * 0.16;
+    const pyY = -halfH + insetPx * px - h * 0.18 - rest.current * h * 0.4;
     cards.forEach((c, i) => {
       const it = items.current[i];
       if (!it) return;
-      const a = (i - (n - 1) / 2) * (phone ? 0.2 : 0.17);
-      const up = c.selected ? 0.06 : hover === i && c.pickable ? 0.025 : 0;
-      const ty = Math.cos(a) * 0.55 - 0.55 + up + rest.current;
-      it.position.x = Math.sin(a) * 0.55;
-      it.position.y += (ty - it.position.y) * Math.min(1, dt * 12);
-      it.position.z = -i * 0.002;
-      // Stand the card up to face the camera (X), fanned in its own plane (Y, applied first).
-      it.rotation.set(Math.PI / 2, a, 0);
+      const th = (i - (n - 1) / 2) * spread;
+      const up = c.selected ? h * 0.22 : hover === i && c.pickable ? h * 0.08 : 0;
+      const rr = R + up;
+      it.scale.setScalar(sc);
+      it.position.x = pxX + Math.sin(th) * rr;
+      it.position.y += (pyY + Math.cos(th) * rr - it.position.y) * Math.min(1, dt * 12);
+      it.position.z = -d + i * 0.0015;
+      // Stand the card up to face the camera (X), turned in its own plane by the fan angle (Y, applied first).
+      it.rotation.set(Math.PI / 2, th, 0);
     });
+    if (fist.current) {
+      fist.current.position.set(pxX + h * 0.02, pyY + h * 0.12, -d + 0.03);
+      fist.current.scale.setScalar(h * 2.6);
+      fist.current.rotation.set(0, 0, -0.15);
+    }
+    if (other.current) {
+      other.current.position.set(halfW * (phone ? 0.55 : 0.38), -halfH + insetPx * px - h * 0.05, -d + 0.02);
+      other.current.scale.setScalar(h * 2.4);
+      other.current.rotation.set(-0.6, 0, 0.35);
+    }
   });
-  const s = phone ? 0.55 : 0.45;
+  const anyPick = cards.some((x) => x.pickable);
   return (
     <group ref={root}>
-      <group position={[phone ? 0 : -0.06, phone ? -0.33 : -0.25, -0.6]} rotation={[-0.12, 0, 0]} scale={s}>
-        {cards.map((c, i) => (
-          <group
-            key={i}
-            ref={(el) => {
-              items.current[i] = el;
-            }}
-            {...clickProps(c.pickable ? () => onPick(i) : undefined)}
-            onPointerEnter={() => setHover(i)}
-            onPointerLeave={() => setHover((h) => (h === i ? null : h))}
-          >
-            {c.selected || c.pickable || c.focus ? (
-              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} scale={[CARD_W * 1.18, CARD_H * 1.12, 1]}>
-                <planeGeometry />
-                <meshBasicMaterial color={c.focus ? '#ffffff' : c.selected ? '#F16147' : '#F3B952'} toneMapped={false} transparent opacity={c.selected || c.focus ? 1 : 0.7} />
-              </mesh>
-            ) : null}
-            <mesh geometry={cardGeo} material={heldMaterials(c.tex, !c.pickable && !c.selected && cards.some((x) => x.pickable))} />
-          </group>
-        ))}
+      {cards.map((c, i) => (
+        <group
+          key={i}
+          ref={(el) => {
+            items.current[i] = el;
+          }}
+          {...clickProps(c.pickable ? () => onPick(i) : undefined)}
+          onPointerEnter={() => setHover(i)}
+          onPointerLeave={() => setHover((h) => (h === i ? null : h))}
+        >
+          {c.selected || c.focus ? (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} scale={[CARD_W * 1.08, CARD_H * 1.06, 1]}>
+              <planeGeometry />
+              <meshBasicMaterial color={c.focus ? '#ffffff' : '#F16147'} toneMapped={false} />
+            </mesh>
+          ) : null}
+          <mesh geometry={cardGeo} material={heldMaterials(c.tex, anyPick && !c.pickable && !c.selected)} />
+        </group>
+      ))}
+      <group ref={fist}>
+        <BlockHand lit />
+      </group>
+      <group ref={other}>
+        <BlockHand lit flip />
+      </group>
+    </group>
+  );
+}
+
+/** An opponent's hand of cards: a small fan of backs held up in front of them (count is public). */
+export function HeldBacks({ spot, count, tex }: { spot: Seat3DSpot; count: number; tex: THREE.Texture }) {
+  if (count <= 0) return null;
+  const n = Math.min(count, 7);
+  const toward = 0.32;
+  const x = spot.seat.x - spot.dir.x * toward;
+  const z = spot.seat.z - spot.dir.z * toward;
+  return (
+    <group position={[x, 0.2, z]} rotation={[0, spot.yaw, 0]}>
+      {/* tilted back toward the holder, so we see the backs */}
+      <group rotation={[-1.1, 0, 0]} scale={0.6}>
+        {Array.from({ length: n }, (_, i) => {
+          const th = (i - (n - 1) / 2) * 0.16;
+          return (
+            <group key={i} position={[Math.sin(th) * 0.1, i * 0.0015, -Math.cos(th) * 0.1 + 0.1]} rotation={[0, -th, 0]}>
+              <mesh geometry={cardGeo} material={cardMaterials(tex)} castShadow />
+            </group>
+          );
+        })}
       </group>
     </group>
   );

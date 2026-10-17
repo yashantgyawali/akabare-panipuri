@@ -29,8 +29,9 @@ import { BidDisc, EventBanner, EventTrail, fxEvent } from './scene/EventFx.tsx';
 import { SeatsLayer, type SeatBase } from './scene/SeatsLayer.tsx';
 import { Tally } from './scene/Tally.tsx';
 import { stackLabel, type Clickable, type SeatCue, type SeatStatus } from './scene/seatData.ts';
-import { SetupPanel } from './SetupPanel.tsx';
+import { SetupPanel, type HeldSetupHand } from './SetupPanel.tsx';
 import { hasWebGL } from './three/webgl.ts';
+import { sfx, startAmbience } from '../sound/sfx.ts';
 
 const Table3D = lazy(() => import('./three/Table3D.tsx'));
 
@@ -118,6 +119,35 @@ function nextMoment(m: Moment | null, e: GameEvent): Moment | null {
   return m;
 }
 
+/** The sound for a move as it plays on the table. */
+function soundFor(e: GameEvent) {
+  switch (e.type) {
+    case 'roundStart':
+      return sfx.shuffle();
+    case 'place':
+      return sfx.place();
+    case 'bidStart':
+    case 'raise':
+      return sfx.bid();
+    case 'pass':
+      return sfx.pass();
+    case 'eater':
+      return sfx.eater();
+    case 'flipPuri':
+      return sfx.flip();
+    case 'flipPower':
+      return e.effect === 'saved' ? sfx.saved() : sfx.flip();
+    case 'bite':
+      return sfx.bite();
+    case 'bust':
+      return sfx.bust();
+    case 'success':
+      return sfx.success();
+    default:
+      return undefined;
+  }
+}
+
 /** Where keyboard focus was when you acted: a stable selector for "the same control", '*' for "whatever you can do next". */
 function focusMemoOf(el: Element | null): string | null {
   if (!(el instanceof HTMLElement) || el === document.body) return null;
@@ -180,6 +210,7 @@ export function Table({ game }: { game: UseGame }) {
   const [peek, setPeek] = useState(false);
   // The real-3D room where WebGL works; the CSS round table otherwise (or if the 3D one fails).
   const [gl3d, setGl3d] = useState(() => hasWebGL());
+  const [setupHeld, setSetupHeld] = useState<HeldSetupHand | null>(null);
 
   const me = view.players.find((p) => p.id === you) ?? null;
   // While a bot plays your seat you only watch (take the seat back to act again).
@@ -279,6 +310,15 @@ export function Table({ game }: { game: UseGame }) {
   useEffect(() => {
     document.title = `${yourMove ? '● Your move · ' : ''}${snap.code} · Akabare Panipuri`;
   }, [yourMove, snap.code]);
+
+  // Sound: each move as it plays, a ding when it becomes your move, the tavern in the background.
+  useEffect(() => {
+    if (current) soundFor(current);
+  }, [current?.seq]);
+  useEffect(() => {
+    if (yourMove) sfx.turn();
+  }, [yourMove]);
+  useEffect(() => startAmbience(), []);
 
   const line = current ? describeEvent(current, names, view.config.trapReward) : null;
   const fx = fxEvent(current);
@@ -400,7 +440,17 @@ export function Table({ game }: { game: UseGame }) {
     </>
   );
   const hand3d =
-    me && !botSeat && hand.length > 0 && (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating')
+    setupMode && setupHeld
+      ? {
+          cards: setupHeld.cards,
+          selected: null,
+          pickable: setupHeld.pickable ? (['panipuri', 'akabare'] as const) : null,
+          onPick: (i: number) => {
+            const c = setupHeld.cards[i];
+            if (c) setupHeld.pick(c.kind);
+          },
+        }
+      : me && !botSeat && hand.length > 0 && (view.phase === 'serving' || view.phase === 'bidding' || view.phase === 'eating')
       ? { cards: hand, selected: legal.place ? sel : null, pickable: legal.place && !busy ? legal.place.kinds : null, onPick: (i: number) => setSel((s) => (s === i ? null : i)) }
       : null;
   const cssScene = (
@@ -460,6 +510,7 @@ export function Table({ game }: { game: UseGame }) {
               pending={pending === 'setup'}
               phone={phone}
               botSeat={!!me?.isBot}
+              onHeld={gl3d ? setSetupHeld : undefined}
               onSubmit={async (stack, power) => {
                 let ok = false;
                 await run('setup', async () => {
