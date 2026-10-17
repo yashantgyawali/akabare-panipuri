@@ -23,7 +23,7 @@ import { CARD_T, seatSpot, type Seat3DSpot } from './layout3d.ts';
 import { backTex, frontTex, peekTex } from './textures.ts';
 import { CHARACTERS } from './characters.ts';
 import { Character, type Reaction } from './Character.tsx';
-import { BidToken, FlyingCard, Hand3D, HeldBacks, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
+import { BidToken, FlyingCard, Hand3D, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
 import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from './Room.tsx';
 import type { Glow } from './Card3D.tsx';
 
@@ -298,7 +298,6 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
                 {!you ? (
                   <>
                     <Chair at={{ x: spot.seat.x * 1.08, z: spot.seat.z * 1.08 }} yaw={spot.yaw + Math.PI} />
-                    <HeldBacks spot={spot} count={s.p.handCount} tex={backTex('puri', s.p.color)} />
                     <Suspense fallback={null}>
                       <Character
                         model={modelOf(s.p.seat)}

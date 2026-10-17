@@ -339,27 +339,3 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
     </group>
   );
 }
-
-/** An opponent's hand of cards: a small fan of backs held up in front of them (count is public). */
-export function HeldBacks({ spot, count, tex }: { spot: Seat3DSpot; count: number; tex: THREE.Texture }) {
-  if (count <= 0) return null;
-  const n = Math.min(count, 7);
-  const toward = 0.32;
-  const x = spot.seat.x - spot.dir.x * toward;
-  const z = spot.seat.z - spot.dir.z * toward;
-  return (
-    <group position={[x, 0.2, z]} rotation={[0, spot.yaw, 0]}>
-      {/* tilted back toward the holder, so we see the backs */}
-      <group rotation={[-1.1, 0, 0]} scale={0.6}>
-        {Array.from({ length: n }, (_, i) => {
-          const th = (i - (n - 1) / 2) * 0.16;
-          return (
-            <group key={i} position={[Math.sin(th) * 0.1, i * 0.0015, -Math.cos(th) * 0.1 + 0.1]} rotation={[0, -th, 0]}>
-              <mesh geometry={cardGeo} material={cardMaterials(tex)} castShadow />
-            </group>
-          );
-        })}
-      </group>
-    </group>
-  );
-}
