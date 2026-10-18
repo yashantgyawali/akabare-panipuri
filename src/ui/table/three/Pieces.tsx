@@ -3,8 +3,8 @@
  * the eaten cards, the high-bid token, a card in flight, and your own hand
  * held up in front of the camera.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CARD_H, CARD_T, CARD_W, PLATE_R, platePos3, stackJitter, type Seat3DSpot } from './layout3d.ts';
 import { Card3D, GlowPad, cardGeo, cardMaterials, clickProps, heldMaterials, type Glow } from './Card3D.tsx';
@@ -13,15 +13,22 @@ import { badgeTex, numberTex } from './textures.ts';
 const MAX_SHOWN = 14;
 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
 
-/** A brief glow after an event touched this pile (keyed by the event seq). */
+/**
+ * A brief glow after an event touched this pile. Pinned to the last event that
+ * did (its seq and tone): the cue going back to null when the next event plays
+ * must not cancel the timer that turns the glow off, or it stays on for good.
+ */
 function useCueGlow(seq: number | null, tone: Glow, ms = 1100): Glow {
   const [on, setOn] = useState<Glow>(null);
+  const last = useRef<{ seq: number; tone: Glow } | null>(null);
+  if (seq !== null && last.current?.seq !== seq) last.current = { seq, tone };
+  const key = last.current?.seq ?? null;
   useEffect(() => {
-    if (seq === null) return;
-    setOn(tone);
+    if (key === null || !last.current) return;
+    setOn(last.current.tone);
     const t = setTimeout(() => setOn(null), ms);
     return () => clearTimeout(t);
-  }, [seq, tone, ms]);
+  }, [key, ms]);
   return on;
 }
 
@@ -41,14 +48,24 @@ export interface PileProps {
 
 export function Pile({ spot, cards, stackGlow, dimStack, onStack, power, landAt, cue, phone }: PileProps) {
   const shown = cards.slice(-MAX_SHOWN);
-  const top = useRef<THREE.Group>(null);
+  // The top card hides until a card flying in lands. When the stack changes, the
+  // card that was on top must be shown again (visible is set imperatively).
+  const top = useRef<THREE.Group | null>(null);
+  const setTop = useCallback((g: THREE.Group | null) => {
+    if (top.current && top.current !== g) top.current.visible = true;
+    top.current = g;
+  }, []);
   useFrame(() => {
     if (top.current) top.current.visible = performance.now() >= landAt;
   });
   const cueTone: Glow = cue?.tone === 'bad' ? 'danger' : cue?.tone === 'good' ? 'good' : 'selectable';
   const stackCue = useCueGlow(cue && cue.part === 'stack' ? cue.seq : null, cueTone);
   const powerCue = useCueGlow(cue && cue.part === 'power' ? cue.seq : null, cueTone);
+  // Tap targets grow outward and in depth, but not toward the neighbouring card
+  // (the power lies to the stack's right), so on phones a tap can't hit the wrong one.
   const hit = phone ? 1.6 : 1.25;
+  const hitW = (CARD_W * (1 + hit)) / 2;
+  const hitOff = (CARD_W * (hit - 1)) / 4;
   const count = cards.length > 3 ? numberTex(String(cards.length), '#2a170c', '#f5e8ca') : null;
   return (
     <group>
@@ -64,7 +81,7 @@ export function Pile({ spot, cards, stackGlow, dimStack, onStack, power, landAt,
           const j = stackJitter(i);
           const isTop = i === shown.length - 1;
           return (
-            <group key={i} ref={isTop ? top : undefined} position={[j.dx, CARD_T * (i + 0.5) + 0.0015, j.dz]} rotation={[0, j.rot, 0]}>
+            <group key={i} ref={isTop ? setTop : undefined} position={[j.dx, CARD_T * (i + 0.5) + 0.0015, j.dz]} rotation={[0, j.rot, 0]}>
               <mesh geometry={cardGeo} material={cardMaterials(c.tex, dimStack)} receiveShadow castShadow={false} />
             </group>
           );
@@ -75,16 +92,16 @@ export function Pile({ spot, cards, stackGlow, dimStack, onStack, power, landAt,
             <meshStandardMaterial map={count} roughness={0.5} metalness={0.3} />
           </mesh>
         ) : null}
-        <mesh {...clickProps(onStack)} position={[0, 0.03, 0]} material={hitMat} visible={!!onStack}>
-          <boxGeometry args={[CARD_W * hit, 0.08, CARD_H * hit]} />
+        <mesh {...clickProps(onStack)} position={[hitOff, 0.03, 0]} material={hitMat} visible={!!onStack}>
+          <boxGeometry args={[hitW, 0.08, CARD_H * hit]} />
         </mesh>
       </group>
       {power ? (
         <group position={[spot.power.x, 0, spot.power.z]} rotation={[0, spot.yaw + 0.12, 0]}>
           <GlowPad glow={powerCue ?? power.glow} scale={0.85} />
           <Card3D tex={power.tex} position={[0, CARD_T / 2 + 0.0015, 0]} rotation={[0, 0, 0]} />
-          <mesh {...clickProps(power.onClick)} position={[0, 0.03, 0]} material={hitMat} visible={!!power.onClick}>
-            <boxGeometry args={[CARD_W * hit, 0.08, CARD_H * hit]} />
+          <mesh {...clickProps(power.onClick)} position={[-hitOff, 0.03, 0]} material={hitMat} visible={!!power.onClick}>
+            <boxGeometry args={[hitW, 0.08, CARD_H * hit]} />
           </mesh>
         </group>
       ) : null}
@@ -134,8 +151,9 @@ export interface PlateCard {
 function EatenCard({ c, i, n, reduced }: { c: PlateCard; i: number; n: number; reduced: boolean }) {
   const p = platePos3(i, n);
   const to = useMemo(() => new THREE.Vector3(p.x, 0.016 + i * CARD_T, p.z), [p.x, p.z, i]);
-  const [start] = useState(() => performance.now());
-  const from = reduced ? null : c.from;
+  // Start time and origin are pinned when the card lands on the plate: the next
+  // event replacing `current` mid-flight must not snap it onto the plate.
+  const [{ start, from }] = useState(() => ({ start: performance.now(), from: reduced ? null : (c.from?.clone() ?? null) }));
   const ms = 820;
   const g = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Mesh>(null);
@@ -162,11 +180,20 @@ function EatenCard({ c, i, n, reduced }: { c: PlateCard; i: number; n: number; r
   );
 }
 
+/**
+ * Each card keeps the plate spot it landed on: slots go by first appearance (a
+ * power flipped earlier doesn't move when another puri lands), and the spiral is
+ * sized for a steady count so earlier cards don't shift as the plate fills.
+ */
 export function PlateCards({ cards, reduced }: { cards: PlateCard[]; reduced: boolean }) {
+  const slots = useRef(new Map<string, number>());
+  if (cards.length < slots.current.size) slots.current.clear(); // a new round
+  for (const c of cards) if (!slots.current.has(c.key)) slots.current.set(c.key, slots.current.size);
+  const total = Math.max(10, slots.current.size);
   return (
     <group>
-      {cards.map((c, i) => (
-        <EatenCard key={c.key} c={c} i={i} n={cards.length} reduced={reduced} />
+      {cards.map((c) => (
+        <EatenCard key={c.key} c={c} i={slots.current.get(c.key)!} n={total} reduced={reduced} />
       ))}
     </group>
   );
@@ -259,6 +286,11 @@ export function BlockHand({ lit = false, flip = false }: { lit?: boolean; flip?:
  * Resting (nothing to pick) it drops lower, out of the way of the table.
  */
 const TIP = -0.22;
+/** Held cards you can't pick still sit in front of the table: they swallow clicks so nothing behind them gets tapped. */
+const BLOCK = {
+  onClick: (e: ThreeEvent<MouseEvent>) => e.stopPropagation(),
+  onPointerOver: (e: ThreeEvent<PointerEvent>) => e.stopPropagation(),
+};
 /** Held cards: the face only (a thin box would show its square edges past the rounded corners). */
 const heldGeo = new THREE.PlaneGeometry(CARD_W, CARD_H).rotateX(-Math.PI / 2);
 
@@ -335,7 +367,7 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
           ref={(el) => {
             items.current[i] = el;
           }}
-          {...clickProps(c.pickable ? () => onPick(i) : undefined)}
+          {...(c.pickable ? clickProps(() => onPick(i)) : BLOCK)}
           onPointerEnter={() => setHover(i)}
           onPointerLeave={() => setHover((h) => (h === i ? null : h))}
         >
@@ -346,7 +378,6 @@ export function Hand3D({ cards, onPick, phone, insetPx = 0 }: { cards: HandCard3
             </mesh>
           ) : null}
           <mesh geometry={heldGeo} material={heldMaterials(c.tex, anyPick && !c.pickable && !c.selected)[2]} />
-
         </group>
       ))}
       {cards.map((c, i) =>

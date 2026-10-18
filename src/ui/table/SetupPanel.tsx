@@ -168,7 +168,15 @@ export function SetupPanel({
   const clear = (i: number) => {
     refocus.current = { from: 'slot', idx: i };
     setSlots(slots.map((s, j) => (j === i ? null : s)));
-    setSlotFrom(slotFrom.map((f, j) => (j === i ? null : f)));
+    // Pin every other filled slot to the card it shows now, so taking one back never
+    // shifts another pick onto a different card.
+    setSlotFrom(
+      slots.map((s, j) => {
+        if (j === i || !s) return null;
+        const at = orders.indexOf(j + 1);
+        return at >= 0 ? at : null;
+      }),
+    );
   };
   toggleRef.current = (i: number) => {
     const o = orders[i];

@@ -25,7 +25,7 @@ import { CHARACTERS } from './characters.ts';
 import { Character, type Reaction } from './Character.tsx';
 import { BidToken, FlyingCard, Hand3D, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
 import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from './Room.tsx';
-import type { Glow } from './Card3D.tsx';
+import { CursorSync, type Glow } from './Card3D.tsx';
 
 export interface Table3DProps {
   seats: SeatBase[];
@@ -101,6 +101,25 @@ class Boundary extends Component<{ onFail: (why: unknown) => void; children: Rea
   }
   componentDidCatch(error: unknown) {
     this.props.onFail(error);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/**
+ * One character failing to load (network, bad file) hides just that character
+ * instead of taking the whole 3D table down, and drops the cached failure so the
+ * next mount fetches it again.
+ */
+class ModelBoundary extends Component<{ url: string; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(e: unknown) {
+    console.warn(`[akabare] character ${this.props.url} failed to load:`, e);
+    useLoader.clear(GLTFLoader, this.props.url);
   }
   render() {
     return this.state.failed ? null : this.props.children;
@@ -255,14 +274,15 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
             size.current = { w: s.width, h: s.height };
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.15;
-            gl.domElement.addEventListener('webglcontextlost', () => alive.current && onFail('WebGL context lost'), { once: true });
-          }}
-          onPointerMissed={() => {
-            document.body.style.cursor = '';
+            // R3F's own teardown (after a render error) also loses the context: only count a
+            // loss while this canvas is still on the page, or one error counts twice.
+            const el = gl.domElement;
+            el.addEventListener('webglcontextlost', () => alive.current && el.isConnected && onFail('WebGL context lost'), { once: true });
           }}
           resize={{ debounce: 0 }}
         >
           <SizeSync size={size} camRef={camRef} />
+          <CursorSync />
           <color attach="background" args={['#1a0d06']} />
           <fog attach="fog" args={['#1a0d06', 4.5, 11]} />
           <Lights flash={flash} shadows={shadows} phone={phone} />
@@ -305,21 +325,23 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
                 {!you ? (
                   <>
                     <Chair at={{ x: spot.seat.x * 1.08, z: spot.seat.z * 1.08 }} yaw={spot.yaw + Math.PI} />
-                    <Suspense fallback={null}>
-                      <Character
-                        model={modelOf(s.p.seat)}
-                        color={s.p.color}
-                        x={spot.seat.x}
-                        z={spot.seat.z}
-                        yaw={spot.yaw + Math.PI}
-                        reaction={reactionFor(s.p.id, current)}
-                        lean={s.turn ? 1 : 0}
-                        seed={s.p.seat + 1}
-                        reduced={reduced}
-                        shadows={shadows}
-                        onHead={(v) => headAt(s.p.id, v)}
-                      />
-                    </Suspense>
+                    <ModelBoundary url={modelOf(s.p.seat).url}>
+                      <Suspense fallback={null}>
+                        <Character
+                          model={modelOf(s.p.seat)}
+                          color={s.p.color}
+                          x={spot.seat.x}
+                          z={spot.seat.z}
+                          yaw={spot.yaw + Math.PI}
+                          reaction={reactionFor(s.p.id, current)}
+                          lean={s.turn ? 1 : 0}
+                          seed={s.p.seat + 1}
+                          reduced={reduced}
+                          shadows={shadows}
+                          onHead={(v) => headAt(s.p.id, v)}
+                        />
+                      </Suspense>
+                    </ModelBoundary>
                   </>
                 ) : null}
               </group>

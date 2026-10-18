@@ -4,7 +4,7 @@
  * other players' moves play one at a time and the table always matches the
  * announcer. Actions come only from view.legal (empty while events play).
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Action, GameEvent, PlayerId, PlayerView, PublicPlayerView } from '../../engine/types.ts';
 import type { UseGame } from '../../net/useGame.ts';
 import { noLegalActions } from '../../engine/index.ts';
@@ -34,6 +34,20 @@ import { hasWebGL } from './three/webgl.ts';
 import { sfx, startAmbience } from '../sound/sfx.ts';
 
 const Table3D = lazy(() => import('./three/Table3D.tsx'));
+
+/** If the 3D table's code can't be loaded (offline, a stale deploy), fall back to the CSS table instead of crashing. */
+class ChunkBoundary extends Component<{ onFail: (e: unknown) => void; fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(e: unknown) {
+    this.props.onFail(e);
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
 
 const NO_LEGAL = noLegalActions();
 
@@ -313,22 +327,43 @@ export function Table({ game }: { game: UseGame }) {
     el.focus({ preventScroll: true });
   });
 
-  // Browser tab title: nudge when it's your move.
-  const yourMove =
-    !pb.playing &&
+  // Your move (live state), and once the table has caught up with it.
+  const mine =
     !me?.isBot &&
     (!!live.legal.startBid || !!live.legal.raise || live.legal.flipPuri.length > 0 || live.legal.flipPower.length > 0 || live.legal.acceptBust || (!!live.legal.setup && !live.legal.setup.submitted) || live.legal.ready);
+  const yourMove = !pb.playing && mine;
+  // Browser tab title: nudge when it's your move (from live state, so it doesn't flicker while moves play).
   useEffect(() => {
-    document.title = `${yourMove ? '● Your move · ' : ''}${snap.code} · Akabare Panipuri`;
-  }, [yourMove, snap.code]);
+    document.title = `${mine ? '● Your move · ' : ''}${snap.code} · Akabare Panipuri`;
+  }, [mine, snap.code]);
+  // One key per real turn of yours: in serving and bidding the turn comes round again
+  // after someone else moves; in setup, eating and round end it's one turn per phase
+  // (your own flips, or others locking in / getting ready, don't make it a new turn).
+  let turnKey: string | null = null;
+  if (mine) {
+    if (live.phase === 'serving' || live.phase === 'bidding') {
+      let other = -1;
+      for (let i = live.log.length - 1; i >= 0; i--) {
+        const e = live.log[i] as GameEvent & { playerId?: PlayerId; eaterId?: PlayerId };
+        if ((e.playerId ?? e.eaterId) !== you) {
+          other = e.seq;
+          break;
+        }
+      }
+      turnKey = `${live.round}:${live.phase}:${other}`;
+    } else turnKey = `${live.round}:${live.phase}`;
+  }
 
   // Sound: each move as it plays, a ding when it becomes your move, the tavern in the background.
   useEffect(() => {
     if (current) soundFor(current);
   }, [current?.seq]);
+  const dinged = useRef<string | null>(null);
   useEffect(() => {
-    if (yourMove) sfx.turn();
-  }, [yourMove]);
+    if (!yourMove || !turnKey || dinged.current === turnKey) return;
+    dinged.current = turnKey;
+    sfx.turn();
+  }, [yourMove, turnKey]);
   useEffect(() => startAmbience(), []);
 
   const line = current ? describeEvent(current, names, view.config.trapReward) : null;
@@ -484,21 +519,23 @@ export function Table({ game }: { game: UseGame }) {
 
       <main className="tp-board" aria-label="The table">
         {gl3d ? (
-          <Suspense fallback={cssScene}>
-            <Table3D
-              seats={ordered.map(seatProps)}
-              current={current}
-              flash={flash}
-              reduced={reduced}
-              phone={phone}
-              bid={view.phase === 'bidding' && view.bidding ? { amount: view.bidding.highBid, rim: PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base } : null}
-              plate={view.eating && showHud ? { cards: view.eating.plate, powers: view.eating.powers ?? [] } : null}
-              hand={hand3d}
-              overlay={overlay(false)}
-              key={glRun}
-              onFail={onGlFail}
-            />
-          </Suspense>
+          <ChunkBoundary fallback={cssScene} onFail={(e) => (console.warn('[akabare] 3D table could not load:', e), setGl3d(false))}>
+            <Suspense fallback={cssScene}>
+              <Table3D
+                seats={ordered.map(seatProps)}
+                current={current}
+                flash={flash}
+                reduced={reduced}
+                phone={phone}
+                bid={view.phase === 'bidding' && view.bidding ? { amount: view.bidding.highBid, rim: PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base } : null}
+                plate={view.eating && showHud ? { cards: view.eating.plate, powers: view.eating.powers ?? [] } : null}
+                hand={hand3d}
+                overlay={overlay(false)}
+                key={glRun}
+                onFail={onGlFail}
+              />
+            </Suspense>
+          </ChunkBoundary>
         ) : (
           cssScene
         )}

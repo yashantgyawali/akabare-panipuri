@@ -3,8 +3,8 @@
  * (a back, or a front the viewer may see). Shared geometry and cached
  * materials keep dozens of cards cheap. Glow = a soft plane under the card.
  */
-import { useMemo, useRef, type ReactNode } from 'react';
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CARD_H, CARD_T, CARD_W } from './layout3d.ts';
 import { cardAlpha } from './textures.ts';
@@ -103,22 +103,46 @@ export function Card3D({ tex, position, rotation, dim, castShadow, children }: C
   );
 }
 
-/** Pointer helpers: a hand cursor over things you can click. */
+/** Pointer helpers for things you can click (CursorSync shows the hand cursor over them). */
 export function clickProps(onClick?: () => void) {
   if (!onClick) return {};
   return {
+    userData: { clickable: true },
     onClick: (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
       onClick();
     },
-    onPointerOver: (e: ThreeEvent<PointerEvent>) => {
-      e.stopPropagation();
-      document.body.style.cursor = 'pointer';
-    },
-    onPointerOut: () => {
+    onPointerOver: (e: ThreeEvent<PointerEvent>) => e.stopPropagation(),
+  };
+}
+
+/**
+ * The hand cursor, worked out every frame from what is actually under the
+ * pointer (a clickable that stops being clickable, or unmounts, never leaves it stuck).
+ */
+export function CursorSync() {
+  const get = useThree((s) => s.get);
+  const was = useRef(false);
+  useFrame(() => {
+    let on = false;
+    for (const h of get().internal.hovered.values()) {
+      if (h.eventObject.userData?.clickable) {
+        on = true;
+        break;
+      }
+    }
+    if (on !== was.current) {
+      was.current = on;
+      document.body.style.cursor = on ? 'pointer' : '';
+    }
+  });
+  useEffect(
+    () => () => {
       document.body.style.cursor = '';
     },
-  };
+    [],
+  );
+  return null;
 }
 
 /** Animates a group along an arc from `from` to `to` over `ms`, starting at `start` (performance.now()). */

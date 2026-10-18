@@ -41,8 +41,8 @@ if (typeof window !== 'undefined') {
     const c = audio();
     if (c && c.state === 'suspended') void c.resume();
   };
-  window.addEventListener('pointerdown', unlock, { capture: true });
-  window.addEventListener('keydown', unlock, { capture: true });
+  // iOS Safari only counts touchend / click as a user activation for audio, not pointerdown.
+  for (const type of ['pointerdown', 'keydown', 'touchend', 'click']) window.addEventListener(type, unlock, { capture: true });
 }
 
 export function isMuted(): boolean {

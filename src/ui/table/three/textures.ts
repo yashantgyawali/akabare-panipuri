@@ -186,26 +186,34 @@ export function numberTex(text: string, ink: string, rim: string): THREE.Texture
   return cached(`num:${text}:${ink}:${rim}`, () => {
     const c = document.createElement('canvas');
     c.width = c.height = 256;
-    const g = c.getContext('2d')!;
-    const grad = g.createRadialGradient(100, 90, 20, 128, 128, 128);
-    grad.addColorStop(0, '#f6d78a');
-    grad.addColorStop(0.7, '#c9953a');
-    grad.addColorStop(1, '#7a5418');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(128, 128, 126, 0, Math.PI * 2);
-    g.fill();
-    g.lineWidth = 14;
-    g.strokeStyle = rim;
-    g.beginPath();
-    g.arc(128, 128, 112, 0, Math.PI * 2);
-    g.stroke();
-    g.fillStyle = ink;
-    g.font = `700 ${text.length > 1 ? 128 : 150}px Mukta, sans-serif`;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(text, 128, 138);
-    return srgb(new THREE.CanvasTexture(c));
+    const t = srgb(new THREE.CanvasTexture(c));
+    const draw = () => {
+      const g = c.getContext('2d')!;
+      g.clearRect(0, 0, 256, 256);
+      const grad = g.createRadialGradient(100, 90, 20, 128, 128, 128);
+      grad.addColorStop(0, '#f6d78a');
+      grad.addColorStop(0.7, '#c9953a');
+      grad.addColorStop(1, '#7a5418');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(128, 128, 126, 0, Math.PI * 2);
+      g.fill();
+      g.lineWidth = 14;
+      g.strokeStyle = rim;
+      g.beginPath();
+      g.arc(128, 128, 112, 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = ink;
+      g.font = `700 ${text.length > 1 ? 128 : 150}px Mukta, sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(text, 128, 138);
+      t.needsUpdate = true;
+    };
+    draw();
+    // Redraw once Mukta is in (the first draw may use the fallback font).
+    void fontsReady().then(draw);
+    return t;
   });
 }
 
