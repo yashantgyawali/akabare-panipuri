@@ -6,9 +6,8 @@
  * stacks/powers keyboard- and screen-reader-operable (same data hooks and
  * aria-labels), and nameplates are DOM pinned above the characters' heads.
  */
-import { Component, Suspense, type FocusEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
-import { Canvas, useLoader, useThree } from '@react-three/fiber';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Component, type FocusEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { GameEvent, PlateCardView, PlayerId, PuriKind } from '../../../engine/types.ts';
 import { PLAYER_PALETTE } from '../../../cards/index.ts';
@@ -21,8 +20,8 @@ import { stackItems } from '../scene/seatData.ts';
 import type { PlatePower } from '../scene/Plate3D.tsx';
 import { CARD_T, seatSpot, type Seat3DSpot } from './layout3d.ts';
 import { backTex, frontTex, peekTex } from './textures.ts';
-import { CHARACTERS } from './characters.ts';
-import { Character, type Reaction } from './Character.tsx';
+import { Villager, type Reaction } from './Villager.tsx';
+import { looksForTable } from './looks.ts';
 import { BidToken, FlyingCard, Hand3D, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
 import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from './Room.tsx';
 import { CursorSync, type Glow } from './Card3D.tsx';
@@ -41,9 +40,6 @@ export interface Table3DProps {
 }
 
 const PLACE_MS = 700;
-
-// Start fetching the characters as soon as the 3D table's code loads.
-for (const c of CHARACTERS) useLoader.preload(GLTFLoader, c.url);
 
 function actorOf(e: GameEvent | null): PlayerId | null {
   if (!e) return null;
@@ -107,25 +103,6 @@ class Boundary extends Component<{ onFail: (why: unknown) => void; children: Rea
   }
 }
 
-/**
- * One character failing to load (network, bad file) hides just that character
- * instead of taking the whole 3D table down, and drops the cached failure so the
- * next mount fetches it again.
- */
-class ModelBoundary extends Component<{ url: string; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch(e: unknown) {
-    console.warn(`[akabare] character ${this.props.url} failed to load:`, e);
-    useLoader.clear(GLTFLoader, this.props.url);
-  }
-  render() {
-    return this.state.failed ? null : this.props.children;
-  }
-}
-
 const glowOf = (state: string): Glow => (state === 'selectable' ? 'selectable' : state === 'selected' ? 'focus' : state === 'danger' ? 'danger' : null);
 
 export default function Table3D({ seats, current, flash, reduced, phone, bid, plate, hand, overlay, onFail }: Table3DProps) {
@@ -136,8 +113,9 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
     return i < 0 ? null : spots[i];
   }, [seats, spots]);
   const youId = seats[0]?.view.youId ?? null;
-  // Characters stay the same per player for the whole game: by seat number.
-  const modelOf = (seat: number) => CHARACTERS[seat % CHARACTERS.length];
+  // Each player keeps one Nepali look for the whole game (by name where we can tell, else by id).
+  const lookKey = seats.map((s) => `${s.p.id}:${s.p.name}:${s.p.seat}`).join('|');
+  const looks = useMemo(() => looksForTable(seats.map((s) => s.p)), [lookKey]);
 
   // Keyboard focus on the hidden controls lights up the matching thing on the table.
   const [focused, setFocused] = useState<string | null>(null);
@@ -325,23 +303,19 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
                 {!you ? (
                   <>
                     <Chair at={{ x: spot.seat.x * 1.08, z: spot.seat.z * 1.08 }} yaw={spot.yaw + Math.PI} />
-                    <ModelBoundary url={modelOf(s.p.seat).url}>
-                      <Suspense fallback={null}>
-                        <Character
-                          model={modelOf(s.p.seat)}
-                          color={s.p.color}
-                          x={spot.seat.x}
-                          z={spot.seat.z}
-                          yaw={spot.yaw + Math.PI}
-                          reaction={reactionFor(s.p.id, current)}
-                          lean={s.turn ? 1 : 0}
-                          seed={s.p.seat + 1}
-                          reduced={reduced}
-                          shadows={shadows}
-                          onHead={(v) => headAt(s.p.id, v)}
-                        />
-                      </Suspense>
-                    </ModelBoundary>
+                    <Villager
+                      look={looks.get(s.p.id)!}
+                      color={s.p.color}
+                      x={spot.seat.x}
+                      z={spot.seat.z}
+                      yaw={spot.yaw + Math.PI}
+                      reaction={reactionFor(s.p.id, current)}
+                      lean={s.turn ? 1 : 0}
+                      seed={s.p.seat + 1}
+                      reduced={reduced}
+                      shadows={shadows}
+                      onHead={(v) => headAt(s.p.id, v)}
+                    />
                   </>
                 ) : null}
               </group>

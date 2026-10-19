@@ -34,8 +34,21 @@ export interface Seat3DSpot {
   yaw: number;
 }
 
+/**
+ * Angle of seat i of n around the table (0 = you). Up to 4 players sit evenly;
+ * with 5 or 6 the others spread over the far side (75° to 285°), so your
+ * neighbours don't sit right beside the camera.
+ */
+export function seatAngle(i: number, n: number): number {
+  if (i === 0) return 0;
+  if (n <= 4) return (i / Math.max(1, n)) * Math.PI * 2;
+  const from = (75 * Math.PI) / 180;
+  const span = (210 * Math.PI) / 180;
+  return from + ((i - 1) / (n - 2)) * span;
+}
+
 export function seatSpot(i: number, n: number): Seat3DSpot {
-  const angle = (i / Math.max(1, n)) * Math.PI * 2;
+  const angle = seatAngle(i, n);
   const dir = { x: -Math.sin(angle), z: Math.cos(angle) };
   // The seat's own right, looking at the centre (the centre is -dir).
   const right = { x: -dir.z, z: dir.x };

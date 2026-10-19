@@ -69,7 +69,7 @@ export function Lights({ flash, shadows, phone }: { flash: boolean; shadows: boo
         </group>
       ))}
       {/* A dim warm fill from your side, so the faces across the table read. */}
-      <directionalLight position={[0, 1.3, 2.6]} color="#ffb877" intensity={0.55} />
+      <directionalLight position={[0, 1.3, 2.6]} color="#ffc28a" intensity={0.8} />
       {/* Soft warm bounce from the table so faces aren't black. */}
       <pointLight position={[0, 0.35, 0]} color="#ff9a4a" intensity={0.5} distance={3.2} decay={1.5} />
       {/* The hanging lamp. */}

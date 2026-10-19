@@ -11,6 +11,18 @@ describe('3D table layout', () => {
     expect(Math.abs(next.seat.z)).toBeLessThan(1e-9);
   });
 
+  it('keeps seats in clockwise order and clear of the camera with 5 or 6 players', () => {
+    for (const n of [5, 6]) {
+      const spots = Array.from({ length: n }, (_, i) => seatSpot(i, n));
+      for (let i = 1; i < n; i++) {
+        expect(spots[i].angle).toBeGreaterThan(spots[i - 1].angle);
+        expect(spots[i].seat.z).toBeLessThan(SEAT_R * 0.27);
+      }
+      // piles of neighbouring seats don't overlap
+      for (let i = 1; i < n; i++) expect(Math.hypot(spots[i].pile.x - spots[i - 1].pile.x, spots[i].pile.z - spots[i - 1].pile.z)).toBeGreaterThan(0.4);
+    }
+  });
+
   it('keeps every pile on its seat side, facing the seat', () => {
     for (const n of [3, 4, 5, 6]) {
       for (let i = 0; i < n; i++) {
