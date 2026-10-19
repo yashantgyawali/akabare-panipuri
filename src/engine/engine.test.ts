@@ -2,9 +2,11 @@ import { describe, expect, test } from 'vitest';
 import {
   applyAction,
   availablePowers,
+  botStep,
   chooseBotAction,
   createGame,
   EngineError,
+  flipPuriTargets,
   legalActions,
   pendingActors,
   POWER_KINDS,
@@ -532,6 +534,80 @@ describe('decision 6: eating order', () => {
     expect(t.fail('sita', { type: 'FLIP_PURI', targetPlayerId: 'priya' })).toMatch(/Priya's stack is empty/);
     expect(t.eating.eaten).toBe(5);
     expect(t.eating.plate.map((x) => x.fromStackOf)).toEqual(['sita', 'sita', 'priya', 'anil', 'priya']);
+  });
+
+  /** Sita's own Panipuri tops Anil's stack; Sita eats at 9 with Chaat, Ramesh holds a Naya Plate. */
+  function ownCardOnAnil() {
+    const t = table({ first: 'sita' });
+    setupAll(t, { sita: { power: 'chaat' }, ramesh: { power: 'nayaplate' } });
+    t.place('sita', P, 'anil');
+    auction(t, 'sita', 9);
+    expect(t.p('anil').stack.at(-1)).toMatchObject({ owner: 'sita', kind: P });
+    return t;
+  }
+
+  test("own stack first, every time, even when the eater's own card is on top of another stack", () => {
+    const t = ownCardOnAnil();
+    t.power('sita', 'sita'); // Chaat: a power that is not Naya Plate does not lift the rule
+    expect(t.eating.freePlate).toBe(false);
+    for (let left = 2; left > 0; left--) {
+      expect(t.p('sita').stack).toHaveLength(left);
+      expect(flipPuriTargets(t.state)).toEqual(['sita']);
+      expect(t.legal('sita').flipPuri).toEqual(['sita']);
+      expect(t.view('sita').legal.flipPuri).toEqual(['sita']);
+      const eaten = t.eating.eaten;
+      // Rejected with no new state and no events; the input state is untouched.
+      const frozen = deepFreeze(t.state);
+      expect(applyAction(frozen, 'sita', { type: 'FLIP_PURI', targetPlayerId: 'anil' })).toEqual({
+        ok: false,
+        error: 'Finish your own stack first.',
+      });
+      expect(t.fail('sita', { type: 'FLIP_PURI', targetPlayerId: 'anil' })).toBe('Finish your own stack first.');
+      expect(t.state).toBe(frozen);
+      expect(t.p('anil').stack.at(-1)).toMatchObject({ owner: 'sita', kind: P });
+      expect(t.eating.eaten).toBe(eaten);
+      t.flip('sita', 'sita');
+    }
+    // Own stack empty: any other non-empty stack, Anil's included.
+    expect(flipPuriTargets(t.state)).toEqual(['ramesh', 'anil', 'priya']);
+    expect(t.legal('sita').flipPuri).toEqual(['ramesh', 'anil', 'priya']);
+    const [ev] = t.flip('sita', 'anil');
+    expect(ev).toMatchObject({ fromStackOf: 'anil', owner: 'sita', kind: P, eaten: 5 });
+    t.flip('sita', 'priya');
+    expect(t.eating.plate.map((x) => x.fromStackOf)).toEqual(['sita', 'sita', 'anil', 'priya']);
+  });
+
+  test('Naya Plate is the only exception: then every non-empty stack, own included, in any order', () => {
+    const t = ownCardOnAnil();
+    const ALL4 = ['sita', 'ramesh', 'anil', 'priya'];
+    expect(t.legal('sita').flipPuri).toEqual(['sita']);
+    t.power('sita', 'ramesh'); // Naya Plate
+    expect(t.eating.freePlate).toBe(true);
+    expect(flipPuriTargets(t.state)).toEqual(ALL4);
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+    t.flip('sita', 'anil'); // her own card off Anil's stack while her own stack is still full
+    t.flip('sita', 'ramesh');
+    t.flip('sita', 'sita');
+    expect(t.p('sita').stack).toHaveLength(1);
+    expect(t.legal('sita').flipPuri).toEqual(ALL4);
+    t.flip('sita', 'sita');
+    expect(t.legal('sita').flipPuri).toEqual(['ramesh', 'anil', 'priya']);
+    expect(t.eating.plate.map((x) => [x.fromStackOf, x.card.owner])).toEqual([
+      ['anil', 'sita'],
+      ['ramesh', 'ramesh'],
+      ['sita', 'sita'],
+      ['sita', 'sita'],
+    ]);
+  });
+
+  test('with Naya Plate down, an empty stack is refused as empty (not "finish your own stack first")', () => {
+    const t = ownCardOnAnil();
+    t.power('sita', 'ramesh'); // Naya Plate
+    t.flip('sita', 'ramesh');
+    t.flip('sita', 'ramesh');
+    expect(t.p('ramesh').stack).toHaveLength(0);
+    expect(t.p('sita').stack.length).toBeGreaterThan(0);
+    expect(t.fail('sita', { type: 'FLIP_PURI', targetPlayerId: 'ramesh' })).toBe("Ramesh's stack is empty.");
   });
 
   test('powers may be flipped at any time, beside any stack including your own', () => {
@@ -1800,6 +1876,50 @@ describe('decision 15: bots decide from their own view only', () => {
     for (let seed = 0; seed < 10; seed++) {
       expect(chooseBotAction(t.state, 'sita', rand(seed))).toEqual({ type: 'FLIP_PURI', targetPlayerId: 'anil' });
     }
+  });
+
+  test('eats its own stack first even when its own known Panipuri tops another stack and a rival card tops its own', () => {
+    let ownFlips = 0;
+    for (const power of POWER_KINDS) {
+      for (let seed = 0; seed < 10; seed++) {
+        const t = table({ first: 'sita', bots: ['sita'] });
+        setupAll(t, { sita: { power } });
+        t.place('sita', P, 'anil'); // known-safe food on Anil's stack
+        t.place('ramesh', A, 'sita'); // a likely plant on top of her own
+        auction(t, 'sita', 6);
+        const r = rand(seed);
+        while (t.state.phase === 'eating' && t.p('sita').stack.length > 0 && !t.eating.freePlate) {
+          const action = chooseBotAction(t.state, 'sita', r)!;
+          if (action.type === 'FLIP_PURI') {
+            expect(action.targetPlayerId).toBe('sita');
+            ownFlips++;
+          }
+          t.act('sita', action);
+        }
+      }
+    }
+    expect(ownFlips).toBeGreaterThan(0);
+  });
+
+  test('in all-bot games an eater never leaves a non-empty own stack without a Naya Plate down', () => {
+    let guarded = 0;
+    for (let seed = 0; seed < 30; seed++) {
+      let s = createGame(seeds({}).map((p) => ({ ...p, isBot: true })), {}, seed);
+      for (let step = botStep(s); step; step = botStep(s)) {
+        expect(step.usedFallback).toBe(false);
+        const e = s.eating;
+        if (s.phase === 'eating' && e && !e.freePlate && step.action.type === 'FLIP_PURI') {
+          const eater = s.players.find((p) => p.id === e.eaterId)!;
+          if (eater.stack.length > 0) {
+            expect(step.action.targetPlayerId).toBe(eater.id);
+            guarded++;
+          }
+        }
+        s = step.state;
+      }
+      expect(s.phase).toBe('gameOver');
+    }
+    expect(guarded).toBeGreaterThan(50);
   });
 
   test('never flips its own known Naya Plate on an empty table; accepts the bust when no Chaat can save it', () => {

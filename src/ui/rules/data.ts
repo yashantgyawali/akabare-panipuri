@@ -5,7 +5,7 @@ import type { FaceKind } from '../../cards/index.ts';
 export const STEPS = [
   { n: '1', title: 'Stack', text: 'Hide cards, then slip puri onto stacks.' },
   { n: '2', title: 'Bid', text: 'Raise or pass. The last one in eats.' },
-  { n: '3', title: 'Eat', text: 'Flip your stack first. Akabare busts you.' },
+  { n: '3', title: 'Eat', text: 'Eat your own stack first, always. Only Naya Plate skips it. Akabare busts you.' },
 ];
 
 export const GALLERY: { face: FaceKind; back: 'puri' | 'power'; color: ColorId; note: string }[] = [

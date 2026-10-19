@@ -425,7 +425,8 @@ function flipPuri(ctx: Ctx, p: PlayerState, a: Extract<Action, { type: 'FLIP_PUR
   const target = findPlayer(s, a.targetPlayerId);
   if (!target) return 'There is no such stack.';
   if (!flipPuriTargets(s).includes(target.id)) {
-    if (p.stack.length > 0) return 'Finish your own stack first.';
+    // With a Naya Plate down any non-empty stack is fine, so a refusal there means the stack is empty.
+    if (p.stack.length > 0 && !e.freePlate) return 'Finish your own stack first.';
     if (target.id === p.id) return 'Your stack is empty: flip from someone else\'s.';
     return `${target.name}'s stack is empty.`;
   }
