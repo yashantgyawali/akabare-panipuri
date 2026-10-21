@@ -266,16 +266,8 @@
   bottom: 70px;
 }
 
-/* ===== Liar's Bar style HUD on desktop: your turn + actions top-right, you top-left ===== */
+/* ===== desktop HUD: your turn + actions (bid, pass...) bottom-right, you and the tally top-left ===== */
 @media (min-width: 641px) {
-  .tp-tablescreen.is-3d:not(.tp-phase-setup) .tp-dock {
-    top: var(--head-h, 72px);
-    bottom: auto;
-  }
-  .tp-tablescreen.is-3d:not(.tp-phase-setup) .tp-dock__inner {
-    padding: 14px 16px 0;
-    align-items: flex-start;
-  }
   .tp-tablescreen.is-3d .tp-np3d--you {
     top: 14px;
     bottom: auto;
