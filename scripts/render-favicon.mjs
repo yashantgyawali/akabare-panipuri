@@ -83,44 +83,39 @@ rect(14, 23, 17, 23, C.mouth);
 rect(6, 14, 7, 18, C.skinDark);
 set(6, 16, C.skin);
 
-// --- the akabare, tucked behind the right ear: fat under its green cap, tapering
-// down behind the ear, the curled tip peeking out by the jaw
-const body = [
-  // [y, x0, x1]
-  [8, 27, 29],
-  [9, 26, 29],
-  [10, 26, 29],
-  [11, 25, 28],
-  [12, 25, 28],
-  [13, 25, 27],
-  [14, 25, 27],
-  [15, 25, 27],
-  [16, 25, 27],
-  [17, 24, 26],
-  [18, 24, 26],
-  [19, 24, 26],
-  [20, 24, 25],
-  [21, 24, 25],
-  [22, 25, 25],
-  [23, 26, 26],
-];
-for (const [y, x0, x1] of body) {
-  rect(x0, y, x1, y, C.chili);
-  if (x1 > x0) set(x1, y, C.chiliDark);
-  if (y >= 9 && y <= 13) set(x0, y, C.chiliHi);
-}
-// green cap and stem, curving up and out
-rect(26, 7, 30, 7, C.stem);
-rect(27, 6, 29, 6, C.stem);
-set(29, 5, C.stem);
-set(30, 4, C.stem);
-set(31, 3, C.stem);
-
-// --- right ear, in front of the chili
+// --- right ear
 rect(24, 14, 26, 18, C.skin);
 rect(26, 14, 26, 18, C.skinDark);
 set(25, 15, C.skinDark);
 set(25, 16, C.skinDark);
+
+// --- the akabare, tucked behind the ear like a pencil: the green stem end goes
+// back behind the ear (peeking out above it), the fat red body rests on top of
+// the ear, and its pointy tip comes forward, facing you, by the temple
+rect(27, 7, 29, 7, C.stem);
+rect(28, 6, 30, 6, C.stem);
+set(30, 5, C.stem);
+set(31, 4, C.stem);
+const body = [
+  // [y, x0, x1]  from the cap (back) to the tip (front)
+  [8, 25, 28],
+  [9, 24, 28],
+  [10, 24, 27],
+  [11, 23, 26],
+  [12, 23, 26],
+  [13, 22, 25],
+  [14, 22, 24],
+  [15, 22, 23],
+  [16, 22, 23],
+  [17, 22, 22],
+];
+for (const [y, x0, x1] of body) {
+  rect(x0, y, x1, y, C.chili);
+  if (x1 > x0) set(x1, y, C.chiliDark);
+  if (y >= 9 && y <= 14) set(x0 + 1, y, C.chiliHi);
+}
+// the very tip, catching the light as it points at you
+set(22, 17, C.chiliHi);
 
 // --- Dhaka topi: a slanted cap, higher on the right, in bands of the weave
 const topiRows = [
