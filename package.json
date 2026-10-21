@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json",
     "sync:function": "node scripts/sync-function.mjs",
+    "art:favicon": "node scripts/render-favicon.mjs",
     "art:extract": "node scripts/extract-art.mjs",
     "art:wordmarks": "node scripts/build-wordmarks.mjs",
     "art:palette": "node scripts/render-palette.mjs",
