@@ -3,7 +3,7 @@
  *
  * Source of truth: docs/design-reference/ (prototype + _ds/tokens.css + README).
  * Warm, hand-made, a little wonky: beige plate, hard offset shadows (never
- * blurred), -0.88deg tilt on primary CTAs, 2px warm-brown borders on cards,
+ * blurred), straight (untilted) primary CTAs, 2px warm-brown borders on cards,
  * Manrope headings, Atkinson Hyperlegible body, Patrick Hand accents,
  * Baloo 2 for Devanagari only.
  *
@@ -276,7 +276,6 @@ input:focus-visible {
   gap: 12px;
   padding: 16px 48px;
   font-size: 18px;
-  transform: rotate(-0.88deg);
   border: 0;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -297,11 +296,11 @@ input:focus-visible {
   box-shadow: var(--shadow-hard-brown);
 }
 .btn-cta:hover:not(:disabled) {
-  transform: rotate(-0.88deg) translate(-4px, -4px);
+  transform: translate(-4px, -4px);
   color: inherit;
 }
 .btn-cta:active:not(:disabled) {
-  transform: rotate(-0.88deg) translate(0, 0);
+  transform: translate(0, 0);
   box-shadow: 2px 2px 0 0 #a42726;
 }
 .btn-cta:disabled {
@@ -790,7 +789,6 @@ input:focus-visible {
   background: var(--tumlet-ink);
   color: var(--tumlet-beige);
   font-weight: 700;
-  transform: rotate(-0.88deg);
   box-shadow: 4px 4px 0 0 var(--tumlet-yellow);
 }
 .tp-toast--error {

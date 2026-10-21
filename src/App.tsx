@@ -11,7 +11,20 @@ const GameRoute = lazy(() => import('./ui/game/GameRoute.tsx').then((m) => ({ de
 const RulesPage = lazy(() => import('./ui/rules/RulesPage.tsx').then((m) => ({ default: m.RulesPage })));
 const CardGallery = lazy(() => import('./cards/CardGallery.tsx').then((m) => ({ default: m.CardGallery })));
 
-function Loading() {
+function Loading({ tavern }: { tavern: boolean }) {
+  // The game and rules pages live in the dark tavern: their loader matches (static CSS only),
+  // so a first visit by link never flashes the old beige page.
+  if (tavern)
+    return (
+      <div className="tv-page tv-screen">
+        <div className="tv-backdrop" aria-hidden="true" />
+        <main className="tv-screen__center">
+          <div className="tv-glass tv-card tv-card--loading" role="status" aria-label="Loading">
+            <span className="tp-spinner" aria-hidden="true" />
+          </div>
+        </main>
+      </div>
+    );
   return (
     <div className="tp-page">
       <main className="tp-loading" role="status">
@@ -77,7 +90,7 @@ export function App() {
   }
   return (
     <ToastProvider>
-      <Suspense fallback={<Loading />}>{page}</Suspense>
+      <Suspense fallback={<Loading tavern={route.name !== 'cards'} />}>{page}</Suspense>
     </ToastProvider>
   );
 }

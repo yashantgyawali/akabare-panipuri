@@ -25,6 +25,7 @@ import { looksForTable } from './looks.ts';
 import { BidToken, FlyingCard, Hand3D, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
 import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from './Room.tsx';
 import { CursorSync, type Glow } from './Card3D.tsx';
+import { ReleaseOnUnmount } from './ReleaseOnUnmount.tsx';
 
 export interface Table3DProps {
   seats: SeatBase[];
@@ -261,6 +262,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
         >
           <SizeSync size={size} camRef={camRef} />
           <CursorSync />
+          <ReleaseOnUnmount />
           <color attach="background" args={['#1a0d06']} />
           <fog attach="fog" args={['#1a0d06', 4.5, 11]} />
           <Lights flash={flash} shadows={shadows} phone={phone} />

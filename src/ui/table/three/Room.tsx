@@ -268,11 +268,11 @@ const ZOOM_MAX = 1.3;
  * the table), breathing gently. Wheel / trackpad or a two-finger pinch moves
  * you closer to or further from the table, within a small range.
  */
-export function CameraRig({ focus, phone, reduced }: { focus: Vec2 | null; phone: boolean; reduced: boolean }) {
+export function CameraRig({ focus, phone, reduced, zoom: zoom0 = 1 }: { focus: Vec2 | null; phone: boolean; reduced: boolean; /** Starting distance (1 = the game's seat). */ zoom?: number }) {
   const { camera, size, gl } = useThree();
   const look = useRef(new THREE.Vector3());
   const want = useMemo(() => new THREE.Vector3(), []);
-  const zoom = useRef({ now: 1, to: 1 });
+  const zoom = useRef({ now: zoom0, to: zoom0 });
   useEffect(() => {
     const el = gl.domElement;
     const set = (z: number) => {

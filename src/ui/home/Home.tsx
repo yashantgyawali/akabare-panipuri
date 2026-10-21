@@ -1,5 +1,9 @@
-/** Home: title, name + colour, Start, join by code, recent tables. */
-import { useEffect, useState } from 'react';
+/**
+ * Home: the live tavern with the villagers around the table (one of them is
+ * you, in the colour you pick), and one glass panel with the title, name +
+ * colour, Start, join by code, and recent tables.
+ */
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { COLORS, type ColorId } from '../../engine/types.ts';
 import { CODE_ALPHABET, CODE_LENGTH, MAX_NAME_LENGTH } from '../../server/types.ts';
@@ -7,6 +11,9 @@ import { createGame } from '../../net/useGame.ts';
 import { Button } from '../common/Button.tsx';
 import { ColorPicker } from '../common/ColorPicker.tsx';
 import { LocalBadge } from '../common/Brand.tsx';
+import { TavernBackdrop } from '../tavern/TavernBackdrop.tsx';
+import { castWith } from '../tavern/cast.ts';
+import { TavernTitle } from '../tavern/TavernTitle.tsx';
 import { prefs } from '../common/hooks.ts';
 import { useToast } from '../common/Toasts.tsx';
 import { RULES, gameHref, navigate } from '../router.ts';
@@ -23,13 +30,8 @@ export function cleanCode(raw: string): string {
     .slice(0, CODE_LENGTH);
 }
 
-function CreateForm() {
+function CreateForm({ name, setName, color, setColor }: { name: string; setName: (v: string) => void; color: ColorId | null; setColor: (c: ColorId) => void }) {
   const toast = useToast();
-  const [name, setName] = useState(() => prefs.get('name') ?? '');
-  const [color, setColor] = useState<ColorId | null>(() => {
-    const c = prefs.get('color');
-    return isColor(c) ? c : 'red';
-  });
   const [busy, setBusy] = useState(false);
   const trimmed = name.trim();
   const submit = async (e: FormEvent) => {
@@ -112,24 +114,28 @@ export function Home() {
   useEffect(() => {
     document.title = 'Akabare Panipuri';
   }, []);
+  const [name, setName] = useState(() => prefs.get('name') ?? '');
+  const [color, setColor] = useState<ColorId | null>(() => {
+    const c = prefs.get('color');
+    return isColor(c) ? c : 'red';
+  });
+  const guests = useMemo(() => castWith({ name, color: color ?? 'red' }), [name, color]);
   return (
-    <div className="tp-page">
-      <main className="tp-container tp-home">
-        <a className="tp-link tp-home-rules" href={RULES}>
-          Rules
-        </a>
-        <div className="tp-home-main">
-          <h1 className="tp-h1">
-            Akabare
-            <br />
-            Panipuri
-          </h1>
-          <LocalBadge className="tp-home-badge" />
-          <CreateForm />
-          <JoinForm />
-          <RecentGames />
-        </div>
+    <div className="tv-page tv-home">
+      <TavernBackdrop mode="orbit" guests={guests} />
+      <a className="tv-chip tv-home__rules" href={RULES}>
+        Rules
+      </a>
+      <main className="tv-glass tv-home__panel">
+        <TavernTitle />
+        <LocalBadge className="tv-home__badge" />
+        <CreateForm name={name} setName={setName} color={color} setColor={setColor} />
+        <JoinForm />
+        <RecentGames />
       </main>
+      <p className="tv-hint" aria-hidden="true">
+        Drag to look around
+      </p>
     </div>
   );
 }

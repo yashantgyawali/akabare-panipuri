@@ -336,7 +336,7 @@
     box-shadow: 4px 4px 0 0 var(--tumlet-yellow);
   }
   .tp-dock .btn-cta:hover:not(:disabled) {
-    transform: rotate(-0.88deg) translate(-2px, -2px);
+    transform: translate(-2px, -2px);
   }
   .tp-dock .tp-btn {
     min-height: 44px;

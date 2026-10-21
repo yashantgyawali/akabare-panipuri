@@ -1,7 +1,8 @@
-/** The #/rules page: three steps and the six cards. */
+/** The #/rules page: three steps and the six cards, on glass in the tavern. */
 import { useEffect } from 'react';
 import { Card } from '../../cards/index.ts';
-import { Wordmark } from '../common/Brand.tsx';
+import { TavernBackdrop } from '../tavern/TavernBackdrop.tsx';
+import { TavernTitle } from '../tavern/TavernTitle.tsx';
 import { usePhone } from '../common/hooks.ts';
 import { HOME } from '../router.ts';
 import { GALLERY, STEPS } from './data.ts';
@@ -17,11 +18,14 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
     document.title = 'Rules · Akabare Panipuri';
   }, []);
   return (
-    <div className="tp-page">
-      <main className="tp-container tp-container--narrow tp-rulespage">
+    <div className="tv-page tv-rules">
+      <TavernBackdrop still mode="orbit" guests={[]} />
+      <main className="tp-container tp-container--narrow tp-rulespage tv-rules__main">
         <header className="tp-header">
-          <Wordmark link byline={false} />
-          <a className="tp-btn" href={from.href}>
+          <a href={HOME} className="tv-screen__home" aria-label="Akabare Panipuri: home">
+            <TavernTitle size="sm" as="div" />
+          </a>
+          <a className="tv-chip" href={from.href}>
             <span aria-hidden="true">←</span> {from.label}
           </a>
         </header>
@@ -29,7 +33,7 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
         <h1 className="tp-sr">Rules</h1>
         <ol className="tp-bites">
           {STEPS.map((s) => (
-            <li key={s.n} className="tp-bite">
+            <li key={s.n} className="tp-bite tv-glass">
               <span className="tp-bite__n tp-num" aria-hidden="true">
                 {s.n}
               </span>

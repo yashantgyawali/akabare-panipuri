@@ -1,12 +1,19 @@
-/** #/g/<CODE>: join → lobby → table, all driven by useGame(code). */
-import { useEffect, useState } from 'react';
+/**
+ * #/g/<CODE>: join → lobby → table, all driven by useGame(code). Everything
+ * before the table happens in the tavern: one live backdrop stays mounted
+ * through loading, joining and the lobby (where the camera takes your seat).
+ */
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { COLORS, type ColorId } from '../../engine/types.ts';
 import { MAX_NAME_LENGTH } from '../../server/types.ts';
 import { useGame, type UseGame } from '../../net/useGame.ts';
 import { Button } from '../common/Button.tsx';
 import { ColorPicker } from '../common/ColorPicker.tsx';
-import { Wordmark } from '../common/Brand.tsx';
+import { TavernBackdrop, type Guest } from '../tavern/TavernBackdrop.tsx';
+import { TavernTitle } from '../tavern/TavernTitle.tsx';
+import { castWith } from '../tavern/cast.ts';
+import { MIN_PLAYERS } from '../../engine/types.ts';
 import { prefs } from '../common/hooks.ts';
 import { useToast } from '../common/Toasts.tsx';
 import { HOME } from '../router.ts';
@@ -31,33 +38,51 @@ export function GameRoute({ code }: { code: string }) {
     document.title = `${code} · Akabare Panipuri`;
   }, [code]);
 
+  const snap = game.status === 'ready' ? game.snapshot : null;
+  const lobby = snap?.status === 'lobby' ? snap : null;
+  // Lobby: everyone at the table in seat order, starting from you (the camera's seat).
+  const seated = useMemo<Guest[] | null>(() => {
+    if (!lobby) return null;
+    const bySeat = [...lobby.players].sort((a, b) => a.seat - b.seat);
+    const at = Math.max(0, bySeat.findIndex((p) => p.id === lobby.youId));
+    return [...bySeat.slice(at), ...bySeat.slice(0, at)].map((p) => ({ id: p.id, name: p.name, color: p.color, seat: p.seat, you: p.id === lobby.youId }));
+  }, [lobby]);
+  const regulars = useMemo(() => castWith(null), []);
+
+  if (snap && snap.status !== 'lobby' && snap.view) return <Table key={`${snap.code}:${snap.youId}`} game={game} />;
+
+  let content;
   switch (game.status) {
     case 'idle':
     case 'loading':
-      return <Loading />;
+      content = <Loading />;
+      break;
     case 'error':
-      return <GameError game={game} />;
+      content = <GameError game={game} />;
+      break;
     case 'needsJoin':
-      return <JoinGame code={code} game={game} />;
-    case 'ready': {
-      const snap = game.snapshot;
-      if (!snap) return <Loading />;
-      if (snap.status === 'lobby') return <Lobby game={game} />;
-      if (!snap.view) return <Loading />;
-      return <Table key={`${snap.code}:${snap.youId}`} game={game} />;
-    }
+      content = <JoinGame code={code} game={game} />;
+      break;
+    case 'ready':
+      content = lobby ? <Lobby game={game} /> : <Loading />;
+      break;
   }
+  return (
+    <div className={`tv-page tv-screen${lobby ? ' tv-screen--lobby' : ''}`}>
+      <TavernBackdrop mode={seated ? 'seat' : 'orbit'} guests={seated ?? regulars} labels={!!seated} slots={seated ? Math.max(MIN_PLAYERS + 1, seated.length) : 0} />
+      {content}
+    </div>
+  );
 }
 
+/** A centred glass card over the tavern, with the title linking home. */
 function Screen({ children }: { children: ReactNode }) {
   return (
-    <main className="tp-page">
-      <div className="tp-container">
-        <header className="tp-header">
-          <Wordmark link />
-        </header>
-        {children}
-      </div>
+    <main className="tv-screen__center">
+      <a href={HOME} className="tv-screen__home" aria-label="Akabare Panipuri: home">
+        <TavernTitle size="sm" as="div" />
+      </a>
+      {children}
     </main>
   );
 }
@@ -65,7 +90,7 @@ function Screen({ children }: { children: ReactNode }) {
 function Loading() {
   return (
     <Screen>
-      <div className="tp-loading" role="status" aria-label="Loading">
+      <div className="tv-glass tv-card tv-card--loading" role="status" aria-label="Loading">
         <span className="tp-spinner" aria-hidden="true" />
       </div>
     </Screen>
@@ -77,7 +102,7 @@ function GameError({ game }: { game: UseGame }) {
   const started = game.errorCode === 'wrong_status';
   return (
     <Screen>
-      <section className="tp-center-card" aria-labelledby="err-h">
+      <section className="tv-glass tv-card" aria-labelledby="err-h">
         <h1 className="tp-h1 tp-h1--md" id="err-h">
           {missing ? 'No table here' : started ? 'Game already started' : 'Can’t reach the table'}
         </h1>
@@ -113,7 +138,7 @@ function JoinGame({ code, game }: { code: string; game: UseGame }) {
   };
   return (
     <Screen>
-      <section className="tp-join-card" aria-label="Join">
+      <section className="tv-glass tv-card tp-join-card" aria-label="Join">
         <CodeTiles code={code} />
         {suggested ? (
           <Button variant="primary" size="md" block onClick={() => game.continueAs(suggested)}>

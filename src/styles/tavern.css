@@ -1,0 +1,612 @@
+/*
+ * The screens before the game, inside the tavern (src/ui/tavern): the live 3D
+ * backdrop (with a warm CSS tavern under it while it loads, or without WebGL),
+ * frosted glass panels like the in-game HUD, the blocky title, and dark-glass
+ * versions of the Tumlet inputs, buttons, swatches and pills.
+ * Classes: tv-*. Scope for restyled Tumlet controls: .tv-page.
+ */
+.tv-page {
+  --tv-cream: #f6e7cf;
+  --tv-cream-dim: rgba(246, 231, 207, 0.7);
+  --tv-brass: #e6b04a;
+  --tv-glass: rgba(30, 18, 9, 0.46);
+  --tv-glass-line: rgba(255, 228, 190, 0.22);
+  position: relative;
+  min-height: 100dvh;
+  color: var(--tv-cream);
+  background: #120a05;
+  isolation: isolate;
+}
+
+/* ===== backdrop ===== */
+.tv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 58%, rgba(201, 120, 52, 0.35), transparent 70%),
+    radial-gradient(ellipse 80% 70% at 50% 55%, #3a2111 0%, #24140a 45%, #120a05 100%);
+}
+.tv-backdrop__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 40% 34% at 50% 6%, rgba(255, 217, 160, 0.16), transparent 70%);
+}
+.tv-backdrop__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 100% 95% at 50% 50%, transparent 58%, rgba(8, 4, 2, 0.6) 100%);
+}
+.tv-canvas {
+  position: absolute;
+  inset: 0;
+  animation: tv-fade-in 0.9s ease both;
+}
+.tv-canvas > div:first-child {
+  position: absolute !important;
+  inset: 0;
+}
+@keyframes tv-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* name tags over the villagers (lobby) */
+.tv-tags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.tv-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--tv-glass-line);
+  background: var(--tv-glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--tv-cream);
+  font: 700 13px/1 var(--font-display);
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+.tv-tag__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+/* ===== glass ===== */
+.tv-glass {
+  border: 1px solid var(--tv-glass-line);
+  border-radius: 22px;
+  background: var(--tv-glass);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(0, 0, 0, 0.5);
+  color: var(--tv-cream);
+}
+.tv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--tv-glass-line);
+  border-radius: 999px;
+  background: var(--tv-glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--tv-cream);
+  font: 700 15px/1 var(--font-display);
+  text-decoration: none;
+  cursor: pointer;
+}
+.tv-chip:hover {
+  background: rgba(243, 185, 82, 0.22);
+  color: var(--tv-cream);
+}
+.tv-chip:focus-visible {
+  outline: 3px solid var(--tumlet-yellow);
+  outline-offset: 2px;
+}
+
+/* ===== the blocky title ===== */
+.tv-title {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-family: 'Pixelify Sans', var(--font-display);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: 0.03em;
+  color: #ffe7b8;
+}
+.tv-title__word {
+  display: block;
+  font-size: clamp(46px, 5.4vw, 66px);
+  text-shadow:
+    0 2px 0 #d8973a,
+    0 4px 0 #a8641f,
+    0 6px 0 #7a4314,
+    0 8px 0 #4a260b,
+    0 16px 22px rgba(0, 0, 0, 0.55);
+}
+.tv-title__word + .tv-title__word {
+  margin-top: 4px;
+  color: #ffd27a;
+}
+.tv-title__dev {
+  margin-top: 14px;
+  font-family: 'Rozha One', serif;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--tv-brass);
+}
+.tv-title--sm {
+  flex-direction: row;
+  gap: 0.35em;
+  align-items: baseline;
+}
+.tv-title--sm .tv-title__word {
+  font-size: 20px;
+  text-shadow:
+    0 1px 0 #a8641f,
+    0 2px 0 #4a260b;
+}
+.tv-title--sm .tv-title__word + .tv-title__word {
+  margin-top: 0;
+}
+
+/* ===== Tumlet controls on dark glass ===== */
+.tv-page .tp-input {
+  border: 1px solid rgba(255, 228, 190, 0.32);
+  border-radius: 14px;
+  background: rgba(255, 240, 215, 0.08);
+  color: var(--tv-cream);
+}
+.tv-page .tp-input::placeholder {
+  color: rgba(246, 231, 207, 0.5);
+}
+.tv-page .tp-input:focus-visible {
+  outline: 2px solid var(--tumlet-yellow);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+.tv-glass .tp-btn {
+  border: 1px solid rgba(255, 228, 190, 0.45);
+  border-radius: 14px;
+  color: var(--tv-cream);
+}
+.tv-glass .tp-btn:hover:not(:disabled) {
+  background: rgba(243, 185, 82, 0.25);
+  color: var(--tv-cream);
+}
+.tv-glass .tp-link,
+.tv-glass .tp-link--quiet {
+  color: var(--tv-cream);
+}
+.tv-glass .tp-link:hover:not(:disabled) {
+  color: var(--tumlet-yellow);
+}
+.tv-page .btn-cta.red {
+  box-shadow: 0 10px 26px rgba(241, 97, 71, 0.35);
+}
+.tv-page .btn-cta.red:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+.tv-page .tp-swatch {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+.tv-page .tp-swatch[aria-checked='true'] {
+  box-shadow:
+    0 0 0 3px #1a0d06,
+    0 0 0 5px var(--tv-cream);
+}
+.tv-glass .tp-iconbtn {
+  color: var(--tv-cream);
+}
+.tv-glass .tp-iconbtn:hover:not(:disabled) {
+  background: rgba(243, 185, 82, 0.25);
+  color: var(--tv-cream);
+}
+.tv-page .tp-localbadge {
+  background: rgba(243, 185, 82, 0.9);
+  color: var(--tumlet-ink);
+}
+.tv-glass .tp-spinner {
+  border-color: rgba(246, 231, 207, 0.25);
+  border-top-color: var(--tv-cream);
+}
+
+/* ===== home ===== */
+.tv-home {
+  height: 100dvh;
+  overflow: hidden;
+}
+.tv-home__rules {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  right: 16px;
+}
+.tv-home__panel {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: clamp(16px, 5vw, 72px);
+  transform: translateY(-50%);
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 30px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.tv-home__badge {
+  margin: 0;
+  font-size: 12px;
+}
+.tv-home .tp-home-create {
+  gap: 14px;
+}
+.tv-home .tp-home-create__row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.tv-home .tp-home-name {
+  font-size: 18px;
+}
+.tv-home .tp-home-create__row .tp-swatches {
+  justify-content: space-between;
+}
+.tv-home .tp-home-create__row .tp-swatch {
+  width: 34px !important;
+  height: 34px !important;
+}
+.tv-home .tp-home-join {
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 228, 190, 0.16);
+}
+.tv-home .tp-home-pill {
+  background: rgba(255, 240, 215, 0.1);
+  border: 1px solid var(--tv-glass-line);
+}
+.tv-home .tp-home-pill button {
+  color: var(--tv-cream);
+}
+.tv-hint {
+  position: absolute;
+  z-index: 2;
+  right: 20px;
+  bottom: 16px;
+  margin: 0;
+  color: var(--tv-cream-dim);
+  font: 600 13px/1 var(--font-display);
+  pointer-events: none;
+  animation: tv-hint 7s ease forwards;
+}
+@keyframes tv-hint {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* phones: the room on top, the panel docked at the bottom */
+@media (max-width: 640px) {
+  .tv-home__panel {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    transform: none;
+    width: auto;
+    max-height: 72dvh;
+    padding: 20px 18px 16px;
+    gap: 14px;
+    border-radius: 20px;
+  }
+  .tv-title__word {
+    font-size: 40px;
+  }
+  .tv-title__dev {
+    margin-top: 8px;
+    font-size: 18px;
+  }
+  .tv-home .tp-home-create__row .tp-swatch {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .tv-hint {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tv-canvas,
+  .tv-hint {
+    animation: none;
+  }
+}
+
+/* ===== join / loading / error: a centred glass card over the circling tavern ===== */
+.tv-screen {
+  min-height: 100dvh;
+}
+.tv-screen__center {
+  position: relative;
+  z-index: 2;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+.tv-screen__home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 6px;
+  text-decoration: none;
+  border-radius: 12px;
+}
+.tv-screen__home:focus-visible {
+  outline: 3px solid var(--tumlet-yellow);
+  outline-offset: 4px;
+}
+.tv-screen__home .tv-title__word {
+  font-size: 30px;
+}
+.tv-card {
+  width: min(440px, 100%);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-sizing: border-box;
+}
+.tv-card--loading {
+  width: auto;
+  padding: 22px;
+  align-items: center;
+}
+.tv-card .tp-h1 {
+  margin: 0;
+  color: var(--tv-cream);
+  font-size: 28px;
+}
+.tv-page .tp-join-card {
+  max-width: none;
+  margin: 0;
+  border: 1px solid var(--tv-glass-line);
+  border-radius: 22px;
+  background: var(--tv-glass);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* code tiles: chunky letters on glass (not the pixel face: its Z reads as 2, and codes use both) */
+.tv-page .tp-lobby-code__ch {
+  border: 1px solid rgba(255, 228, 190, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 240, 215, 0.08);
+  color: #ffe7b8;
+  font-family: var(--font-display);
+  font-weight: 800;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.25);
+  text-shadow:
+    0 2px 0 #a8641f,
+    0 3px 0 #4a260b;
+}
+.tv-page .tp-join-card .tp-lobby-code__ch {
+  height: 58px;
+  font-size: 32px;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* ===== lobby: glass panels over the table, from your seat ===== */
+.tv-screen--lobby {
+  height: 100dvh;
+  overflow: hidden;
+}
+.tv-lobby__top {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.tv-lobby__top > * {
+  pointer-events: auto;
+}
+.tv-lobby__home .tv-title__word {
+  font-size: 18px;
+}
+.tv-lobby__code {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 18px;
+}
+.tv-lobby__code .tp-lobby-code {
+  gap: 8px;
+}
+.tv-lobby__code .tp-lobby-code__ch {
+  width: 48px;
+  flex: none;
+  height: 56px;
+  font-size: 32px;
+}
+.tv-lobby__panel {
+  position: absolute;
+  z-index: 2;
+  /* centred in the space below the top row, so it never covers the code bar */
+  top: calc(50% + 45px);
+  right: clamp(14px, 3vw, 40px);
+  transform: translateY(-50%);
+  width: min(360px, calc(100vw - 28px));
+  max-height: calc(100dvh - 118px);
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+.tv-lobby__badge {
+  margin: 0;
+  font-size: 12px;
+}
+.tv-page .tp-lobby-row {
+  min-height: 52px;
+  border: 1px solid rgba(255, 228, 190, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 240, 215, 0.06);
+}
+.tv-page .tp-lobby-row--you {
+  border-color: var(--c, var(--tumlet-yellow));
+  box-shadow: inset 4px 0 0 var(--c, var(--tumlet-yellow));
+}
+.tv-page .tp-lobby-row__icon {
+  color: var(--tv-brass);
+}
+.tv-page .tp-lobby-presence {
+  background: rgba(255, 228, 190, 0.3);
+}
+.tv-page .tp-lobby-presence--on {
+  background: #6ad07a;
+  box-shadow: 0 0 8px rgba(106, 208, 122, 0.7);
+}
+.tv-page .tp-lobby-presence--off {
+  background: var(--tumlet-red);
+}
+.tv-page .tp-lobby-preset {
+  border: 1px solid rgba(255, 228, 190, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 240, 215, 0.06);
+  color: var(--tv-cream);
+}
+.tv-page .tp-lobby-preset:hover:not(:disabled) {
+  background: rgba(243, 185, 82, 0.2);
+}
+.tv-page .tp-lobby-preset--on,
+.tv-page .tp-lobby-preset--on:hover:not(:disabled) {
+  background: var(--tumlet-yellow);
+  border-color: var(--tumlet-yellow);
+  color: var(--tumlet-ink);
+  box-shadow: none;
+}
+.tv-page .tp-lobby-start__cta {
+  width: 100%;
+}
+.tv-page .tp-lobby-waiting {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--tv-cream-dim);
+}
+
+/* tablets: the centred code bar needs the top row to itself */
+@media (max-width: 820px) {
+  .tv-lobby__home {
+    display: none;
+  }
+  .tv-lobby__top {
+    justify-content: flex-end;
+  }
+}
+
+/* phones: code on top, the panel docked at the bottom, the table between */
+@media (max-width: 640px) {
+  /* the code bar drops below the top row, so the home chip fits beside Leave again */
+  .tv-lobby__home {
+    display: inline-flex;
+  }
+  .tv-lobby__top {
+    justify-content: space-between;
+  }
+  .tv-lobby__code {
+    top: 66px;
+    left: 14px;
+    transform: none;
+    padding: 8px;
+  }
+  .tv-lobby__code .tp-lobby-code__ch {
+    width: 40px;
+    height: 48px;
+    font-size: 26px;
+  }
+  .tv-lobby__panel {
+    top: auto;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    transform: none;
+    width: auto;
+    max-height: 56dvh;
+    padding: 14px;
+    gap: 12px;
+  }
+}
+
+/* ===== rules page: glass on the (still) tavern ===== */
+.tv-rules__main {
+  position: relative;
+  z-index: 2;
+}
+.tv-rules .tp-header .tv-title__word {
+  font-size: 24px;
+}
+.tv-rules .tp-bite {
+  padding: 22px;
+}
+.tv-rules .tp-bite__n {
+  transform: none;
+  box-shadow: 0 6px 16px rgba(241, 97, 71, 0.35);
+}
+.tv-rules .tp-h2 {
+  color: #ffe7b8;
+}
+.tv-rules .tp-muted {
+  color: var(--tv-cream-dim);
+}
