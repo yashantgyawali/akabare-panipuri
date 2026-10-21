@@ -9,3 +9,4 @@ source_assets/svg
 supabase/.build/game/
 supabase/functions/game/_lib/
 akabare-site.zip
+tsconfig.tsbuildinfo
