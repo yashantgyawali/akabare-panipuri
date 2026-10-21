@@ -610,3 +610,72 @@
 .tv-rules .tp-muted {
   color: var(--tv-cream-dim);
 }
+
+/* ===== game mode info (lobby) ===== */
+.tp-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tv-page .tp-modeinfo__btn {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 228, 190, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 240, 215, 0.06);
+  color: var(--tv-cream);
+}
+.tv-page .tp-modeinfo__btn:hover:not(:disabled),
+.tv-page .tp-modeinfo__btn.is-on {
+  background: rgba(243, 185, 82, 0.25);
+  color: var(--tv-cream);
+}
+.tp-modeinfo__btn:focus-visible {
+  outline: 3px solid var(--tumlet-yellow);
+  outline-offset: 2px;
+}
+.tp-modeinfo__card {
+  padding: 12px;
+  border: 1px solid rgba(255, 228, 190, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 240, 215, 0.05);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.tp-modeinfo__card dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tp-modeinfo__row {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+.tp-modeinfo__row.is-on {
+  background: rgba(243, 185, 82, 0.16);
+  box-shadow: inset 3px 0 0 var(--tumlet-yellow);
+}
+.tp-modeinfo__row dt {
+  font: 700 15px/1.2 var(--font-display);
+  color: #ffe7b8;
+}
+.tp-modeinfo__row dd {
+  margin: 2px 0 0;
+  color: var(--tv-cream);
+}
+.tp-modeinfo__note {
+  margin: 10px 0 0;
+  color: var(--tv-cream-dim);
+  font-size: 13px;
+}
+/* guests: the mode on, with the same info button */
+.tp-lobby-presets--guest {
+  align-items: center;
+  justify-content: space-between;
+}
+.tp-lobby-mode {
+  font: 700 16px/1.2 var(--font-display);
+  color: var(--tv-cream);
+}

@@ -46,7 +46,7 @@ export function Lobby({ game }: { game: UseGame }) {
         <section className="tv-glass tv-lobby__panel" aria-label="Players">
         <LocalBadge className="tv-lobby__badge" />
         <PlayersColumn game={game} graceOver={graceOver} />
-        {game.isHost ? <Presets game={game} /> : null}
+        <Presets game={game} />
         <div className="tp-lobby-start" aria-live="polite">
           {game.isHost ? (
             <button
