@@ -27,7 +27,7 @@ export function EventBanner({ e, names }: { e: FxEvent; names: NameBook }) {
     const target = own ? (e.playerId === names.you ? 'your own stack' : 'their own stack') : `${names.whose(e.onStackOf)} stack`;
     body = (
       <>
-        <b>{who}</b> put a card on <b>{target}</b>
+        <b>{who}</b> put a bowl on <b>{target}</b>
       </>
     );
   } else if (e.type === 'bidStart') {

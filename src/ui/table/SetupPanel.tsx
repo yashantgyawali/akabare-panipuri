@@ -11,6 +11,7 @@ import { Icon } from '../common/Icon.tsx';
 import { cx } from '../common/hooks.ts';
 import { powerName } from '../text.ts';
 import { Hand, handCards, type HandCard } from './Hand.tsx';
+import { BowlIcon } from '../common/BowlIcon.tsx';
 
 /** The setup hand, for the 3D table to hold up in first person. */
 export interface HeldSetupHand {
@@ -51,10 +52,10 @@ export function usedInRound(view: PlayerView, kind: PowerKind): number | null {
 }
 
 function slotName(i: number, n: number): string {
-  if (n === 1) return 'Your card';
+  if (n === 1) return 'Your bowl';
   if (i === 0) return 'Bottom';
   if (i === n - 1) return 'Top';
-  return `Card ${i + 1}`;
+  return `Bowl ${i + 1}`;
 }
 
 export function SetupPanel({
@@ -143,7 +144,7 @@ export function SetupPanel({
           aria-label={`Your stack, bottom to top: ${submitted.stack.join(', ')}; power: ${powerName(submitted.power)}`}
         >
           {submitted.stack.map((k, i) => (
-            <Card key={i} back="puri" color={color} face={k} width={phone ? 40 : 52} decorative />
+            <BowlIcon key={i} kind={k} color={color} size={phone ? 48 : 60} />
           ))}
           <Card back="power" color={color} face={submitted.power} width={phone ? 40 : 52} decorative />
         </div>
@@ -213,10 +214,10 @@ export function SetupPanel({
               <li key={i} className="tp-slot">
                 {s ? (
                   <button type="button" className="tp-slot__btn" onClick={() => clear(i)} aria-label={`${slotName(i, size)}: ${s}. Tap to take it back.`}>
-                    <Card back="puri" color={color} face={s} width={cardW} decorative />
+                    <BowlIcon kind={s} color={color} size={Math.round(cardW * 1.3)} />
                   </button>
                 ) : (
-                  <span className="tp-slot__empty" style={{ width: cardW, height: Math.round(cardW * (88 / 63)) }} aria-label={`${slotName(i, size)}: empty`}>
+                  <span className="tp-slot__empty" style={{ width: Math.round(cardW * 1.3), height: Math.round(cardW * (88 / 63)) }} aria-label={`${slotName(i, size)}: empty`}>
                     <span aria-hidden="true">{i + 1}</span>
                   </span>
                 )}

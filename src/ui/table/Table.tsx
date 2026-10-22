@@ -20,6 +20,7 @@ import { describeEvent, makeNameBook, powerName } from '../text.ts';
 import { LogList, ScoresPanel, TableHeader, turnText, type DrawerName } from './Chrome.tsx';
 import { TableScene } from './scene/TableScene.tsx';
 import { Hand, handCards } from './Hand.tsx';
+import { BowlTray } from './BowlTray.tsx';
 import { AkabareMoment, GameOverPanel, RoundEndPanel, type Moment } from './Overlays.tsx';
 import { ActionPanel } from './Panels.tsx';
 import { useChromeHeights } from './scene/useStage.ts';
@@ -185,7 +186,7 @@ function focusTargetFor(memo: string): HTMLElement | null {
   const next = [
     ...document.querySelectorAll('.tp-seats [data-stack-of] > button.ak-card-stack--selectable'),
     ...document.querySelectorAll('.tp-seats [data-power-of] > button.ak-card--selectable'),
-    ...document.querySelectorAll('.tp-dock__hand button, .tp-a11y3d__hand button, .tp-dock__prompt .btn-cta, .tp-dock__prompt button, .tp-dock button'),
+    ...document.querySelectorAll('.tp-dock__hand button, .tp-tray button, .tp-dock__prompt .btn-cta, .tp-dock__prompt button, .tp-dock button'),
   ];
   return next.find(usable) ?? null;
 }
@@ -397,7 +398,7 @@ export function Table({ game }: { game: UseGame }) {
     if (legal.flipPuri.includes(p.id)) {
       return {
         state: 'selectable',
-        label: `${label}. Eat the top card.`,
+        label: `${label}. Eat the top bowl.`,
         onClick: () => {
           if (!busy) act(`flip:${p.id}`, { type: 'FLIP_PURI', targetPlayerId: p.id });
         },
@@ -445,7 +446,7 @@ export function Table({ game }: { game: UseGame }) {
   useEffect(() => {
     if (!placing) return;
     const a = document.activeElement;
-    if (!(a instanceof HTMLElement) || !a.closest('.tp-dock__hand, .tp-a11y3d__hand') || !a.matches(':focus-visible')) return;
+    if (!(a instanceof HTMLElement) || !a.closest('.tp-dock__hand, .tp-tray') || !a.matches(':focus-visible')) return;
     document.querySelector<HTMLElement>('.tp-seats [data-stack-of] > button.ak-card-stack--selectable')?.focus();
   }, [placing]);
   const botSeat = !!me?.isBot && view.phase !== 'gameOver';
@@ -529,7 +530,6 @@ export function Table({ game }: { game: UseGame }) {
                 phone={phone}
                 bid={view.phase === 'bidding' && view.bidding ? { amount: view.bidding.highBid, rim: PLAYER_PALETTE[names.color(view.bidding.highBidderId)].base } : null}
                 plate={view.eating && showHud ? { cards: view.eating.plate, powers: view.eating.powers ?? [] } : null}
-                hand={hand3d}
                 overlay={overlay(false)}
                 key={glRun}
                 onFail={onGlFail}
@@ -548,6 +548,8 @@ export function Table({ game }: { game: UseGame }) {
 
       <section className={cx('tp-dock', setupMode && 'tp-dock--setup')} aria-label="Your seat">
         <div className="tp-dock__inner">
+          {/* A phone has no room for the tray while bidding or eating (the bowls can't be played then anyway). */}
+          {gl3d && hand3d && (!phone || setupMode || view.phase === 'serving') ? <BowlTray hand={hand3d} color={me?.color ?? 'red'} phone={phone} /> : null}
           {setupMode ? (
             <SetupPanel
               key={view.round}

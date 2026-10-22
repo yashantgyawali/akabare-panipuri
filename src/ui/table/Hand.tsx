@@ -1,6 +1,6 @@
-/** Your hand as real card fronts (you know your own cards), in a flat row. */
+/** Your hand as open bowls (you know what's in your own), in a flat row. */
 import type { ColorId, PuriKind } from '../../engine/types.ts';
-import { Card, type CardState } from '../../cards/index.ts';
+import { BowlIcon } from '../common/BowlIcon.tsx';
 import { cx } from '../common/hooks.ts';
 
 export interface HandCard {
@@ -41,23 +41,23 @@ export function Hand({
 }) {
   const n = cards.length;
   return (
-    <div className={cx('tp-hand-row', className)} role="group" aria-label={`${label}: ${n} card${n === 1 ? '' : 's'}`}>
+    <div className={cx('tp-hand-row', className)} role="group" aria-label={`${label}: ${n} bowl${n === 1 ? '' : 's'}`}>
       {n === 0 ? <p className="tp-hand-row__empty">{emptyText}</p> : null}
       {cards.map((c, i) => {
         const can = !!pickable && pickable.includes(c.kind) && !!onPick;
-        const state: CardState = selected === i ? 'selected' : can ? 'selectable' : pickable ? 'dim' : 'idle';
+        const state = selected === i ? 'selected' : can ? 'selectable' : pickable ? 'dim' : 'idle';
         return (
           <div key={`${c.kind}-${c.instance}-${i}`} className="tp-hand-row__card">
-            <Card
-              back="puri"
-              color={color}
-              face={c.kind}
-              instance={c.instance}
-              width={width}
-              state={state}
+            <button
+              type="button"
+              className={cx('tp-handbowl', `is-${state}`)}
+              disabled={!can}
               onClick={can ? () => onPick!(i, c) : undefined}
-              ariaLabel={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand${selected === i ? ', selected' : ''}`}
-            />
+              aria-pressed={selected === i ? true : undefined}
+              aria-label={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand${selected === i ? ', selected' : ''}`}
+            >
+              <BowlIcon kind={c.kind} color={color} size={Math.round(width * 1.15)} />
+            </button>
           </div>
         );
       })}

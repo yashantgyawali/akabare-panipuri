@@ -13,16 +13,16 @@ import type { GameEvent, PlateCardView, PlayerId, PuriKind } from '../../../engi
 import { PLAYER_PALETTE } from '../../../cards/index.ts';
 import { cx } from '../../common/hooks.ts';
 import { powerName } from '../../text.ts';
-import type { HandCard } from '../Hand.tsx';
 import type { SeatBase } from '../scene/SeatsLayer.tsx';
 import { Nameplate } from '../scene/Nameplate.tsx';
 import { stackItems } from '../scene/seatData.ts';
 import type { PlatePower } from '../scene/Plate3D.tsx';
-import { CARD_T, seatSpot, type Seat3DSpot } from './layout3d.ts';
+import { seatSpot, type Seat3DSpot } from './layout3d.ts';
 import { backTex, frontTex, peekTex } from './textures.ts';
 import { Villager, type Reaction } from './Villager.tsx';
 import { looksForTable } from './looks.ts';
-import { BidToken, FlyingCard, Hand3D, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
+import { BidToken, Pile, Plate, PlateCards, type PlateCard } from './Pieces.tsx';
+import { FlyingBowl, NEST } from './Bowl3D.tsx';
 import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from './Room.tsx';
 import { CursorSync, type Glow } from './Card3D.tsx';
 import { ReleaseOnUnmount } from './ReleaseOnUnmount.tsx';
@@ -35,7 +35,6 @@ export interface Table3DProps {
   phone: boolean;
   bid: { amount: number; rim: string } | null;
   plate: { cards: PlateCardView[]; powers: PlatePower[] } | null;
-  hand: { cards: HandCard[]; selected: number | null; pickable: readonly PuriKind[] | null; onPick: (i: number) => void; orders?: (number | null)[] } | null;
   overlay?: ReactNode;
   onFail: (why: unknown) => void;
 }
@@ -106,7 +105,7 @@ class Boundary extends Component<{ onFail: (why: unknown) => void; children: Rea
 
 const glowOf = (state: string): Glow => (state === 'selectable' ? 'selectable' : state === 'selected' ? 'focus' : state === 'danger' ? 'danger' : null);
 
-export default function Table3D({ seats, current, flash, reduced, phone, bid, plate, hand, overlay, onFail }: Table3DProps) {
+export default function Table3D({ seats, current, flash, reduced, phone, bid, plate, overlay, onFail }: Table3DProps) {
   const n = seats.length;
   const spots = useMemo(() => seats.map((_, i) => seatSpot(i, n)), [n, seats]);
   const spotOf = useCallback((id: PlayerId): Seat3DSpot | null => {
@@ -135,16 +134,16 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
     if (!to || !by) return null;
     const target = seats.find((s) => s.p.id === current.onStackOf)!;
     const actor = seats.find((s) => s.p.id === current.playerId)!;
-    const fromV = current.playerId === youId ? new THREE.Vector3(0, 0.45, 1.25) : new THREE.Vector3(by.seat.x * 0.82, 0.35, by.seat.z * 0.82);
+    // Your own bowls come from your edge of the table; others' from their hands.
+    const fromV = current.playerId === youId ? new THREE.Vector3(0, 0.08, 0.92) : new THREE.Vector3(by.seat.x * 0.82, 0.35, by.seat.z * 0.82);
     const h = target.p.stack.length;
     return {
       seq: current.seq,
       to: current.onStackOf,
       start: moveStart,
       from: fromV,
-      dest: new THREE.Vector3(to.pile.x, CARD_T * h + 0.003, to.pile.z),
-      yaw: to.yaw,
-      tex: backTex('puri', actor.p.color),
+      dest: new THREE.Vector3(to.pile.x, Math.max(0, h - 1) * NEST, to.pile.z),
+      color: actor.p.color,
     };
   }, [current, reduced, spotOf, seats, youId, moveStart]);
 
@@ -155,10 +154,9 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
     const src = from ? new THREE.Vector3((current?.type === 'flipPower' ? from.power : from.pile).x, 0.05, (current?.type === 'flipPower' ? from.power : from.pile).z) : null;
     const owners = seats.map((s) => s.p);
     const colorOf = (id: PlayerId) => owners.find((p) => p.id === id)?.color ?? 'red';
-    const eaten = plate.cards.map((c, i) => ({
+    const eaten: PlateCard[] = plate.cards.map((c, i) => ({
       key: `c${i}`,
-      front: frontTex(c.kind, colorOf(c.owner)),
-      back: backTex('puri', colorOf(c.owner)),
+      bowl: { kind: c.kind, color: colorOf(c.owner) },
       dim: c.cancelled,
       from: current?.type === 'flipPuri' && i === plate.cards.length - 1 ? src : null,
     }));
@@ -194,42 +192,8 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
     el.style.opacity = tmp.z < 1 ? '1' : '0';
   }, [tmp]);
 
-  const handCards = useMemo(
-    () =>
-      hand
-        ? hand.cards.map((c, i) => ({
-            tex: frontTex(c.kind, seats[0]?.p.color ?? 'red'),
-            pickable: !!hand.pickable?.includes(c.kind) || hand.orders?.[i] != null,
-            selected: hand.selected === i,
-            order: hand.orders?.[i] ?? null,
-            focus: focused === `hand:${i}`,
-          }))
-        : [],
-    [hand, seats, focused],
-  );
 
   const shadows = !phone;
-  // How far the floating controls reach up over the bottom of the view where your hand is held.
-  const roomRef = useRef<HTMLDivElement>(null);
-  const [inset, setInset] = useState(0);
-  useEffect(() => {
-    const measure = () => {
-      const canvas = roomRef.current?.querySelector('canvas');
-      const panel = document.querySelector('.tp-tablescreen.is-3d .tp-dock__prompt, .tp-tablescreen.is-3d .tp-setup');
-      let px = 0;
-      if (canvas && panel) {
-        const c = canvas.getBoundingClientRect();
-        const p = panel.getBoundingClientRect();
-        const handL = c.left + c.width * 0.2;
-        const handR = c.left + c.width * 0.6;
-        if (p.width > 0 && p.top > c.top + c.height * 0.5 && p.left < handR && p.right > handL) px = Math.max(0, Math.round(c.bottom - p.top + 10));
-      }
-      setInset((v) => (Math.abs(v - px) > 2 ? px : v));
-    };
-    measure();
-    const t = setInterval(measure, 400);
-    return () => clearInterval(t);
-  }, []);
   // The renderer drops its context on unmount too: only a loss while we're on screen means trouble.
   const alive = useRef(true);
   useEffect(() => {
@@ -240,7 +204,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
   }, []);
   const me = seats[0];
   return (
-    <div ref={roomRef} className={cx('tp-room', 'tp-room--3d', flash && 'is-flash')}>
+    <div className={cx('tp-room', 'tp-room--3d', flash && 'is-flash')}>
       <Boundary onFail={onFail}>
         <Canvas
           className="tp-gl"
@@ -265,18 +229,21 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
           <ReleaseOnUnmount />
           <color attach="background" args={['#1a0d06']} />
           <fog attach="fog" args={['#1a0d06', 4.5, 11]} />
-          <Lights flash={flash} shadows={shadows} phone={phone} />
+          <Lights flash={flash} shadows={shadows} phone={phone} overhead={!!plate} reduced={reduced} />
           <RoomShell />
           <TableMesh />
-          <Plate />
+          <Plate overhead={!!plate} reduced={reduced} />
           {!reduced ? <Dust count={phone ? 60 : 140} /> : null}
-          <CameraRig focus={focusSpot ? focusSpot.pile : null} phone={phone} reduced={reduced} />
+          {/* While the eater reveals puri, look straight down on the middle of the table. */}
+          <CameraRig focus={focusSpot ? focusSpot.pile : null} phone={phone} reduced={reduced} overhead={!!plate} />
           {seats.map((s, i) => {
             const spot = spots[i];
             const you = s.p.id === youId;
             const items = stackItems(s.p, s.view, s.names);
-            const cards = items.map((it) => ({
-              tex: it.faceUp && it.face ? frontTex(it.face, it.color) : it.peek ? peekTex('puri', it.color, it.peek) : backTex('puri', it.color),
+            // Upturned bowls: the owner's colour, plus the letter only where you may know the puri.
+            const bowls = items.map((it) => ({
+              color: it.color,
+              peek: it.faceUp && it.face ? (it.face as PuriKind) : (it.peek as PuriKind | null),
             }));
             const pw = s.p.power;
             const pwUp = !!pw && (pw.revealed || s.view.revealed) && pw.kind !== null;
@@ -293,7 +260,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
               <group key={s.p.id}>
                 <Pile
                   spot={spot}
-                  cards={cards}
+                  bowls={bowls}
                   stackGlow={focused === `stack:${s.p.id}` ? 'focus' : glowOf(s.stack.state)}
                   dimStack={s.stack.state === 'dim'}
                   onStack={s.stack.onClick}
@@ -325,8 +292,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
           })}
           {bid ? <BidToken amount={bid.amount} rim={bid.rim} /> : null}
           {plate ? <PlateCards cards={plateCards} reduced={reduced} /> : null}
-          {flight ? <FlyingCard key={flight.seq} from={flight.from} to={flight.dest} yaw={flight.yaw} tex={flight.tex} start={flight.start} ms={PLACE_MS} /> : null}
-          {hand && handCards.length > 0 ? <Hand3D cards={handCards} onPick={hand.onPick} phone={phone} insetPx={inset} /> : null}
+          {flight ? <FlyingBowl key={flight.seq} from={flight.from} to={flight.dest} color={flight.color} start={flight.start} ms={PLACE_MS} /> : null}
         </Canvas>
       </Boundary>
       <div className="tp-room__vignette" aria-hidden="true" />
@@ -353,7 +319,7 @@ export default function Table3D({ seats, current, flash, reduced, phone, bid, pl
           </div>
         ) : null}
       </div>
-      <A11yLayer seats={seats} hand={hand} onFocusTarget={setFocused} />
+      <A11yLayer seats={seats} onFocusTarget={setFocused} />
       {overlay ? <div className="tp-room__overlay">{overlay}</div> : null}
     </div>
   );
@@ -393,31 +359,12 @@ function SizeSync({ size, camRef }: { size: RefObject<{ w: number; h: number }>;
  * hooks and labels Table.tsx restores focus with). Visually hidden; focusing
  * one lights up the matching thing on the table.
  */
-function A11yLayer({ seats, hand, onFocusTarget }: { seats: SeatBase[]; hand: Table3DProps['hand']; onFocusTarget: (k: string | null) => void }) {
+function A11yLayer({ seats, onFocusTarget }: { seats: SeatBase[]; onFocusTarget: (k: string | null) => void }) {
   // Only a keyboard focus lights things up on the table (not a programmatic focus after a click).
   const onFocus = (k: string) => (e: FocusEvent<HTMLElement>) => onFocusTarget(e.currentTarget.matches(':focus-visible') ? k : null);
   const onBlur = () => onFocusTarget(null);
   return (
     <div className="tp-seats tp-a11y3d">
-      {hand && hand.cards.length > 0 ? (
-        <div className="tp-a11y3d__hand" role="group" aria-label="Your hand">
-          {hand.cards.map((c, i) =>
-            hand.pickable?.includes(c.kind) || hand.orders?.[i] != null ? (
-              <button
-                key={i}
-                type="button"
-                aria-pressed={hand.selected === i || hand.orders?.[i] != null}
-                aria-label={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand${hand.orders?.[i] != null ? `, picked ${hand.orders[i]}` : ''}`}
-                onClick={() => hand.onPick(i)}
-                onFocus={onFocus(`hand:${i}`)}
-                onBlur={onBlur}
-              />
-            ) : (
-              <span key={i} role="img" aria-label={`${c.kind === 'akabare' ? 'Akabare' : 'Panipuri'} in your hand`} />
-            ),
-          )}
-        </div>
-      ) : null}
       {seats.map((s) => {
         const you = s.p.id === s.view.youId;
         const pw = s.p.power;

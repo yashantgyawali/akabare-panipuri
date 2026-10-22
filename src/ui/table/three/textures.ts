@@ -217,36 +217,6 @@ export function numberTex(text: string, ink: string, rim: string): THREE.Texture
   });
 }
 
-/** A flat pick-order badge: Tumlet red disc, cream ring, bold white number. */
-export function badgeTex(text: string): THREE.Texture {
-  return cached(`badge:${text}`, () => {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const t = srgb(new THREE.CanvasTexture(c));
-    const draw = () => {
-      const g = c.getContext('2d')!;
-      g.clearRect(0, 0, 128, 128);
-      g.fillStyle = '#F9EFD3';
-      g.beginPath();
-      g.arc(64, 64, 62, 0, Math.PI * 2);
-      g.fill();
-      g.fillStyle = '#F16147';
-      g.beginPath();
-      g.arc(64, 64, 54, 0, Math.PI * 2);
-      g.fill();
-      g.fillStyle = '#ffffff';
-      g.font = '800 68px Manrope, "Baloo 2", system-ui, sans-serif';
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      g.fillText(text, 64, 68);
-      t.needsUpdate = true;
-    };
-    draw();
-    void document.fonts?.load('800 68px Manrope').then(draw, () => {});
-    return t;
-  });
-}
-
 /** Procedural wood grain (no external images). */
 export function woodTex(key: string, base: [number, number, number], rings: boolean, size = 512): THREE.Texture {
   return cached(`wood:${key}`, () => {

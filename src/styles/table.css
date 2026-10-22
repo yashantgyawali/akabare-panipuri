@@ -124,6 +124,30 @@
 .tp-hand-row__card {
   flex: none;
 }
+.tp-handbowl {
+  display: block;
+  padding: 2px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  line-height: 0;
+  transition:
+    transform 0.15s,
+    opacity 0.15s;
+}
+.tp-handbowl:disabled {
+  cursor: default;
+}
+.tp-handbowl.is-selectable:hover {
+  transform: translateY(-3px);
+}
+.tp-handbowl.is-selected {
+  transform: translateY(-6px);
+  box-shadow: 0 0 0 2px var(--tumlet-yellow);
+}
+.tp-handbowl.is-dim {
+  opacity: 0.45;
+}
 .tp-hand-row__empty {
   align-self: center;
   font-size: 14px;
@@ -350,6 +374,8 @@
   .tp-setup__col--hand,
   .tp-setup__col--cta {
     flex: 1 0 100%;
+    /* a long hand scrolls in its row instead of widening the dock */
+    min-width: 0;
   }
   .tp-setup__slots,
   .tp-setup__powers {

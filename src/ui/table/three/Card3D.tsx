@@ -8,6 +8,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CARD_H, CARD_T, CARD_W } from './layout3d.ts';
 import { cardAlpha } from './textures.ts';
+import { DRAG_PX } from './Room.tsx';
 
 export const cardGeo = new THREE.BoxGeometry(CARD_W, CARD_T, CARD_H);
 const edgeMat = new THREE.MeshStandardMaterial({ color: '#e9dcc0', roughness: 0.9 });
@@ -110,6 +111,8 @@ export function clickProps(onClick?: () => void) {
     userData: { clickable: true },
     onClick: (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
+      // The end of a drag to look around is not a click.
+      if (e.delta > DRAG_PX) return;
       onClick();
     },
     onPointerOver: (e: ThreeEvent<PointerEvent>) => e.stopPropagation(),

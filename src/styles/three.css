@@ -104,7 +104,8 @@
   overflow: visible;
 }
 .tp-tablescreen.is-3d .tp-dock--setup .tp-dock__inner {
-  justify-content: center;
+  /* bottom-right like the turn controls: your bowls have the bottom-left corner */
+  justify-content: flex-end;
 }
 /* the floating panel: the Tumlet card (2px ink border, hard offset shadow) */
 .tp-tablescreen.is-3d .tp-dock__prompt,
@@ -251,15 +252,6 @@
     0 0 24px 4px rgba(255, 217, 160, 0.35);
 }
 
-/* setup: your hand is held up in the 3D room; the dock copy stays for keyboard users only */
-.tp-tablescreen.is-3d .tp-setup__col--hand:not(:has(:focus-visible)) {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-}
 /* the eating tally sits above your nameplate (the top corners belong to the players' nameplates) */
 .tp-room--3d .tp-tally {
   top: auto;
@@ -281,10 +273,135 @@
     bottom: 14px;
   }
 }
-/* phones: your hand is held at the left, so your nameplate sits right */
+/* phones: your bowls sit at the left, so your nameplate sits right */
 @media (max-width: 640px) {
   .tp-tablescreen.is-3d .tp-np3d--you {
     left: auto;
     right: 8px;
+  }
+}
+
+/* ===== your bowls: a glass tray in the bottom-left corner (the turn / setup panel keeps the right) ===== */
+.tp-tablescreen.is-3d .tp-dock__inner {
+  flex-wrap: wrap;
+}
+.tp-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-right: auto;
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(255, 228, 190, 0.22);
+  border-radius: var(--radius-md, 14px);
+  background: rgba(30, 18, 9, 0.42);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+.tp-tray__label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(246, 231, 207, 0.75);
+}
+.tp-tray__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tp-tray__bowl {
+  position: relative;
+  padding: 2px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  line-height: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.tp-tray__bowl:disabled {
+  cursor: default;
+}
+.tp-tray__bowl.is-can {
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(243, 185, 82, 0.45);
+}
+.tp-tray__bowl.is-can:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 2px rgba(243, 185, 82, 0.8);
+}
+.tp-tray__bowl.is-on,
+.tp-tray__bowl.is-on:hover {
+  transform: translateY(-6px);
+  background: rgba(241, 97, 71, 0.18);
+  box-shadow:
+    0 0 0 2px #f16147,
+    0 6px 16px rgba(241, 97, 71, 0.35);
+}
+.tp-tray__bowl.is-off {
+  opacity: 0.4;
+}
+.tp-tray__bowl:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+/* pick order (setup): the red disc with a cream ring */
+.tp-tray__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #f9efd3;
+  border-radius: 50%;
+  background: #f16147;
+  color: #fff;
+  font-family: Manrope, var(--font-display), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+/* the replay skip moves to the bottom middle, out of the tray's corner */
+@media (min-width: 641px) {
+  .tp-room--3d .tp-ticker__skip {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+/* setup's own hand row is the tray's job at the 3D table */
+.tp-tablescreen.is-3d .tp-setup__col--hand {
+  display: none;
+}
+@media (max-width: 640px) {
+  /* a row of its own above the panel, at the left */
+  .tp-tray {
+    flex: none;
+    max-width: calc(100% - 96px);
+    padding: 6px 8px 8px;
+  }
+  .tp-tablescreen.is-3d .tp-dock__prompt,
+  .tp-tablescreen.is-3d .tp-setup {
+    flex: 1 1 100%;
+  }
+  .tp-tray__label {
+    font-size: 11px;
+  }
+  /* setting up, your nameplate is away: the whole hand fits in one row */
+  .tp-phase-setup .tp-tray {
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-tray__bowl {
+    transition: none;
   }
 }

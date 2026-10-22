@@ -10,7 +10,7 @@ import { Card } from '../../cards/index.ts';
 import { Button } from '../common/Button.tsx';
 import { cx } from '../common/hooks.ts';
 import { powerName, signed, type NameBook } from '../text.ts';
-import { Overlay, RevealCard } from './OverlayShell.tsx';
+import { Overlay, RevealBowl, RevealCard } from './OverlayShell.tsx';
 
 export { RoundEndPanel } from './OverlayResult.tsx';
 export { GameOverPanel } from './OverlayGameOver.tsx';
@@ -93,7 +93,7 @@ export function AkabareMoment({
       <div className="tp-bite__content">
         <div className="tp-bite__cards">
           <div className="tp-bite__card tp-bite__card--chili">
-            <RevealCard back="puri" color={names.color(moment.owner)} face="akabare" width={bigW} state={moment.stage === 'saved' ? 'idle' : 'danger'} />
+            <RevealBowl color={names.color(moment.owner)} kind="akabare" size={Math.round(bigW * 1.3)} danger={moment.stage !== 'saved'} />
           </div>
           {moment.power && moment.stage !== 'bitten' ? (
             <div className="tp-bite__card">

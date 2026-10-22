@@ -437,6 +437,27 @@
 .tp-bite--saved .tp-bite__card--chili {
   animation: none;
 }
+.tp-revealbowl {
+  display: block;
+  line-height: 0;
+}
+/* Turned over: the open bowl springs up from flat. */
+.tp-revealbowl.is-up {
+  animation: tp-bowl-turn 0.4s cubic-bezier(0.3, 1.4, 0.5, 1) 1;
+}
+.tp-revealbowl.is-danger.is-up {
+  filter: drop-shadow(0 0 18px rgba(255, 59, 34, 0.75));
+}
+@keyframes tp-bowl-turn {
+  from {
+    transform: scaleY(0.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-revealbowl.is-up {
+    animation: none;
+  }
+}
 @keyframes tp-shake {
   20% {
     transform: translateX(-6px) rotate(-1.5deg);

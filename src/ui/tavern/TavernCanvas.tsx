@@ -16,12 +16,12 @@ import type { ColorId } from '../../engine/types.ts';
 import { PLAYER_PALETTE } from '../../cards/index.ts';
 import { Villager, type Reaction, type ReactionKind } from '../table/three/Villager.tsx';
 import { looksForTable } from '../table/three/looks.ts';
-import { CameraRig, Chair, Dust, Lights, RoomShell, TableMesh } from '../table/three/Room.tsx';
+import { CameraRig, Chair, DRAG_PX, Dust, Lights, RoomShell, TableMesh } from '../table/three/Room.tsx';
 import { Plate } from '../table/three/Pieces.tsx';
-import { Card3D, CursorSync } from '../table/three/Card3D.tsx';
+import { CursorSync } from '../table/three/Card3D.tsx';
+import { Bowl, NEST } from '../table/three/Bowl3D.tsx';
 import { ReleaseOnUnmount } from '../table/three/ReleaseOnUnmount.tsx';
-import { CARD_T, SEAT_R, platePos3, seatSpot } from '../table/three/layout3d.ts';
-import { backTex, frontTex } from '../table/three/textures.ts';
+import { SEAT_R, platePos3, seatSpot } from '../table/three/layout3d.ts';
 import { sfx } from '../sound/sfx.ts';
 
 export interface Guest {
@@ -315,9 +315,14 @@ export default function TavernCanvas({ mode, guests, phone, reduced, labels, slo
           ) : (
             <OrbitRig reduced={reduced} phone={phone} />
           )}
+          {/* a few eaten puri, open in their bowls on the plate */}
           {plateCards.map((c, i) => {
             const p = platePos3(i, 6);
-            return <Card3D key={i} tex={frontTex(c.face, c.color)} position={[p.x, 0.016 + i * CARD_T, p.z]} rotation={[0, p.rot, 0]} />;
+            return (
+              <group key={i} position={[p.x, 0.013, p.z]} rotation={[0, p.rot, 0]} scale={0.62}>
+                <Bowl color={c.color} up kind={c.face} />
+              </group>
+            );
           })}
           {guests.map((g, i) => {
             const spot = seat ? seatSpot(i, n) : orbitSpot(i, n);
@@ -326,7 +331,9 @@ export default function TavernCanvas({ mode, guests, phone, reduced, labels, slo
               return (
                 <group key={g.id}>
                   {[0, 1].map((k) => (
-                    <Card3D key={k} tex={backTex('puri', g.color)} position={[spot.pile.x + (k - 0.5) * 0.24, CARD_T / 2 + 0.0015, spot.pile.z]} rotation={[0, spot.yaw, 0]} />
+                    <group key={k} position={[spot.pile.x, k * NEST, spot.pile.z]} rotation={[0, spot.yaw + k * 0.3, 0]}>
+                      <Bowl color={g.color} up={false} />
+                    </group>
                   ))}
                 </group>
               );
@@ -334,14 +341,16 @@ export default function TavernCanvas({ mode, guests, phone, reduced, labels, slo
             return (
               <group key={g.id}>
                 <Chair at={{ x: spot.seat.x * 1.08, z: spot.seat.z * 1.08 }} yaw={spot.yaw + Math.PI} />
-                <Card3D tex={backTex('puri', g.color)} position={[spot.pile.x, CARD_T / 2 + 0.0015, spot.pile.z]} rotation={[0, spot.yaw, 0]} />
+                <group position={[spot.pile.x, 0, spot.pile.z]} rotation={[0, spot.yaw, 0]}>
+                  <Bowl color={g.color} up={false} />
+                </group>
                 <Seated delay={seat ? 0 : i * 120} reduced={reduced} x={spot.seat.x} z={spot.seat.z}>
                   <group
                     userData={{ clickable: true }}
                     onClick={(e: ThreeEvent<MouseEvent>) => {
                       e.stopPropagation();
                       // A drag to spin the room isn't a tap.
-                      if (e.delta < 6) poke(g.id);
+                      if (e.delta <= DRAG_PX) poke(g.id);
                     }}
                     onPointerOver={(e: ThreeEvent<PointerEvent>) => e.stopPropagation()}
                   >

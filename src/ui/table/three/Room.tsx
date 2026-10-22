@@ -11,9 +11,33 @@ import { woodTex } from './textures.ts';
 
 const FLOOR_Y = -0.78;
 
-export function Lights({ flash, shadows, phone }: { flash: boolean; shadows: boolean; phone: boolean }) {
+/** 0 → 1 while `on` (and back), eased over about a second; read `.current` in useFrame. */
+export function useBlend(on: boolean, reduced: boolean) {
+  const v = useRef(on ? 1 : 0);
+  useFrame((_, dt) => {
+    v.current += ((on ? 1 : 0) - v.current) * (reduced ? 1 : Math.min(1, dt * 2.4));
+  });
+  return v;
+}
+
+export function Lights({
+  flash,
+  shadows,
+  phone,
+  overhead = false,
+  reduced = false,
+}: {
+  flash: boolean;
+  shadows: boolean;
+  phone: boolean;
+  /** The camera is (going) up above the lamp: hide the lamp, it would black out the view. */
+  overhead?: boolean;
+  reduced?: boolean;
+}) {
   const spot = useRef<THREE.SpotLight>(null);
   const bulb = useRef<THREE.MeshBasicMaterial>(null);
+  const lamp = useRef<THREE.Group>(null);
+  const top = useBlend(overhead, reduced);
   const target = useMemo(() => {
     const o = new THREE.Object3D();
     o.position.set(0, -0.4, 0);
@@ -34,6 +58,8 @@ export function Lights({ flash, shadows, phone }: { flash: boolean; shadows: boo
     // A slow, faint flicker.
     s.intensity = (phone ? 16 : 18) * (0.97 + 0.03 * Math.sin(clock.elapsedTime * 7.3) * Math.sin(clock.elapsedTime * 3.1));
     bulb.current?.color.copy(s.color).multiplyScalar(2.2);
+    // The camera passes the shade about halfway up.
+    if (lamp.current) lamp.current.visible = top.current < 0.5;
   });
   return (
     <>
@@ -73,7 +99,7 @@ export function Lights({ flash, shadows, phone }: { flash: boolean; shadows: boo
       {/* Soft warm bounce from the table so faces aren't black. */}
       <pointLight position={[0, 0.35, 0]} color="#ff9a4a" intensity={0.5} distance={3.2} decay={1.5} />
       {/* The hanging lamp. */}
-      <group position={[0, 1.95, 0]}>
+      <group ref={lamp} position={[0, 1.95, 0]}>
         <mesh position={[0, 1.2, 0]}>
           <cylinderGeometry args={[0.006, 0.006, 2.3, 6]} />
           <meshStandardMaterial color="#111" />
@@ -263,16 +289,45 @@ export function Dust({ count }: { count: number }) {
 const ZOOM_MIN = 0.62;
 const ZOOM_MAX = 1.3;
 
+// How far a drag can swing the camera around the table, in radians.
+const YAW_MAX = 0.75;
+const PITCH_MIN = -0.3;
+const PITCH_MAX = 0.4;
+/** Pointer travel (px) before a press counts as a drag rather than a click. */
+export const DRAG_PX = 8;
+
 /**
  * Your eyes: seated at your place, turning a little toward `focus` (a point on
  * the table), breathing gently. Wheel / trackpad or a two-finger pinch moves
- * you closer to or further from the table, within a small range.
+ * you closer to or further from the table, within a small range; click and drag
+ * (one finger on a phone) swings you around it a little. Double-click recentres.
  */
-export function CameraRig({ focus, phone, reduced, zoom: zoom0 = 1 }: { focus: Vec2 | null; phone: boolean; reduced: boolean; /** Starting distance (1 = the game's seat). */ zoom?: number }) {
+export function CameraRig({
+  focus,
+  phone,
+  reduced,
+  zoom: zoom0 = 1,
+  overhead = false,
+}: {
+  focus: Vec2 | null;
+  phone: boolean;
+  reduced: boolean;
+  /** Starting distance (1 = the game's seat). */
+  zoom?: number;
+  /** Glide up to a top-down view of the middle of the table (while the eater reveals puri). */
+  overhead?: boolean;
+}) {
   const { camera, size, gl } = useThree();
   const look = useRef(new THREE.Vector3());
   const want = useMemo(() => new THREE.Vector3(), []);
+  const seatPos = useMemo(() => new THREE.Vector3(), []);
+  const upPos = useMemo(() => new THREE.Vector3(), []);
+  const upLook = useMemo(() => new THREE.Vector3(), []);
+  const ov = useBlend(overhead, reduced);
   const zoom = useRef({ now: zoom0, to: zoom0 });
+  const orbit = useRef({ yaw: 0, pitch: 0, toYaw: 0, toPitch: 0 });
+  const sph = useMemo(() => new THREE.Spherical(), []);
+  const off = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => {
     const el = gl.domElement;
     const set = (z: number) => {
@@ -284,23 +339,55 @@ export function CameraRig({ focus, phone, reduced, zoom: zoom0 = 1 }: { focus: V
     };
     const touches = new Map<number, { x: number; y: number }>();
     let pinch: { d: number; z: number } | null = null;
+    let drag: { id: number; x: number; y: number; yaw: number; pitch: number; moved: boolean } | null = null;
+    const o = orbit.current;
     const dist = () => {
       const [a, b] = [...touches.values()];
       return Math.hypot(a.x - b.x, a.y - b.y);
     };
+    const endDrag = () => {
+      drag = null;
+      el.style.cursor = '';
+    };
     const down = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch') return;
-      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (touches.size === 2) pinch = { d: dist(), z: zoom.current.to };
+      if (e.pointerType === 'touch') {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2) {
+          pinch = { d: dist(), z: zoom.current.to };
+          endDrag();
+          return;
+        }
+      } else if (e.button !== 0) return;
+      if (!drag) drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: o.toYaw, pitch: o.toPitch, moved: false };
     };
     const move = (e: PointerEvent) => {
-      if (!touches.has(e.pointerId)) return;
-      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pinch && touches.size === 2) set(pinch.z * (pinch.d / Math.max(1, dist())));
+      if (touches.has(e.pointerId)) {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch && touches.size === 2) set(pinch.z * (pinch.d / Math.max(1, dist())));
+      }
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (!drag.moved) {
+        if (Math.hypot(dx, dy) < DRAG_PX) return;
+        drag.moved = true;
+        el.style.cursor = 'grabbing';
+        // Keep the drag when the pointer leaves the canvas (over a panel, or off the window).
+        if (el.hasPointerCapture && !el.hasPointerCapture(e.pointerId)) el.setPointerCapture?.(e.pointerId);
+      }
+      // The table follows the pointer: a drag across the whole view is about 90°.
+      const k = 1.6 / Math.max(320, el.clientWidth);
+      o.toYaw = Math.min(YAW_MAX, Math.max(-YAW_MAX, drag.yaw - dx * k));
+      o.toPitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, drag.pitch + dy * k));
     };
     const up = (e: PointerEvent) => {
       touches.delete(e.pointerId);
       if (touches.size < 2) pinch = null;
+      if (drag && e.pointerId === drag.id) endDrag();
+    };
+    const recentre = () => {
+      o.toYaw = 0;
+      o.toPitch = 0;
     };
     el.style.touchAction = 'none';
     el.addEventListener('wheel', wheel, { passive: false });
@@ -308,12 +395,15 @@ export function CameraRig({ focus, phone, reduced, zoom: zoom0 = 1 }: { focus: V
     el.addEventListener('pointermove', move);
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
+    el.addEventListener('dblclick', recentre);
     return () => {
       el.removeEventListener('wheel', wheel);
       el.removeEventListener('pointerdown', down);
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
       el.removeEventListener('pointercancel', up);
+      el.removeEventListener('dblclick', recentre);
+      el.style.cursor = '';
     };
   }, [gl]);
   useFrame(({ clock }, dt) => {
@@ -325,14 +415,33 @@ export function CameraRig({ focus, phone, reduced, zoom: zoom0 = 1 }: { focus: V
     }
     const t = clock.elapsedTime;
     const sway = reduced ? 0 : 1;
-    cam.position.set(Math.sin(t * 0.31) * 0.012 * sway, c.y + Math.sin(t * 0.47) * 0.008 * sway, c.z);
+    // Ease between your seat and the top-down view (smoothstep, about a second each way).
+    const o = ov.current * ov.current * (3 - 2 * ov.current);
+    seatPos.set(Math.sin(t * 0.31) * 0.012 * sway, c.y + Math.sin(t * 0.47) * 0.008 * sway, c.z);
+    // Straight above the plate, tipped just enough that the far side still reads.
+    // A phone is narrow: go only as high as it takes for the table to fill its width.
+    const upY = phone ? (TABLE_R * 1.15) / (Math.tan((cam.fov * Math.PI) / 360) * cam.aspect) : 2.3;
+    upPos.set(0, upY, upY * (phone ? 0.15 : 0.22));
+    upLook.set(0, 0, phone ? 0.02 : 0.06);
+    cam.position.lerpVectors(seatPos, upPos, o);
     want.set((focus?.x ?? 0) * 0.32, c.lookY, c.lookZ + (focus ? (focus.z - c.lookZ) * 0.22 : 0));
+    want.lerp(upLook, o);
     const k = reduced ? 1 : Math.min(1, dt * 2.2);
     look.current.lerp(want, k);
     // Zoom = slide along the line from where you look to where you sit.
     const z = zoom.current;
     z.now += (z.to - z.now) * (reduced ? 1 : Math.min(1, dt * 8));
-    cam.position.sub(look.current).multiplyScalar(z.now).add(look.current);
+    off.copy(cam.position).sub(look.current).multiplyScalar(z.now);
+    // Swing around where you look, as far as you've dragged.
+    const ob = orbit.current;
+    const ko = reduced ? 1 : Math.min(1, dt * 10);
+    ob.yaw += (ob.toYaw - ob.yaw) * ko;
+    ob.pitch += (ob.toPitch - ob.pitch) * ko;
+    sph.setFromVector3(off);
+    sph.theta += ob.yaw;
+    sph.phi = Math.min(1.45, Math.max(0.02, sph.phi - ob.pitch));
+    off.setFromSpherical(sph);
+    cam.position.copy(look.current).add(off);
     cam.lookAt(look.current);
   });
   return null;

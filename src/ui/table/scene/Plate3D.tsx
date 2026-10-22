@@ -61,7 +61,7 @@ export function Plate3D({ plate, powers = [], names, width, radius, reduced }: {
   const from = plate.length < prev ? 0 : prev;
   const n = plate.length + powers.length;
   return (
-    <div className="tp-pl" role="list" aria-label={`The plate: ${plate.length} card${plate.length === 1 ? '' : 's'} eaten`}>
+    <div className="tp-pl" role="list" aria-label={`The plate: ${plate.length} bowl${plate.length === 1 ? '' : 's'} eaten`}>
       {plate.map((c, i) => (
         <EatenCard key={i} c={c} names={names} width={width} animate={i >= from && plate.length >= prev} reduced={reduced} pos={platePos(i, n, radius)} />
       ))}

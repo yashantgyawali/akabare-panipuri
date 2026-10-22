@@ -1,8 +1,9 @@
-/** The modal scrim shared by the bite, round result and game over screens (focus management + trap), and a card that flips face up. */
+/** The modal scrim shared by the bite, round result and game over screens (focus management + trap), a card that flips face up and a bowl that turns over. */
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { ColorId } from '../../engine/types.ts';
+import type { ColorId, PuriKind } from '../../engine/types.ts';
 import { Card, type FaceKind } from '../../cards/index.ts';
+import { BowlIcon } from '../common/BowlIcon.tsx';
 import { cx } from '../common/hooks.ts';
 
 export function Overlay({ className, labelledBy, children, focusKey, dark }: { className?: string; labelledBy: string; children: ReactNode; focusKey?: string; dark?: boolean }) {
@@ -103,4 +104,18 @@ export function RevealCard({
     return () => clearTimeout(t);
   }, [delay]);
   return <Card back={back} color={color} face={face} faceUp={up} width={width} state={state} decorative flipMs={700} />;
+}
+
+/** A puri's bowl, upside down at first, then turned over to show what's inside. */
+export function RevealBowl({ color, kind, size, danger, delay = 120 }: { color: ColorId; kind: PuriKind; size: number; danger?: boolean; delay?: number }) {
+  const [up, setUp] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setUp(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+  return (
+    <span className={cx('tp-revealbowl', up && 'is-up', danger && 'is-danger')}>
+      <BowlIcon kind={up ? kind : null} up={up} color={color} size={size} />
+    </span>
+  );
 }
