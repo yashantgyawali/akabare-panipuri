@@ -42,7 +42,7 @@ export function RulesContent({ compact = false, config }: { compact?: boolean; c
   return (
     <div className={cx('rq', compact && 'rq--compact')}>
       <p className="rq-hook">
-        <strong>Eat the bowls you bid. Don't bite an Akabare.</strong> Sneak yours onto other stacks: if it bites whoever is eating, you get +{c.trapReward}.{' '}
+        <strong>Eat the bowls you bid. Don't bite an Akabare.</strong> Sneak yours onto other stacks: if it busts someone else, you get +{c.trapReward}.{' '}
         {goalLine(c)}
       </p>
 
@@ -55,7 +55,7 @@ export function RulesContent({ compact = false, config }: { compact?: boolean; c
             <OpenBowl kind="panipuri" color="green" size={s + 8} />
             <span>
               <strong>{plural(c.panipuriPerPlayer, 'Panipuri bowl')}</strong>
-              <Sep />1 point each
+              <Sep />each counts 1 toward the bid
             </span>
           </li>
           <li>

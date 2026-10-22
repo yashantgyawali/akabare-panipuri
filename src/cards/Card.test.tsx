@@ -70,7 +70,7 @@ describe('faces, urls, labels', () => {
     expect(f).toContain('NAYA PLATE');
     expect(f).toContain('नयाँ प्लेट');
     expect(f).toContain('ak-card-front__index">9<');
-    expect(f).toContain('Flip any time');
+    expect(f).toContain('Not after an Akabare bite');
   });
   it('names and labels', () => {
     expect(cardName('nayaplate')).toBe('Naya Plate');

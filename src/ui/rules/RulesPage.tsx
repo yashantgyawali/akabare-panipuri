@@ -181,10 +181,10 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
               without getting bitten.
             </p>
             <p className="rb-lead">
-              <strong>Sneak your own Akabare onto other stacks:</strong> if it bites whoever is eating, you get +{C.trapReward}.
+              <strong>Sneak your own Akabare onto other stacks:</strong> if it busts someone else, you get +{C.trapReward}.
             </p>
             <p className="rb-goal">
-              <strong>Goal:</strong> {goalLine(C)}
+              <strong>Goal:</strong> {goalLine(C)} That's Classic. Quick and Marathon are under Winning.
             </p>
             <ul className="rb-facts" aria-label="At a glance">
               <li>
@@ -571,8 +571,7 @@ export function RulesPage({ from = { href: HOME, label: 'Home' } }: RulesPagePro
             ))}
           </ul>
           <p className="rb-tie tv-glass">
-            <strong>Two players past the target in the same round?</strong> The higher score wins. <strong>Tied?</strong> Fewer busts wins. Still tied?
-            You share the win.
+            <strong>Tied for the most points when the game ends?</strong> Fewer busts wins. <strong>Still tied?</strong> You share the win.
           </p>
         </section>
 
